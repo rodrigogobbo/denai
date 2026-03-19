@@ -96,16 +96,20 @@ Open your browser at **http://localhost:4078** — that's it! 🎉
 
 ## 🛠️ Available Tools
 
-| Tool | Description | Requires Internet |
+DenAI comes with **10 built-in tools** that the AI can use automatically:
+
+| Tool | Description | Internet? |
 |------|-------------|:-:|
-| `read_file` | Read files from the local filesystem | ❌ |
-| `write_file` | Create or overwrite files | ❌ |
-| `list_files` | List directory contents | ❌ |
-| `run_command` | Execute shell commands (sandboxed) | ❌ |
-| `web_search` | Search the web via DuckDuckGo | ✅ |
-| `web_fetch` | Fetch and parse a URL | ✅ |
-| `memory_save` | Save a persistent memory | ❌ |
-| `memory_search` | Search saved memories | ❌ |
+| `file_read` | Read files with line numbers (offset/limit for large files) | ❌ |
+| `file_write` | Create or overwrite files (auto-creates directories) | ❌ |
+| `list_files` | List directory contents with glob patterns | ❌ |
+| `command_exec` | Execute shell commands (sandboxed + filtered) | ❌ |
+| `web_search` | Fetch and extract text from any URL | ✅ |
+| `memory_save` | Save persistent memory (fact/decision/preference/observation) | ❌ |
+| `memory_search` | Search saved memories by keywords and type | ❌ |
+| `rag_search` | Search indexed local documents (BM25) | ❌ |
+| `rag_index` | Reindex `~/.denai/documents/` | ❌ |
+| `rag_stats` | Show RAG index statistics | ❌ |
 
 Tools are auto-discovered from `denai/tools/`. Drop a new `.py` file and it just works.
 
@@ -255,27 +259,40 @@ denai/
 ├── denai/
 │   ├── __init__.py
 │   ├── __main__.py          # CLI entrypoint
-│   ├── server.py            # FastAPI app
-│   ├── chat.py              # Ollama chat logic
-│   ├── memory.py            # Persistent memory
+│   ├── app.py               # FastAPI app factory
 │   ├── config.py            # Settings & env vars
-│   ├── security.py          # Auth, rate limiting
-│   ├── static/              # Web UI assets
+│   ├── db.py                # SQLite (aiosqlite)
+│   ├── network.py           # Local IP detection
+│   ├── llm/                 # LLM integration
+│   │   ├── ollama.py        # Ollama streaming + tool loop
+│   │   └── prompt.py        # System prompt builder
+│   ├── rag/                 # RAG engine
+│   │   └── __init__.py      # BM25 index, tokenizer, chunker
+│   ├── routes/              # API endpoints
+│   │   ├── chat.py          # POST /api/chat (SSE)
+│   │   ├── conversations.py # CRUD conversations
+│   │   ├── models.py        # Ollama models
+│   │   ├── plugins.py       # Plugin management
+│   │   └── rag.py           # RAG endpoints
+│   ├── security/            # Security layers
+│   │   ├── auth.py          # API key
+│   │   ├── sandbox.py       # Path validation
+│   │   ├── command_filter.py# Command blocklist
+│   │   └── rate_limit.py    # Per-IP rate limiting
+│   ├── plugins/             # Plugin autodiscovery
+│   ├── static/              # Web UI (SPA)
 │   └── tools/               # Auto-discovered tools
-│       ├── __init__.py
-│       ├── file_tools.py
-│       ├── web_tools.py
-│       ├── command_tools.py
-│       └── memory_tools.py
-├── tests/
-│   ├── test_chat.py
-│   ├── test_tools.py
-│   └── test_memory.py
-├── docs/
-│   └── GUIA-COMPLETO.md
+│       ├── registry.py      # Tool dispatcher
+│       ├── file_ops.py      # file_read, file_write, list_files
+│       ├── command_exec.py  # command_exec
+│       ├── memory.py        # memory_save, memory_search
+│       ├── web_fetch.py     # web_search
+│       └── rag_search.py    # rag_search, rag_index, rag_stats
+├── tests/                   # 208 tests
+├── examples/plugins/        # Example plugins
 ├── pyproject.toml
 ├── README.md
-├── CONTRIBUTING.md
+├── CHANGELOG.md
 └── LICENSE
 ```
 
