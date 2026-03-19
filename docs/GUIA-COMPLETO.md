@@ -88,12 +88,12 @@ Precisamos do **Windows 10** ou **Windows 11**. Veja como descobrir qual é o se
 
 **Requisitos de RAM:**
 
-| RAM do seu PC | Funciona? | Recomendação |
+| RAM do seu PC | Funciona? | O que esperar |
 |---|---|---|
-| 4 GB ou menos | ❌ Não recomendado | Muito pouca memória |
-| 8 GB | ✅ Funciona | Use modelos menores (3B) |
-| 16 GB | ✅✅ Bom | Use modelos médios (7B-8B) |
-| 32 GB ou mais | ✅✅✅ Excelente | Use qualquer modelo |
+| 4 GB ou menos | ❌ Não | Muito pouca memória pra rodar IA |
+| 8 GB | ✅ Básico | Modelos 3-4B. Conversas simples, texto, perguntas. Não vai editar arquivos ou executar planos sozinho de forma confiável |
+| 16 GB | ⭐ Recomendado | Modelos 7-8B. Conversa boa, gera código, usa tools (ler/escrever arquivos, executar comandos). Acerta na maioria das vezes |
+| 32 GB+ | 🏆 Ideal | Modelos 14-32B. Tool calling preciso, planning multi-step, edita vários arquivos em sequência. Experiência mais próxima de ChatGPT/Copilot |
 
 > 💡 **Traduzindo:** Se seu computador tem **8 GB de RAM**, você consegue rodar. Com **16 GB**, roda muito bem. Se não sabe o que significa "3B" ou "7B", não se preocupe — vou explicar mais adiante!
 
@@ -863,14 +863,17 @@ Sim e não:
 
 ### "E se meu PC for fraco?"
 
-Se seu computador tem pouca memória (8 GB) ou um processador mais antigo:
+Mesmo com um PC modesto, dá pra usar! Dicas:
 
-1. **Use modelos menores:** `llama3.2:3b` ou `gemma3:4b`
-2. **Feche outros programas** antes de usar o DenAI
-3. **Use modelos quantizados** (versões comprimidas): adicione `q4_0` no nome
-4. **Seja paciente** — em PCs mais fracos, a IA demora mais pra responder, mas funciona!
+1. **8 GB de RAM:** Use `llama3.2:3b` ou `gemma3:4b`. São leves e respondem rápido
+2. **Sem GPU:** Funciona 100% na CPU, só é mais lento. Um `llama3.2:3b` na CPU responde em 5-15 segundos
+3. **SSD vs HD:** SSD faz MUITA diferença na hora de carregar o modelo. Se seu PC tem HD, considere trocar por SSD (~R$150 pra 240 GB)
+4. **Feche outros programas:** Chrome com muitas abas consome RAM. Feche o que não precisa antes de usar o DenAI
 
-> 💡 **Quanto mais fraco o PC, menor deve ser o modelo.** Um modelo 3B roda até em computadores de 2018. Um modelo 8B precisa de um PC mais moderno.
+**Quer investir pra melhorar?** A melhor upgrade custo-benefício é:
+- **RAM:** Adicionar mais RAM (de 8→16 GB custa ~R$150-300)
+- **SSD:** Trocar HD por SSD (se ainda não tem)
+- **GPU:** Uma RTX 3060 usada (~R$1.200) acelera os modelos 5-10x
 
 ---
 
@@ -910,15 +913,25 @@ Este guia foca no Windows, mas a experiência é a mesma em todos os sistemas.
 
 ### "A IA é tão boa quanto o ChatGPT?"
 
-Sendo honesto: **os modelos locais são menores e menos potentes que o GPT-4** (o modelo usado no ChatGPT Plus pago). Mas:
+Resposta honesta — **depende do modelo e da sua RAM:**
 
-- São **melhores que o ChatGPT gratuito** para muitas tarefas
-- São **excelentes** para conversas gerais, escrita, resumos e código
-- São **infinitamente melhores em privacidade**
-- **Não têm limites de uso** — pergunte quantas vezes quiser
-- Estão **melhorando rapidamente** — a cada poucos meses saem modelos melhores
+| O que vc quer fazer | ChatGPT/Copilot | DenAI com 8B (16 GB RAM) | DenAI com 32B (32 GB RAM) |
+|---|---|---|---|
+| Conversar, tirar dúvidas | ⭐⭐⭐⭐⭐ Excelente | ⭐⭐⭐ Bom | ⭐⭐⭐⭐ Muito bom |
+| Escrever textos/e-mails | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Gerar código | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Ler e editar seus arquivos | ⭐⭐⭐⭐⭐ (Copilot/Cursor) | ⭐⭐ Erra às vezes | ⭐⭐⭐⭐ Confiável |
+| Executar planos complexos | ⭐⭐⭐⭐⭐ | ⭐⭐ Perde o fio | ⭐⭐⭐ Funciona |
+| Privacidade | ❌ Dados na nuvem | ✅ 100% local | ✅ 100% local |
+| Custo | R$100-1000/mês | **Grátis** | **Grátis** |
+| Funciona sem internet | ❌ | ✅ | ✅ |
 
-> 💡 **Na prática**, pra 90% do uso diário (perguntas, textos, ajuda com código, resumos), os modelos locais são mais do que suficientes.
+**Resumo prático:**
+- Com **16 GB de RAM** (modelo 7-8B): é um ótimo assistente pra conversa e código. Pra uso do dia a dia, resolve 80% do que vc precisa.
+- Com **32 GB de RAM** (modelo 32B): chega perto do ChatGPT em qualidade. Tool calling funciona bem, consegue planejar e executar tarefas em sequência.
+- O gap principal é o **tamanho do contexto** — modelos locais trabalham com 8-32k tokens vs 128k+ dos modelos cloud. Pra arquivos muito grandes ou conversas muito longas, o cloud ainda ganha.
+
+> 💡 **Dica:** Se vc já tem um PC com 16 GB, comece com o `qwen2.5-coder:7b`. Se quiser investir, 32 GB de RAM é a melhor upgrade — custa ~R$300-500 e desbloqueia modelos muito melhores.
 
 ---
 
@@ -1189,6 +1202,29 @@ Software cujo **código-fonte é público** — qualquer pessoa pode ver como fu
 | **Remover modelo** | `ollama rm nome-do-modelo` no terminal |
 | **Atualizar** | `pip install --upgrade denai` |
 | **Desinstalar** | `pip uninstall denai` + desinstalar Ollama |
+
+---
+
+## 💌 Palavras Finais
+
+Parabéns por chegar até aqui! 🎉
+
+Você agora tem uma **inteligência artificial pessoal, privada e gratuita** rodando no seu computador. Sem assinaturas, sem limites, sem ninguém espionando suas conversas.
+
+Use e abuse:
+- Pergunte qualquer coisa
+- Peça ajuda com textos, e-mails, relatórios
+- Estude com ela como um tutor particular
+- Explore, experimente, divirta-se!
+
+> 🐺 **O DenAI está aqui pra te ajudar. Sempre que precisar, é só chamar.**
+
+---
+
+> **Criado com 🐺 por DenAI**  
+> Guia versão 1.0 — Julho 2025  
+> Licença: MIT — Livre para uso, cópia e distribuição.
+ll denai` + desinstalar Ollama |
 
 ---
 

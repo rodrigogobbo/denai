@@ -116,17 +116,53 @@ Tools are auto-discovered from `denai/tools/`. Drop a new `.py` file and it just
 
 ---
 
+## 💻 System Requirements
+
+| Tier | RAM | Storage | GPU | Experience |
+|------|-----|---------|-----|------------|
+| 🟢 **Mínimo** | 8 GB | 10 GB livre | Não precisa | Modelos 3B — respostas simples, sem tool calling confiável |
+| ⭐ **Recomendado** | 16 GB | 20 GB livre | Não precisa | Modelos 7-8B — bom tool calling, respostas consistentes |
+| 🏆 **Ideal** | 32 GB+ | 40 GB livre | Qualquer GPU com 8GB+ VRAM | Modelos 14-32B — tool calling preciso, planning multi-step |
+
+### "Consigo fazer o mesmo que o ChatGPT/Copilot?"
+
+Resposta honesta:
+
+| Capacidade | Cloud (GPT-4, Claude) | DenAI 8B | DenAI 32B |
+|------------|----------------------|----------|-----------|
+| Conversa geral | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Gerar código | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Tool calling (ler/editar/executar) | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ |
+| Planning multi-step | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ |
+| Contexto longo (100k+ tokens) | ⭐⭐⭐⭐⭐ | ⭐⭐ (8k ctx) | ⭐⭐⭐ (32k ctx) |
+| Privacidade | ❌ Dados vão pra nuvem | ✅ 100% local | ✅ 100% local |
+| Custo | $20-200/mês | **Grátis** | **Grátis** |
+| Funciona offline | ❌ | ✅ | ✅ |
+
+> 💡 **Resumo prático:** Com **8 GB RAM + modelo 8B**, o DenAI é um bom assistente de conversa e código, mas erra em tool calling complexo. Com **32 GB RAM + qwen2.5-coder:32b**, chega perto da experiência de cloud — tool calling confiável, planning, edição de arquivos em sequência. O gap principal é o contexto (8-32k vs 128k dos modelos cloud).
+
+### Qual computador comprar?
+
+Se está pensando em montar/comprar um PC pra rodar IA local:
+
+- **Orçamento mínimo (~R$2.500):** PC usado com 16 GB RAM + SSD. Roda modelos 7-8B bem.
+- **Orçamento ideal (~R$5.000-8.000):** 32 GB RAM + GPU com 8 GB VRAM (RTX 3060/4060). Roda modelos 14-32B com velocidade.
+- **Notebook:** MacBook com Apple Silicon (M1/M2/M3 com 16 GB+) é excelente pra IA local — memória unificada beneficia muito os modelos.
+
+---
+
 ## 🧠 AI Models
 
-| Model | Size | RAM | Best For | Recommendation |
-|-------|------|-----|----------|:-:|
-| `llama3.2:3b` | ~2 GB | 8 GB | Quick questions, light tasks | 🟢 Low-end PCs |
-| `llama3.1:8b` | ~4.7 GB | 10 GB | General use, good balance | ⭐ **Recommended** |
-| `qwen2.5-coder:7b` | ~4.4 GB | 10 GB | Code generation & debugging | 🔵 Developers |
-| `qwen2.5-coder:32b` | ~18 GB | 24 GB | Best tool calling & planning | 🏆 **Power users** |
-| `deepseek-r1:8b` | ~4.9 GB | 10 GB | Reasoning & math | 🟣 Complex problems |
-| `mistral:7b` | ~4.1 GB | 10 GB | Versatile, multilingual | 🟡 Good all-rounder |
-| `gemma3:4b` | ~3.3 GB | 8 GB | Lightweight yet capable | 🟢 Alternative |
+| Model | Size | RAM | What it can do | Recommendation |
+|-------|------|-----|----------------|:-:|
+| `llama3.2:3b` | ~2 GB | 8 GB | Conversa, Q&A, texto simples | 🟢 PCs fracos |
+| `gemma3:4b` | ~3.3 GB | 8 GB | Conversa, código básico | 🟢 Alternativa leve |
+| `llama3.1:8b` | ~4.7 GB | 10 GB | Conversa + tool calling básico | ⭐ **Recomendado** |
+| `qwen2.5-coder:7b` | ~4.4 GB | 10 GB | Código + tools, bom em programação | 🔵 Devs |
+| `mistral:7b` | ~4.1 GB | 10 GB | Versátil, multilingual | 🟡 All-rounder |
+| `deepseek-r1:8b` | ~4.9 GB | 10 GB | Raciocínio, matemática, lógica | 🟣 Problemas complexos |
+| `qwen2.5-coder:14b` | ~9 GB | 16 GB | Tool calling confiável, planning | 🔵 Devs com 16 GB |
+| `qwen2.5-coder:32b` | ~18 GB | 24 GB | Melhor tool calling + planning multi-step | 🏆 **Power users** |
 
 ```bash
 # Install any model
