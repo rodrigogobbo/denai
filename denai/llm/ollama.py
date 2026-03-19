@@ -20,6 +20,12 @@ CONTEXT_SUMMARIZE_THRESHOLD = 20000  # Tokens — comprimir acima disso
 MAX_RETRIES = 2  # Retries para erros transientes do Ollama
 CIRCUIT_BREAKER_LIMIT = 3  # Falhas consecutivas na mesma tool → para
 
+# Tools que são read-only e podem rodar em paralelo
+PARALLEL_SAFE_TOOLS = frozenset({
+    "file_read", "list_files", "grep", "think",
+    "memory_search", "rag_search", "rag_stats", "web_search",
+})
+
 
 def _is_transient_error(status_code: int) -> bool:
     """Erros que podem ser resolvidos com retry."""
@@ -40,6 +46,42 @@ def _build_recovery_hint(tool_name: str, error_msg: str) -> str:
     if "🔒" in error_msg:
         return "\n💡 Dica: Este caminho está bloqueado por segurança. Não tente acessá-lo novamente."
     return ""
+
+
+def _batch_tool_calls(
+    tool_calls: list[dict], tool_failures: Counter
+) -> list[list[dict]]:
+    """Agrupa tool calls consecutivas em batches para execução paralela.
+
+    Tools parallel-safe consecutivas são agrupadas. Qualquer tool não-parallel-safe
+    ou com circuit breaker ativo quebra o batch e fica sozinha.
+    """
+    batches: list[list[dict]] = []
+    current_batch: list[dict] = []
+    current_is_parallel = False
+
+    for tc in tool_calls:
+        fn = tc.get("function", {})
+        name = fn.get("name", "unknown")
+        is_parallel = (
+            name in PARALLEL_SAFE_TOOLS
+            and tool_failures[name] < CIRCUIT_BREAKER_LIMIT
+        )
+
+        if not current_batch:
+            current_batch = [tc]
+            current_is_parallel = is_parallel
+        elif is_parallel and current_is_parallel:
+            current_batch.append(tc)
+        else:
+            batches.append(current_batch)
+            current_batch = [tc]
+            current_is_parallel = is_parallel
+
+    if current_batch:
+        batches.append(current_batch)
+
+    return batches
 
 
 async def stream_chat(
@@ -160,7 +202,7 @@ async def stream_chat(
             if not tool_calls:
                 break
 
-            # Executar tool calls
+            # Executar tool calls (com paralelismo para tools read-only)
             full_messages.append(
                 {
                     "role": "assistant",
@@ -169,49 +211,88 @@ async def stream_chat(
                 }
             )
 
-            for tc in tool_calls:
-                fn = tc.get("function", {})
-                tool_name = fn.get("name", "unknown")
-                tool_args = fn.get("arguments", {})
+            # Separar em batches: tools parallelizable vs sequenciais
+            # Mantém a ordem original — agrupa consecutivas que são parallel-safe
+            batches = _batch_tool_calls(tool_calls, tool_failures)
 
-                # Circuit breaker: se tool falhou demais, pular
-                if tool_failures[tool_name] >= CIRCUIT_BREAKER_LIMIT:
-                    skip_msg = (
-                        f"⚠️ Tool '{tool_name}' falhou {CIRCUIT_BREAKER_LIMIT} vezes consecutivas. "
-                        "Parando tentativas automáticas. Peça ajuda ao usuário ou tente outra abordagem."
-                    )
-                    yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': skip_msg}})}\n\n"
-                    full_messages.append({"role": "tool", "content": skip_msg})
-                    continue
+            for batch in batches:
+                if len(batch) == 1 or not all(
+                    tc.get("function", {}).get("name", "") in PARALLEL_SAFE_TOOLS
+                    for tc in batch
+                ):
+                    # Execução sequencial
+                    for tc in batch:
+                        fn = tc.get("function", {})
+                        tool_name = fn.get("name", "unknown")
+                        tool_args = fn.get("arguments", {})
 
-                yield f"data: {json.dumps({'tool_call': {'name': tool_name, 'args': tool_args}})}\n\n"
+                        if tool_failures[tool_name] >= CIRCUIT_BREAKER_LIMIT:
+                            skip_msg = (
+                                f"⚠️ Tool '{tool_name}' falhou {CIRCUIT_BREAKER_LIMIT} vezes consecutivas. "
+                                "Parando tentativas automáticas. Peça ajuda ao usuário ou tente outra abordagem."
+                            )
+                            yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': skip_msg}})}\n\n"
+                            full_messages.append({"role": "tool", "content": skip_msg})
+                            continue
 
-                # Se for question, enviar evento especial antes de executar
-                if tool_name == "question":
-                    q_text = tool_args.get("question", "")
-                    q_options = tool_args.get("options", [])
-                    from ..tools.question import _next_id
+                        yield f"data: {json.dumps({'tool_call': {'name': tool_name, 'args': tool_args}})}\n\n"
 
-                    q_id = _next_id()
-                    yield f"data: {json.dumps({'question': {'id': q_id, 'text': q_text, 'options': q_options}})}\n\n"
-                    tool_args["_question_id"] = q_id
+                        if tool_name == "question":
+                            q_text = tool_args.get("question", "")
+                            q_options = tool_args.get("options", [])
+                            from ..tools.question import _next_id
 
-                result = await execute_tool(tool_name, tool_args)
+                            q_id = _next_id()
+                            q_event = {"question": {"id": q_id, "text": q_text, "options": q_options}}
+                            yield f"data: {json.dumps(q_event)}\n\n"
+                            tool_args["_question_id"] = q_id
 
-                # Detectar erro e adicionar recovery hint
-                is_error = result.startswith("❌") or result.startswith("🔒")
-                if is_error:
-                    tool_failures[tool_name] += 1
-                    hint = _build_recovery_hint(tool_name, result)
-                    if hint:
-                        result += hint
+                        result = await execute_tool(tool_name, tool_args)
+
+                        is_error = result.startswith("❌") or result.startswith("🔒")
+                        if is_error:
+                            tool_failures[tool_name] += 1
+                            hint = _build_recovery_hint(tool_name, result)
+                            if hint:
+                                result += hint
+                        else:
+                            tool_failures[tool_name] = 0
+
+                        yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': result[:2000]}})}\n\n"
+                        full_messages.append({"role": "tool", "content": result})
+
                 else:
-                    # Reset circuit breaker se tool funcionou
-                    tool_failures[tool_name] = 0
+                    # Execução paralela — emitir todos tool_call events primeiro
+                    tc_infos = []
+                    for tc in batch:
+                        fn = tc.get("function", {})
+                        tool_name = fn.get("name", "unknown")
+                        tool_args = fn.get("arguments", {})
+                        yield f"data: {json.dumps({'tool_call': {'name': tool_name, 'args': tool_args}})}\n\n"
+                        tc_infos.append((tool_name, tool_args))
 
-                yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': result[:2000]}})}\n\n"
+                    # Executar em paralelo
+                    import asyncio
 
-                full_messages.append({"role": "tool", "content": result})
+                    tasks = [execute_tool(name, args) for name, args in tc_infos]
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                    # Emitir resultados na mesma ordem
+                    for (tool_name, _), result in zip(tc_infos, results):
+                        if isinstance(result, Exception):
+                            result = f"❌ Erro interno: {result}"
+
+                        is_error = result.startswith("❌") or result.startswith("🔒")
+                        if is_error:
+                            tool_failures[tool_name] += 1
+                            hint = _build_recovery_hint(tool_name, result)
+                            if hint:
+                                result += hint
+                        else:
+                            tool_failures[tool_name] = 0
+
+                        yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': result[:2000]}})}\n\n"
+                        full_messages.append({"role": "tool", "content": result})
 
             # Emitir progresso do round pra UI saber que ainda tá trabalhando
             if round_num > 0 and round_num % 5 == 0:

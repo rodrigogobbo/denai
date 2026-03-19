@@ -480,3 +480,79 @@ class TestToolCount:
         from denai.tools import TOOLS_SPEC
 
         assert len(TOOLS_SPEC) >= 16
+
+
+# ─── Parallel tool batching tests ─────────────────────────────────────────
+
+class TestToolBatching:
+    """Tests for _batch_tool_calls parallel grouping."""
+
+    def _make_tc(self, name):
+        return {"function": {"name": name, "arguments": {}}}
+
+    def test_single_tool(self):
+        from collections import Counter
+
+        from denai.llm.ollama import _batch_tool_calls
+        tcs = [self._make_tc("file_read")]
+        batches = _batch_tool_calls(tcs, Counter())
+        assert len(batches) == 1
+        assert len(batches[0]) == 1
+
+    def test_parallel_safe_grouped(self):
+        from collections import Counter
+
+        from denai.llm.ollama import _batch_tool_calls
+        tcs = [self._make_tc("file_read"), self._make_tc("grep"), self._make_tc("think")]
+        batches = _batch_tool_calls(tcs, Counter())
+        assert len(batches) == 1
+        assert len(batches[0]) == 3
+
+    def test_write_breaks_batch(self):
+        from collections import Counter
+
+        from denai.llm.ollama import _batch_tool_calls
+        tcs = [self._make_tc("file_read"), self._make_tc("file_write"), self._make_tc("grep")]
+        batches = _batch_tool_calls(tcs, Counter())
+        assert len(batches) == 3  # [file_read], [file_write], [grep]
+
+    def test_all_write_sequential(self):
+        from collections import Counter
+
+        from denai.llm.ollama import _batch_tool_calls
+        tcs = [self._make_tc("file_write"), self._make_tc("file_edit"), self._make_tc("command_exec")]
+        batches = _batch_tool_calls(tcs, Counter())
+        assert len(batches) == 3  # each alone
+
+    def test_mixed_batch(self):
+        from collections import Counter
+
+        from denai.llm.ollama import _batch_tool_calls
+        tcs = [
+            self._make_tc("file_read"),
+            self._make_tc("memory_search"),
+            self._make_tc("file_write"),
+            self._make_tc("grep"),
+            self._make_tc("think"),
+        ]
+        batches = _batch_tool_calls(tcs, Counter())
+        assert len(batches) == 3
+        assert len(batches[0]) == 2  # file_read + memory_search
+        assert len(batches[1]) == 1  # file_write
+        assert len(batches[2]) == 2  # grep + think
+
+    def test_circuit_breaker_breaks_parallel(self):
+        from collections import Counter
+
+        from denai.llm.ollama import CIRCUIT_BREAKER_LIMIT, _batch_tool_calls
+        failures = Counter({"file_read": CIRCUIT_BREAKER_LIMIT})
+        tcs = [self._make_tc("grep"), self._make_tc("file_read"), self._make_tc("think")]
+        batches = _batch_tool_calls(tcs, failures)
+        # file_read has circuit breaker → not parallel safe → breaks batch
+        assert len(batches) == 3
+
+    def test_empty_list(self):
+        from collections import Counter
+
+        from denai.llm.ollama import _batch_tool_calls
+        assert _batch_tool_calls([], Counter()) == []
