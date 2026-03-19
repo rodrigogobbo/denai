@@ -99,6 +99,18 @@ async def stream_chat(
 
                 yield f"data: {json.dumps({'tool_call': {'name': tool_name, 'args': tool_args}})}\n\n"
 
+                # Se for question, enviar evento especial antes de executar
+                if tool_name == "question":
+                    q_text = tool_args.get("question", "")
+                    q_options = tool_args.get("options", [])
+                    # Pré-registrar a pergunta pra saber o ID
+                    from ..tools.question import _next_id
+
+                    q_id = _next_id()
+                    yield f"data: {json.dumps({'question': {'id': q_id, 'text': q_text, 'options': q_options}})}\n\n"
+                    # Injetar o ID nos args pra tool usar
+                    tool_args["_question_id"] = q_id
+
                 result = await execute_tool(tool_name, tool_args)
 
                 yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': result[:2000]}})}\n\n"

@@ -228,10 +228,99 @@ async def list_files(args: dict) -> str:
     return "\n".join(parts)
 
 
+# ─── file_edit ─────────────────────────────────────────────────────────────
+
+FILE_EDIT_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "file_edit",
+        "description": (
+            "Edita um arquivo substituindo um trecho de texto por outro. "
+            "Funciona como search-and-replace exato. Ideal para fazer "
+            "mudanças cirúrgicas sem reescrever o arquivo inteiro."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Caminho do arquivo a editar",
+                },
+                "old_text": {
+                    "type": "string",
+                    "description": "Texto exato a ser encontrado e substituído",
+                },
+                "new_text": {
+                    "type": "string",
+                    "description": "Texto substituto",
+                },
+                "replace_all": {
+                    "type": "boolean",
+                    "description": "Substituir todas as ocorrências (padrão: false, só a primeira)",
+                },
+            },
+            "required": ["path", "old_text", "new_text"],
+        },
+    },
+}
+
+
+async def file_edit(args: dict) -> str:
+    """Substitui trecho de texto em arquivo (search/replace exato)."""
+    path_str = args.get("path", "")
+    old_text = args.get("old_text", "")
+    new_text = args.get("new_text", "")
+    replace_all = args.get("replace_all", False)
+
+    if not path_str:
+        return "❌ Parâmetro 'path' é obrigatório."
+    if not old_text:
+        return "❌ Parâmetro 'old_text' é obrigatório."
+
+    path = _resolve_path(path_str)
+
+    err = _check_sandbox(str(path), write=True)
+    if err:
+        return err
+
+    if not path.exists():
+        return f"❌ Arquivo não encontrado: {path}"
+    if not path.is_file():
+        return f"❌ Não é um arquivo: {path}"
+
+    try:
+        content = path.read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        return f"❌ Erro ao ler: {e}"
+
+    # Contar ocorrências
+    count = content.count(old_text)
+    if count == 0:
+        # Mostrar contexto para ajudar a debugar
+        preview = old_text[:80].replace("\n", "\\n")
+        return f'❌ Texto não encontrado no arquivo.\nBuscado: "{preview}"\nArquivo: {path}'
+
+    # Substituir
+    if replace_all:
+        new_content = content.replace(old_text, new_text)
+        replaced = count
+    else:
+        new_content = content.replace(old_text, new_text, 1)
+        replaced = 1
+
+    try:
+        path.write_text(new_content, encoding="utf-8")
+    except Exception as e:
+        return f"❌ Erro ao escrever: {e}"
+
+    return f"✅ {replaced} substituição(ões) em {path.name}"
+
+
 # ─── Registration ──────────────────────────────────────────────────────────
 
 TOOLS = [
     (FILE_READ_SPEC, "file_read"),
     (FILE_WRITE_SPEC, "file_write"),
     (LIST_FILES_SPEC, "list_files"),
+    (FILE_EDIT_SPEC, "file_edit"),
 ]

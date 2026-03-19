@@ -1,7 +1,8 @@
-"""Testes unitários para as core tools (file_ops, command_exec, memory, web_fetch)."""
+"""Testes unitários para as core tools (file_ops, command_exec, memory, web_fetch, question)."""
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -441,3 +442,296 @@ class TestWebSearch:
         # Should have called with https://
         call_args = mock_client.get.call_args
         assert call_args[0][0] == "https://example.com"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# FILE EDIT
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestFileEdit:
+    """Testes para a tool file_edit."""
+
+    @pytest.mark.asyncio
+    async def test_replace_first_occurrence(self, tmp_path):
+        """Deve substituir apenas a primeira ocorrência por padrão."""
+        from denai.tools.file_ops import file_edit
+
+        f = tmp_path / "code.py"
+        f.write_text("foo = 1\nbar = 2\nfoo = 3\n")
+
+        with patch("denai.tools.file_ops.is_path_allowed", return_value=(True, "")):
+            with patch("denai.tools.file_ops._resolve_path", return_value=f):
+                result = await file_edit(
+                    {
+                        "path": str(f),
+                        "old_text": "foo",
+                        "new_text": "baz",
+                    }
+                )
+
+        assert "✅" in result
+        assert "1 substituição" in result
+        content = f.read_text()
+        assert content == "baz = 1\nbar = 2\nfoo = 3\n"
+
+    @pytest.mark.asyncio
+    async def test_replace_all_occurrences(self, tmp_path):
+        """Deve substituir todas as ocorrências quando replace_all=True."""
+        from denai.tools.file_ops import file_edit
+
+        f = tmp_path / "code.py"
+        f.write_text("foo = 1\nbar = 2\nfoo = 3\n")
+
+        with patch("denai.tools.file_ops.is_path_allowed", return_value=(True, "")):
+            with patch("denai.tools.file_ops._resolve_path", return_value=f):
+                result = await file_edit(
+                    {
+                        "path": str(f),
+                        "old_text": "foo",
+                        "new_text": "baz",
+                        "replace_all": True,
+                    }
+                )
+
+        assert "✅" in result
+        assert "2 substituição" in result
+        content = f.read_text()
+        assert content == "baz = 1\nbar = 2\nbaz = 3\n"
+
+    @pytest.mark.asyncio
+    async def test_text_not_found(self, tmp_path):
+        """Deve retornar erro quando texto não é encontrado."""
+        from denai.tools.file_ops import file_edit
+
+        f = tmp_path / "code.py"
+        f.write_text("hello world\n")
+
+        with patch("denai.tools.file_ops.is_path_allowed", return_value=(True, "")):
+            with patch("denai.tools.file_ops._resolve_path", return_value=f):
+                result = await file_edit(
+                    {
+                        "path": str(f),
+                        "old_text": "xyz_not_here",
+                        "new_text": "replacement",
+                    }
+                )
+
+        assert "❌" in result
+        assert "não encontrado" in result.lower()
+
+    @pytest.mark.asyncio
+    async def test_nonexistent_file(self, tmp_path):
+        """Deve retornar erro para arquivo inexistente."""
+        from denai.tools.file_ops import file_edit
+
+        missing = tmp_path / "ghost.txt"
+
+        with patch("denai.tools.file_ops.is_path_allowed", return_value=(True, "")):
+            with patch("denai.tools.file_ops._resolve_path", return_value=missing):
+                result = await file_edit(
+                    {
+                        "path": str(missing),
+                        "old_text": "a",
+                        "new_text": "b",
+                    }
+                )
+
+        assert "❌" in result
+        assert "não encontrado" in result.lower()
+
+    @pytest.mark.asyncio
+    async def test_blocked_path(self):
+        """Deve negar edição em path bloqueado."""
+        from denai.tools.file_ops import file_edit
+
+        result = await file_edit(
+            {
+                "path": "/etc/passwd",
+                "old_text": "root",
+                "new_text": "hacked",
+            }
+        )
+        assert "🔒" in result or "negado" in result.lower()
+
+    @pytest.mark.asyncio
+    async def test_empty_old_text(self, tmp_path):
+        """Deve retornar erro se old_text vazio."""
+        from denai.tools.file_ops import file_edit
+
+        f = tmp_path / "file.txt"
+        f.write_text("content")
+
+        result = await file_edit(
+            {
+                "path": str(f),
+                "old_text": "",
+                "new_text": "x",
+            }
+        )
+        assert "❌" in result
+
+    @pytest.mark.asyncio
+    async def test_empty_path(self):
+        """Deve retornar erro se path vazio."""
+        from denai.tools.file_ops import file_edit
+
+        result = await file_edit(
+            {
+                "path": "",
+                "old_text": "a",
+                "new_text": "b",
+            }
+        )
+        assert "❌" in result
+
+    @pytest.mark.asyncio
+    async def test_multiline_replace(self, tmp_path):
+        """Deve substituir bloco multiline."""
+        from denai.tools.file_ops import file_edit
+
+        f = tmp_path / "multi.py"
+        f.write_text("def hello():\n    print('hi')\n    return True\n")
+
+        with patch("denai.tools.file_ops.is_path_allowed", return_value=(True, "")):
+            with patch("denai.tools.file_ops._resolve_path", return_value=f):
+                result = await file_edit(
+                    {
+                        "path": str(f),
+                        "old_text": "    print('hi')\n    return True",
+                        "new_text": "    print('hello')\n    return False",
+                    }
+                )
+
+        assert "✅" in result
+        content = f.read_text()
+        assert "print('hello')" in content
+        assert "return False" in content
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# QUESTION
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestQuestion:
+    """Testes para a tool question."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_state(self):
+        """Limpa estado global entre testes."""
+        import denai.tools.question as qmod
+
+        qmod._pending.clear()
+        qmod._questions.clear()
+        qmod._counter = 0
+
+    @pytest.mark.asyncio
+    async def test_question_answered(self):
+        """Deve retornar resposta do usuário quando respondida."""
+        from denai.tools.question import answer_question, question
+
+        async def answer_after_delay():
+            await asyncio.sleep(0.05)
+            answer_question("q_1", "Sim, pode fazer!")
+
+        task = asyncio.create_task(answer_after_delay())
+        result = await question({"question": "Posso continuar?"})
+        await task
+
+        assert "Sim, pode fazer!" in result
+
+    @pytest.mark.asyncio
+    async def test_question_timeout(self):
+        """Deve retornar timeout quando não respondida a tempo."""
+        from denai.tools.question import question
+
+        # Patch timeout para ser curto (0.1s)
+        with patch("denai.tools.question.asyncio.wait_for", side_effect=asyncio.TimeoutError):
+            result = await question({"question": "Vai responder?"})
+
+        assert "⏱️" in result or "timeout" in result.lower()
+
+    @pytest.mark.asyncio
+    async def test_question_empty_text(self):
+        """Deve retornar erro se pergunta vazia."""
+        from denai.tools.question import question
+
+        result = await question({"question": ""})
+        assert "❌" in result
+
+    @pytest.mark.asyncio
+    async def test_question_with_options(self):
+        """Deve aceitar pergunta com opções."""
+        from denai.tools.question import answer_question, question
+
+        async def answer_after_delay():
+            await asyncio.sleep(0.05)
+            answer_question("q_1", "Opção B")
+
+        task = asyncio.create_task(answer_after_delay())
+        result = await question(
+            {
+                "question": "Qual opção?",
+                "options": ["Opção A", "Opção B", "Opção C"],
+            }
+        )
+        await task
+
+        assert "Opção B" in result
+
+    def test_list_pending(self):
+        """Deve listar perguntas pendentes."""
+        import denai.tools.question as qmod
+        from denai.tools.question import list_pending
+
+        loop = asyncio.new_event_loop()
+        future = loop.create_future()
+        qmod._pending["q_test"] = future
+        qmod._questions["q_test"] = {"question": "Teste?", "options": []}
+
+        pending = list_pending()
+        assert len(pending) == 1
+        assert pending[0]["id"] == "q_test"
+        assert pending[0]["question"] == "Teste?"
+
+        # Cleanup
+        future.cancel()
+        loop.close()
+
+    def test_answer_nonexistent_question(self):
+        """Deve retornar False para pergunta inexistente."""
+        from denai.tools.question import answer_question
+
+        assert answer_question("q_999", "resposta") is False
+
+    def test_answer_already_answered(self):
+        """Deve retornar False se pergunta já foi respondida."""
+        import denai.tools.question as qmod
+        from denai.tools.question import answer_question
+
+        loop = asyncio.new_event_loop()
+        future = loop.create_future()
+        future.set_result("already done")
+        qmod._pending["q_done"] = future
+
+        assert answer_question("q_done", "nova resposta") is False
+
+        loop.close()
+
+    def test_get_pending_question(self):
+        """Deve retornar dados da pergunta por ID."""
+        import denai.tools.question as qmod
+        from denai.tools.question import get_pending_question
+
+        qmod._questions["q_x"] = {"question": "Olá?", "options": ["A"]}
+        result = get_pending_question("q_x")
+        assert result is not None
+        assert result["question"] == "Olá?"
+        assert result["options"] == ["A"]
+
+    def test_get_pending_question_missing(self):
+        """Deve retornar None para pergunta inexistente."""
+        from denai.tools.question import get_pending_question
+
+        assert get_pending_question("q_nope") is None

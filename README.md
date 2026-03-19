@@ -16,7 +16,7 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 
 - 🔒 **100% Private** — Everything runs locally. No data leaves your machine. Ever.
 - 🧠 **Persistent Memory** — Remembers context across conversations (SQLite)
-- 🛠️ **Built-in Tools** — File I/O, web search, shell commands, and more (10 tools)
+- 🛠️ **Built-in Tools** — File I/O, web search, shell commands, and more (12 tools)
 - 🌐 **Web UI** — Clean chat interface served automatically at `localhost:4078`
 - 🔄 **Model Switching** — Swap between Ollama models on the fly
 - 📡 **Share Mode** — Expose your instance with authentication via `--share`
@@ -93,13 +93,14 @@ Open your browser at **http://localhost:4078** — that's it! 🎉
 
 ## 🛠️ Available Tools
 
-DenAI comes with **10 built-in tools** that the AI can use automatically:
+DenAI comes with **12 built-in tools** that the AI can use automatically:
 
 | Tool | Description | Internet? |
 |------|-------------|:-:|
 | `file_read` | Read files with line numbers (offset/limit for large files) | ❌ |
 | `file_write` | Create or overwrite files (auto-creates directories) | ❌ |
 | `list_files` | List directory contents with glob patterns | ❌ |
+| `file_edit` | Search/replace in files (exact text matching, replace_all) | ❌ |
 | `command_exec` | Execute shell commands (sandboxed + filtered) | ❌ |
 | `web_search` | Fetch and extract text from any URL | ✅ |
 | `memory_save` | Save persistent memory (fact/decision/preference/observation) | ❌ |
@@ -107,6 +108,7 @@ DenAI comes with **10 built-in tools** that the AI can use automatically:
 | `rag_search` | Search indexed local documents (BM25) | ❌ |
 | `rag_index` | Reindex `~/.denai/documents/` | ❌ |
 | `rag_stats` | Show RAG index statistics | ❌ |
+| `question` | Ask the user a question and wait for the answer | ❌ |
 
 Tools are auto-discovered from `denai/tools/`. Drop a new `.py` file and it just works.
 
@@ -285,7 +287,7 @@ denai/
 │       ├── memory.py        # memory_save, memory_search
 │       ├── web_fetch.py     # web_search
 │       └── rag_search.py    # rag_search, rag_index, rag_stats
-├── tests/                   # 208 tests
+├── tests/                   # 227 tests
 ├── examples/plugins/        # Example plugins
 ├── pyproject.toml
 ├── README.md

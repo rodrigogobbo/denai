@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `memory_save` — Persistent memory across sessions (SQLite)
   - `memory_search` — Search past memories by keywords and type
   - `web_search` — Fetch web URLs with HTML stripping and SSRF protection
+- **`file_edit` tool** — Search/replace in files with exact text matching, replace_all option, sandbox-safe
+- **`question` tool** — Pause the LLM and ask the user for input (future-based async blocking, 5min timeout)
+  - SSE `question` event sent to frontend before blocking
+  - API routes: `GET /api/questions/pending`, `POST /api/questions/{id}/answer`
 - **RAG local** — BM25-based document search, zero external dependencies
   - Index documents from `~/.denai/documents/` (30+ file formats)
   - Smart text chunking with overlap for large files
@@ -31,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `DELETE /api/rag/documents/{name}` — Remove document
 - **Plugin system** — Autodiscovery from `~/.denai/plugins/` (single-file + directory plugins)
 - **Plugin API routes** — List and manage plugins via `/api/plugins`
-- **51 new tests** — RAG unit tests, API integration tests, tool tests, prompt tests (208 total)
+- **51 new tests** — RAG unit tests, API integration tests, tool tests, prompt tests (227 total)
 
 ## [0.2.0] - 2026-03-19
 
