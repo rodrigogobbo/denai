@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "denai"
+version = "0.1.0"
+description = "🐺 Your private AI den. Local LLM assistant with tools, memory and zero cloud dependency."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Rodrigo Gobbo", email = "rodrigo@gobbo.dev" },
+]
+keywords = ["ai", "llm", "ollama", "local", "assistant", "tools", "privacy"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Communications :: Chat",
+]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "httpx>=0.28",
+    "aiosqlite>=0.20",
+    "python-multipart>=0.0.18",
+]
+
+[project.urls]
+Homepage = "https://github.com/rodrigogobbo/denai"
+Repository = "https://github.com/rodrigogobbo/denai"
+Issues = "https://github.com/rodrigogobbo/denai/issues"
+
+[project.scripts]
+denai = "denai.__main__:main"
+
+[tool.hatch.build.targets.sdist]
+include = ["denai/"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["denai"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]

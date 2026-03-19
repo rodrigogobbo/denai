@@ -1,0 +1,108 @@
+"""Rota /api/chat — streaming SSE."""
+
+import json
+import uuid
+from datetime import datetime
+
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse, StreamingResponse
+
+from ..config import DEFAULT_MODEL
+from ..db import get_db
+from ..llm import stream_chat
+
+router = APIRouter()
+
+
+@router.post("/api/chat")
+async def chat(request: Request):
+    body = await request.json()
+    conv_id = body.get("conversation_id")
+    user_message = body.get("message", "")
+    model = body.get("model", DEFAULT_MODEL)
+
+    if not user_message.strip():
+        return JSONResponse({"error": "Mensagem vazia"}, status_code=400)
+    if len(user_message) > 50_000:
+        return JSONResponse({"error": "Mensagem muito longa (máx 50000 chars)"}, status_code=400)
+
+    db = await get_db()
+
+    # Criar conversa se necessário
+    if not conv_id:
+        conv_id = str(uuid.uuid4())[:12]
+        now = datetime.now().isoformat()
+        await db.execute(
+            "INSERT INTO conversations (id, title, model, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            (conv_id, user_message[:50], model, now, now),
+        )
+    else:
+        rows = await db.execute_fetchall(
+            "SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (conv_id,)
+        )
+        if rows[0][0] == 0:
+            await db.execute(
+                "UPDATE conversations SET title = ? WHERE id = ?",
+                (user_message[:50], conv_id),
+            )
+
+    # Salvar mensagem do usuário
+    msg_id = str(uuid.uuid4())[:12]
+    now = datetime.now().isoformat()
+    await db.execute(
+        "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
+        (msg_id, conv_id, "user", user_message, now),
+    )
+    await db.execute("UPDATE conversations SET updated_at = ? WHERE id = ?", (now, conv_id))
+    await db.commit()
+
+    # Histórico
+    rows = await db.execute_fetchall(
+        "SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY created_at",
+        (conv_id,),
+    )
+    await db.close()
+    messages = [{"role": r[0], "content": r[1]} for r in rows]
+
+    # Memórias
+    mem_db = await get_db()
+    mem_rows = await mem_db.execute_fetchall(
+        "SELECT type, content FROM memories ORDER BY created_at DESC LIMIT 20"
+    )
+    await mem_db.close()
+    if mem_rows:
+        mem_text = "\n".join(f"- [{r[0]}] {r[1]}" for r in mem_rows)
+        messages.insert(0, {"role": "system", "content": f"Memórias persistentes:\n{mem_text}"})
+
+    async def generate():
+        full_response = []
+        yield f"data: {json.dumps({'conversation_id': conv_id})}\n\n"
+
+        async for chunk in stream_chat(messages, model):
+            yield chunk
+            try:
+                data = json.loads(chunk.replace("data: ", "").strip())
+                if "content" in data:
+                    full_response.append(data["content"])
+            except Exception:
+                pass
+
+        # Salvar resposta
+        response_text = "".join(full_response)
+        if response_text.strip():
+            db2 = await get_db()
+            resp_id = str(uuid.uuid4())[:12]
+            now2 = datetime.now().isoformat()
+            await db2.execute(
+                "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
+                (resp_id, conv_id, "assistant", response_text, now2),
+            )
+            await db2.execute("UPDATE conversations SET updated_at = ? WHERE id = ?", (now2, conv_id))
+            await db2.commit()
+            await db2.close()
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
