@@ -132,6 +132,55 @@ ollama list
 
 ---
 
+## 🧩 Plugins
+
+Extend DenAI with custom tools by dropping Python files in `~/.denai/plugins/`:
+
+### Single-file plugin
+
+```python
+# ~/.denai/plugins/calculator.py
+"""Plugin: calculadora."""
+
+SPEC = {
+    "type": "function",
+    "function": {
+        "name": "calculator",
+        "description": "Calcula expressões matemáticas.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "expression": {"type": "string", "description": "Ex: '2 + 3 * 4'"}
+            },
+            "required": ["expression"],
+        },
+    },
+}
+
+async def calculator(args: dict) -> str:
+    expr = args.get("expression", "")
+    allowed = set("0123456789+-*/.() ")
+    if not all(c in allowed for c in expr):
+        return "Caracteres não permitidos"
+    return f"Resultado: {eval(expr, {'__builtins__': {}}, {})}"
+
+TOOLS = [(SPEC, "calculator")]
+```
+
+### Directory plugin
+
+```
+~/.denai/plugins/weather/
+├── plugin.json    # {"name": "weather", "version": "1.0.0"}
+└── main.py        # TOOLS + functions (same format)
+```
+
+Plugins are auto-discovered on startup. Use `POST /api/plugins/reload` to reload without restart.
+
+See `examples/plugins/` for ready-to-use examples.
+
+---
+
 ## 🔗 Share Mode
 
 Expose your local DenAI to others on the network (or via tunnel):

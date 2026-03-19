@@ -1,15 +1,24 @@
 """System prompt builder."""
 
+from __future__ import annotations
+
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
 
-def build_system_prompt() -> str:
+def build_system_prompt(rag_context: str = "") -> str:
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
     user = os.getenv("USERNAME", os.getenv("USER", "usuário"))
     home = str(Path.home())
+
+    rag_block = ""
+    if rag_context:
+        rag_block = f"""
+
+{rag_context}
+"""
 
     return f"""Você é DenAI 🐺 — um assistente de IA pessoal, inteligente e direto.
 
@@ -25,6 +34,7 @@ Capacidades:
 - Pode executar comandos no terminal (comandos destrutivos são bloqueados)
 - Tem memória persistente entre conversas
 - Pode pesquisar na web via DuckDuckGo
+- Pode pesquisar documentos locais (~/.denai/documents/) via RAG
 - Pode listar arquivos e diretórios
 
 Regras de Segurança:
@@ -42,4 +52,4 @@ Contexto:
 - Usuário: {user}
 - Home: {home}
 - Sistema: {sys.platform}
-"""
+{rag_block}"""

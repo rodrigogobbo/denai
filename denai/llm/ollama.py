@@ -1,11 +1,14 @@
 """Integração com Ollama — streaming chat com tool calling."""
 
+from __future__ import annotations
+
 import json
 from typing import AsyncGenerator
 
 import httpx
 
 from ..config import DEFAULT_MODEL, OLLAMA_URL
+from ..rag import get_rag_context
 from ..tools import TOOLS_SPEC, execute_tool
 from .prompt import build_system_prompt
 
@@ -17,7 +20,22 @@ async def stream_chat(
 ) -> AsyncGenerator[str, None]:
     """Stream de chat com Ollama, com suporte a tool calling iterativo."""
 
-    system_msg = {"role": "system", "content": build_system_prompt()}
+    # Extrair última mensagem do usuário para RAG context
+    user_query = ""
+    for msg in reversed(messages):
+        if msg.get("role") == "user":
+            user_query = msg.get("content", "")
+            break
+
+    # Buscar contexto RAG relevante (não bloqueia se não houver docs)
+    rag_context = ""
+    if user_query:
+        try:
+            rag_context = get_rag_context(user_query, max_chars=3000)
+        except Exception:
+            pass  # RAG é best-effort — não quebra o chat
+
+    system_msg = {"role": "system", "content": build_system_prompt(rag_context)}
     full_messages = [system_msg] + messages
 
     async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=10.0)) as client:

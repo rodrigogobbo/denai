@@ -5,6 +5,26 @@ All notable changes to DenAI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-20
+
+### Added
+- **RAG local** — BM25-based document search, zero external dependencies
+  - Index documents from `~/.denai/documents/` (30+ file formats)
+  - Smart text chunking with overlap for large files
+  - Bilingual stop words (PT-BR + EN)
+  - Auto-inject relevant context into chat prompts
+- **RAG tools** — `rag_search`, `rag_index`, `rag_stats` available to the LLM
+- **RAG API routes** — Full CRUD for document management
+  - `GET /api/rag/stats` — Index statistics
+  - `POST /api/rag/index` — Reindex documents
+  - `POST /api/rag/search` — Search documents
+  - `GET /api/rag/documents` — List documents
+  - `POST /api/rag/upload` — Upload document (with extension/size validation)
+  - `DELETE /api/rag/documents/{name}` — Remove document
+- **Plugin system** — Autodiscovery from `~/.denai/plugins/` (single-file + directory plugins)
+- **Plugin API routes** — List and manage plugins via `/api/plugins`
+- **51 new tests** — RAG unit tests, API integration tests, tool tests, prompt tests (167 total)
+
 ## [0.2.0] - 2026-03-19
 
 ### Added
@@ -53,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Windows installer scripts (BAT/PowerShell)
 - 84 unit tests
 
+[0.3.0]: https://github.com/rodrigogobbo/denai/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rodrigogobbo/denai/compare/v0.1.0...v0.2.0
 [0.1.1]: https://github.com/rodrigogobbo/denai/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/rodrigogobbo/denai/releases/tag/v0.1.0
