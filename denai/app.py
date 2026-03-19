@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="DenAI", version="0.4.0", lifespan=lifespan)
+    app = FastAPI(title="DenAI", version="0.5.0", lifespan=lifespan)
 
     # ── CORS ──
     cors_origins = [
@@ -83,7 +83,7 @@ def create_app() -> FastAPI:
             pass
         return {
             "status": "ok",
-            "version": "0.2.0",
+            "version": "0.5.0",
             "ollama": ollama_ok,
             "ollama_version": ollama_version,
             "model": DEFAULT_MODEL,
@@ -91,10 +91,13 @@ def create_app() -> FastAPI:
             "local_ip": LOCAL_IP if SHARE_MODE else None,
         }
 
-    # ── Static files (vendor JS/CSS) ──
+    # ── Static files ──
+    # Mount vendor first (more specific), then catch-all /static
     vendor_dir = STATIC_DIR / "vendor"
     if vendor_dir.is_dir():
         app.mount("/static/vendor", StaticFiles(directory=str(vendor_dir)), name="vendor")
+    if STATIC_DIR.is_dir():
+        app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     # ── Registrar routers ──
     for router in all_routers:

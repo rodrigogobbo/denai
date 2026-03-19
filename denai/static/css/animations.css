@@ -1,0 +1,168 @@
+/* ═══════════════════════════════════════════════════════════
+   KEYFRAMES & ANIMATIONS
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes wolfBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+@keyframes dialogSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOOL CALL ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Pulse animation on running status */
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.tool-call-status.running {
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tool-call-status.running::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+  animation: statusPulse 1.5s ease infinite;
+  flex-shrink: 0;
+}
+
+/* Spinner for running tool calls */
+@keyframes toolSpinner {
+  to { transform: rotate(360deg); }
+}
+
+.tool-call-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: #fbbf24;
+  border-radius: 50%;
+  animation: toolSpinner 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Progress bar at bottom of running tool cards */
+@keyframes toolProgressSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.tool-call-card.running-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-call-card.running-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #fbbf24, var(--accent), transparent);
+  animation: toolProgressSlide 1.8s ease infinite;
+}
+
+/* Flash green on completion */
+@keyframes toolCompleteFlash {
+  0% { border-color: var(--accent); box-shadow: 0 0 12px rgba(33, 194, 94, 0.3); }
+  100% { border-color: var(--border); box-shadow: none; }
+}
+
+.tool-call-card.completed-flash {
+  animation: toolCompleteFlash 1s ease forwards;
+}
+
+/* Smooth expand/collapse transition */
+.tool-call-body {
+  display: block;
+  max-height: 0;
+  overflow: hidden;
+  border-top: none;
+  padding: 0 12px;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease, border-top 0s 0.35s;
+}
+
+.tool-call-card.expanded .tool-call-body {
+  max-height: 600px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease, border-top 0s;
+}
+
+/* Tool counter badge */
+.tool-counter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--bg-tool);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 8px 0;
+}
+
+.tool-counter-badge .counter-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--border);
+  border-top-color: #fbbf24;
+  border-radius: 50%;
+  animation: toolSpinner 0.8s linear infinite;
+}

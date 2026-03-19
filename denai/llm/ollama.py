@@ -11,7 +11,7 @@ import httpx
 from ..config import DEFAULT_MODEL, MAX_CONTEXT, MAX_TOOL_ROUNDS, OLLAMA_URL
 from ..rag import get_rag_context
 from ..tools import TOOLS_SPEC, execute_tool
-from .context import estimate_messages_tokens, pick_context_size, summarize_old_messages
+from .context import estimate_messages_tokens, llm_summarize, pick_context_size, summarize_old_messages
 from .prompt import build_system_prompt
 
 # ─── Config ────────────────────────────────────────────────────────────────
@@ -128,7 +128,18 @@ async def stream_chat(
         for round_num in range(MAX_TOOL_ROUNDS):
             # Auto-summarize se contexto ficou grande demais
             if estimate_messages_tokens(full_messages) > CONTEXT_SUMMARIZE_THRESHOLD:
-                full_messages = summarize_old_messages(full_messages, keep_recent=12)
+                yield f"data: {json.dumps({'progress': {'status': 'summarizing'}})}\n\n"
+                llm_summary = None
+                try:
+                    # Separar mensagens antigas pra resumir via LLM
+                    _sys = full_messages[0] if full_messages[0].get("role") == "system" else None
+                    _rest = full_messages[1:] if _sys else full_messages
+                    if len(_rest) > 12:
+                        _old = _rest[:-12]
+                        llm_summary = await llm_summarize(_old, model=model, ollama_url=OLLAMA_URL)
+                except Exception:
+                    pass  # Fallback silencioso pra summarization manual
+                full_messages = summarize_old_messages(full_messages, keep_recent=12, llm_summary=llm_summary)
 
             # Context size dinâmico baseado no tamanho real
             num_ctx = pick_context_size(full_messages, max_context=MAX_CONTEXT)

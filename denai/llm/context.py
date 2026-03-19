@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import httpx
+
 
 def estimate_tokens(text: str) -> int:
     """Estimativa rápida de tokens (~4 chars por token em inglês, ~3 em PT)."""
@@ -40,10 +42,65 @@ def pick_context_size(messages: list[dict], max_context: int = 65536) -> int:
     return min(size, max_context)
 
 
-def summarize_old_messages(messages: list[dict], keep_recent: int = 10) -> list[dict]:
+_SUMMARIZE_PROMPT = (
+    "Resuma a conversa anterior em um parágrafo conciso, preservando: "
+    "decisões tomadas, fatos importantes, e contexto necessário para continuar."
+)
+
+
+async def llm_summarize(
+    messages: list[dict],
+    model: str,
+    ollama_url: str,
+) -> str:
+    """Chama Ollama para gerar um resumo das mensagens antigas.
+
+    Usa uma chamada não-streaming ao /api/chat com temperatura baixa
+    e contexto pequeno (4096) para ser rápido e determinístico.
+
+    Timeout de 15s — se Ollama demorar, levanta exceção pro caller
+    fazer fallback à summarization manual.
+    """
+    # Monta transcript das mensagens pra resumir
+    transcript_parts: list[str] = []
+    for msg in messages:
+        role = msg.get("role", "?")
+        content = msg.get("content", "")
+        if content:
+            transcript_parts.append(f"[{role}] {content}")
+
+    transcript = "\n".join(transcript_parts)
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": _SUMMARIZE_PROMPT},
+            {"role": "user", "content": transcript},
+        ],
+        "stream": False,
+        "options": {
+            "temperature": 0.3,
+            "num_ctx": 4096,
+        },
+    }
+
+    async with httpx.AsyncClient(timeout=httpx.Timeout(15.0, connect=5.0)) as client:
+        resp = await client.post(f"{ollama_url}/api/chat", json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+
+    return data.get("message", {}).get("content", "").strip()
+
+
+def summarize_old_messages(
+    messages: list[dict],
+    keep_recent: int = 10,
+    llm_summary: str | None = None,
+) -> list[dict]:
     """Comprime mensagens antigas num resumo quando o contexto fica grande.
 
     Mantém as `keep_recent` mensagens mais recentes intactas.
+    Se `llm_summary` for fornecido, usa ele no lugar do resumo manual.
     As anteriores são comprimidas num único resumo de sistema.
     """
     if len(messages) <= keep_recent + 2:  # system + poucas msgs = não precisa
@@ -56,26 +113,30 @@ def summarize_old_messages(messages: list[dict], keep_recent: int = 10) -> list[
     if len(rest) <= keep_recent:
         return messages
 
-    old = rest[:-keep_recent]
     recent = rest[-keep_recent:]
 
-    # Construir resumo das mensagens antigas
-    summary_parts = []
-    for msg in old:
-        role = msg.get("role", "?")
-        content = msg.get("content", "")
-        if role == "tool":
-            # Tool results: só a primeira linha
-            first_line = content.split("\n")[0][:200]
-            summary_parts.append(f"[tool] {first_line}")
-        elif role == "assistant":
-            # Assistant: primeiras 2 linhas
-            lines = content.split("\n")[:2]
-            summary_parts.append(f"[assistant] {' '.join(lines)[:300]}")
-        elif role == "user":
-            summary_parts.append(f"[user] {content[:200]}")
+    if llm_summary:
+        # Usar resumo gerado pelo LLM
+        summary_text = "--- Resumo da conversa anterior (gerado por IA) ---\n" + llm_summary + "\n--- Fim do resumo ---"
+    else:
+        # Fallback: resumo manual por truncação
+        old = rest[:-keep_recent]
+        summary_parts = []
+        for msg in old:
+            role = msg.get("role", "?")
+            content = msg.get("content", "")
+            if role == "tool":
+                # Tool results: só a primeira linha
+                first_line = content.split("\n")[0][:200]
+                summary_parts.append(f"[tool] {first_line}")
+            elif role == "assistant":
+                # Assistant: primeiras 2 linhas
+                lines = content.split("\n")[:2]
+                summary_parts.append(f"[assistant] {' '.join(lines)[:300]}")
+            elif role == "user":
+                summary_parts.append(f"[user] {content[:200]}")
 
-    summary_text = "--- Resumo do histórico anterior ---\n" + "\n".join(summary_parts) + "\n--- Fim do resumo ---"
+        summary_text = "--- Resumo do histórico anterior ---\n" + "\n".join(summary_parts) + "\n--- Fim do resumo ---"
 
     result = []
     if system:

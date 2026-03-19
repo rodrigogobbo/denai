@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -564,3 +565,165 @@ class TestToolBatching:
         from denai.llm.ollama import _batch_tool_calls
 
         assert _batch_tool_calls([], Counter()) == []
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CONTEXT MANAGEMENT — LLM Summarization
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestContextManagement:
+    """Testes para llm_summarize e summarize_old_messages com LLM summary."""
+
+    @pytest.mark.asyncio
+    async def test_llm_summarize_success(self):
+        """llm_summarize deve retornar resumo do Ollama."""
+        from denai.llm.context import llm_summarize
+
+        messages = [
+            {"role": "user", "content": "Crie um arquivo hello.py"},
+            {"role": "assistant", "content": "Criei o arquivo hello.py com print('hello')"},
+            {"role": "user", "content": "Agora adicione um loop"},
+        ]
+
+        mock_response = httpx.Response(
+            200,
+            json={
+                "message": {
+                    "role": "assistant",
+                    "content": "O usuário pediu para criar hello.py e depois adicionar um loop.",
+                },
+                "done": True,
+            },
+            request=httpx.Request("POST", "http://localhost:11434/api/chat"),
+        )
+
+        with patch("denai.llm.context.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            result = await llm_summarize(messages, model="llama3.1:8b", ollama_url="http://localhost:11434")
+
+        assert "hello.py" in result
+        assert "loop" in result
+
+        # Verificar que chamou /api/chat com os params certos
+        call_kwargs = mock_client.post.call_args
+        payload = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+        assert payload["model"] == "llama3.1:8b"
+        assert payload["stream"] is False
+        assert payload["options"]["temperature"] == 0.3
+        assert payload["options"]["num_ctx"] == 4096
+
+    @pytest.mark.asyncio
+    async def test_llm_summarize_timeout(self):
+        """llm_summarize deve levantar exceção em timeout."""
+        from denai.llm.context import llm_summarize
+
+        messages = [{"role": "user", "content": "Algo"}]
+
+        with patch("denai.llm.context.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(side_effect=httpx.ReadTimeout("timeout"))
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            with pytest.raises(httpx.ReadTimeout):
+                await llm_summarize(messages, model="llama3.1:8b", ollama_url="http://localhost:11434")
+
+    @pytest.mark.asyncio
+    async def test_llm_summarize_http_error(self):
+        """llm_summarize deve levantar exceção em erro HTTP."""
+        from denai.llm.context import llm_summarize
+
+        messages = [{"role": "user", "content": "Algo"}]
+
+        mock_response = httpx.Response(
+            500,
+            text="Internal Server Error",
+            request=httpx.Request("POST", "http://localhost:11434/api/chat"),
+        )
+
+        with patch("denai.llm.context.httpx.AsyncClient") as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            with pytest.raises(httpx.HTTPStatusError):
+                await llm_summarize(messages, model="llama3.1:8b", ollama_url="http://localhost:11434")
+
+    def test_summarize_old_messages_with_llm_summary(self):
+        """summarize_old_messages deve usar llm_summary quando fornecido."""
+        from denai.llm.context import summarize_old_messages
+
+        messages = [{"role": "system", "content": "You are helpful."}]
+        for i in range(20):
+            messages.append({"role": "user", "content": f"Mensagem {i}"})
+            messages.append({"role": "assistant", "content": f"Resposta {i}"})
+
+        result = summarize_old_messages(
+            messages,
+            keep_recent=10,
+            llm_summary="Usuário fez 20 perguntas sobre Python.",
+        )
+
+        # Deve ter: system + summary + 10 recent
+        assert len(result) == 12
+        assert result[0]["role"] == "system"
+        assert result[0]["content"] == "You are helpful."
+        assert "gerado por IA" in result[1]["content"]
+        assert "20 perguntas sobre Python" in result[1]["content"]
+
+    def test_summarize_old_messages_without_llm_summary(self):
+        """summarize_old_messages sem llm_summary deve usar fallback manual."""
+        from denai.llm.context import summarize_old_messages
+
+        messages = [{"role": "system", "content": "You are helpful."}]
+        for i in range(20):
+            messages.append({"role": "user", "content": f"Mensagem {i}"})
+            messages.append({"role": "assistant", "content": f"Resposta {i}"})
+
+        result = summarize_old_messages(messages, keep_recent=10)
+
+        # Deve ter: system + summary + 10 recent
+        assert len(result) == 12
+        assert result[0]["role"] == "system"
+        assert "Resumo do histórico anterior" in result[1]["content"]
+        # Não deve ter "gerado por IA"
+        assert "gerado por IA" not in result[1]["content"]
+
+    def test_summarize_old_messages_short_conversation(self):
+        """Conversas curtas não devem ser resumidas."""
+        from denai.llm.context import summarize_old_messages
+
+        messages = [
+            {"role": "system", "content": "You are helpful."},
+            {"role": "user", "content": "Oi"},
+            {"role": "assistant", "content": "Olá!"},
+        ]
+
+        result = summarize_old_messages(messages, keep_recent=10, llm_summary="Ignorar isso")
+
+        # Deve retornar as mesmas mensagens (conversa curta)
+        assert result == messages
+
+    def test_summarize_old_messages_empty_llm_summary_uses_fallback(self):
+        """llm_summary vazio (empty string) deve usar fallback manual."""
+        from denai.llm.context import summarize_old_messages
+
+        messages = [{"role": "system", "content": "System."}]
+        for i in range(20):
+            messages.append({"role": "user", "content": f"Msg {i}"})
+            messages.append({"role": "assistant", "content": f"Resp {i}"})
+
+        result = summarize_old_messages(messages, keep_recent=10, llm_summary="")
+
+        # Empty string is falsy → should use manual fallback
+        assert "Resumo do histórico anterior" in result[1]["content"]
+        assert "gerado por IA" not in result[1]["content"]
