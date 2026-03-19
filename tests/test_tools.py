@@ -9,7 +9,7 @@ import pytest
 
 from denai.tools.registry import TOOLS_SPEC, execute_tool
 
-# As 12 tools esperadas
+# As 14 tools esperadas
 EXPECTED_TOOLS = [
     "file_read",
     "file_write",
@@ -23,6 +23,8 @@ EXPECTED_TOOLS = [
     "rag_index",
     "rag_stats",
     "question",
+    "plan_create",
+    "plan_update",
 ]
 
 
@@ -35,7 +37,7 @@ class TestToolsSpec:
         assert len(TOOLS_SPEC) > 0, "TOOLS_SPEC não deve estar vazio"
 
     def test_all_expected_tools_registered(self):
-        """Todas as 12 tools core devem estar registradas."""
+        """Todas as 14 tools core devem estar registradas."""
         registered = [t.get("function", {}).get("name") for t in TOOLS_SPEC]
         for name in EXPECTED_TOOLS:
             assert name in registered, f"Tool '{name}' não encontrada. Registradas: {registered}"
@@ -64,8 +66,8 @@ class TestToolsSpec:
             assert params.get("type") == "object", f"Ferramenta '{name}' deve ter parameters.type='object'"
 
     def test_total_tools_count(self):
-        """Devem haver pelo menos 12 tools registradas."""
-        assert len(TOOLS_SPEC) >= 12
+        """Devem haver pelo menos 14 tools registradas."""
+        assert len(TOOLS_SPEC) >= 14
 
 
 class TestExecuteTool:

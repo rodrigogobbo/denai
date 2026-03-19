@@ -16,7 +16,7 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 
 - 🔒 **100% Private** — Everything runs locally. No data leaves your machine. Ever.
 - 🧠 **Persistent Memory** — Remembers context across conversations (SQLite)
-- 🛠️ **Built-in Tools** — File I/O, web search, shell commands, and more (12 tools)
+- 🛠️ **Built-in Tools** — File I/O, web search, shell commands, planning, and more (14 tools)
 - 🌐 **Web UI** — Clean chat interface served automatically at `localhost:4078`
 - 🔄 **Model Switching** — Swap between Ollama models on the fly
 - 📡 **Share Mode** — Expose your instance with authentication via `--share`
@@ -93,7 +93,7 @@ Open your browser at **http://localhost:4078** — that's it! 🎉
 
 ## 🛠️ Available Tools
 
-DenAI comes with **12 built-in tools** that the AI can use automatically:
+DenAI comes with **14 built-in tools** that the AI can use automatically:
 
 | Tool | Description | Internet? |
 |------|-------------|:-:|
@@ -109,6 +109,8 @@ DenAI comes with **12 built-in tools** that the AI can use automatically:
 | `rag_index` | Reindex `~/.denai/documents/` | ❌ |
 | `rag_stats` | Show RAG index statistics | ❌ |
 | `question` | Ask the user a question and wait for the answer | ❌ |
+| `plan_create` | Create a multi-step execution plan | ❌ |
+| `plan_update` | Mark plan steps as done / in progress | ❌ |
 
 Tools are auto-discovered from `denai/tools/`. Drop a new `.py` file and it just works.
 
@@ -121,6 +123,7 @@ Tools are auto-discovered from `denai/tools/`. Drop a new `.py` file and it just
 | `llama3.2:3b` | ~2 GB | 8 GB | Quick questions, light tasks | 🟢 Low-end PCs |
 | `llama3.1:8b` | ~4.7 GB | 10 GB | General use, good balance | ⭐ **Recommended** |
 | `qwen2.5-coder:7b` | ~4.4 GB | 10 GB | Code generation & debugging | 🔵 Developers |
+| `qwen2.5-coder:32b` | ~18 GB | 24 GB | Best tool calling & planning | 🏆 **Power users** |
 | `deepseek-r1:8b` | ~4.9 GB | 10 GB | Reasoning & math | 🟣 Complex problems |
 | `mistral:7b` | ~4.1 GB | 10 GB | Versatile, multilingual | 🟡 Good all-rounder |
 | `gemma3:4b` | ~3.3 GB | 8 GB | Lightweight yet capable | 🟢 Alternative |
@@ -287,7 +290,7 @@ denai/
 │       ├── memory.py        # memory_save, memory_search
 │       ├── web_fetch.py     # web_search
 │       └── rag_search.py    # rag_search, rag_index, rag_stats
-├── tests/                   # 227 tests
+├── tests/                   # 237 tests
 ├── examples/plugins/        # Example plugins
 ├── pyproject.toml
 ├── README.md

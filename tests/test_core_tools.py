@@ -1,4 +1,4 @@
-"""Testes unitários para as core tools (file_ops, command_exec, memory, web_fetch, question)."""
+"""Testes unitários para as core tools (file_ops, command_exec, memory, web_fetch, question, planning)."""
 
 from __future__ import annotations
 
@@ -737,3 +737,119 @@ class TestQuestion:
         from denai.tools.question import get_pending_question
 
         assert get_pending_question("q_nope") is None
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PLANNING
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestPlanCreate:
+    """Testes para a tool plan_create."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_plan(self):
+        """Limpa plano entre testes."""
+        import denai.tools.planning as pmod
+
+        pmod._current_plan = None
+
+    @pytest.mark.asyncio
+    async def test_create_plan(self):
+        """Deve criar plano com passos pendentes."""
+        from denai.tools.planning import plan_create
+
+        result = await plan_create(
+            {
+                "goal": "Configurar projeto",
+                "steps": ["Criar repo", "Adicionar CI", "Deploy"],
+            }
+        )
+
+        assert "📋" in result
+        assert "Configurar projeto" in result
+        assert "Criar repo" in result
+        assert "⬜" in result
+        assert "0/3" in result
+
+    @pytest.mark.asyncio
+    async def test_create_empty_goal(self):
+        """Deve rejeitar goal vazio."""
+        from denai.tools.planning import plan_create
+
+        result = await plan_create({"goal": "", "steps": ["x"]})
+        assert "❌" in result
+
+    @pytest.mark.asyncio
+    async def test_create_empty_steps(self):
+        """Deve rejeitar steps vazio."""
+        from denai.tools.planning import plan_create
+
+        result = await plan_create({"goal": "Algo", "steps": []})
+        assert "❌" in result
+
+
+class TestPlanUpdate:
+    """Testes para a tool plan_update."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_plan(self):
+        """Limpa plano entre testes."""
+        import denai.tools.planning as pmod
+
+        pmod._current_plan = None
+
+    @pytest.mark.asyncio
+    async def test_update_step_done(self):
+        """Deve marcar passo como concluído."""
+        from denai.tools.planning import plan_create, plan_update
+
+        await plan_create({"goal": "Test", "steps": ["Passo 1", "Passo 2"]})
+        result = await plan_update({"step": 1, "status": "done", "result": "OK"})
+
+        assert "✅" in result
+        assert "OK" in result
+        assert "1/2" in result
+
+    @pytest.mark.asyncio
+    async def test_update_step_in_progress(self):
+        """Deve marcar passo como em progresso."""
+        from denai.tools.planning import plan_create, plan_update
+
+        await plan_create({"goal": "Test", "steps": ["Passo 1"]})
+        result = await plan_update({"step": 1, "status": "in_progress"})
+
+        assert "🔄" in result
+
+    @pytest.mark.asyncio
+    async def test_update_invalid_step(self):
+        """Deve rejeitar número de passo inválido."""
+        from denai.tools.planning import plan_create, plan_update
+
+        await plan_create({"goal": "Test", "steps": ["A", "B"]})
+        result = await plan_update({"step": 5, "status": "done"})
+
+        assert "❌" in result
+        assert "inválido" in result.lower() or "Passo inválido" in result
+
+    @pytest.mark.asyncio
+    async def test_update_no_plan(self):
+        """Deve retornar erro se não há plano ativo."""
+        from denai.tools.planning import plan_update
+
+        result = await plan_update({"step": 1, "status": "done"})
+        assert "❌" in result
+
+    @pytest.mark.asyncio
+    async def test_full_plan_lifecycle(self):
+        """Deve acompanhar plano do início ao fim."""
+        from denai.tools.planning import plan_create, plan_update
+
+        await plan_create({"goal": "Deploy", "steps": ["Build", "Test", "Push"]})
+
+        await plan_update({"step": 1, "status": "done", "result": "built"})
+        await plan_update({"step": 2, "status": "done", "result": "passed"})
+        result = await plan_update({"step": 3, "status": "done", "result": "deployed"})
+
+        assert "3/3" in result
+        assert result.count("✅") == 3

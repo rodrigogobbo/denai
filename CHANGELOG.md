@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`question` tool** — Pause the LLM and ask the user for input (future-based async blocking, 5min timeout)
   - SSE `question` event sent to frontend before blocking
   - API routes: `GET /api/questions/pending`, `POST /api/questions/{id}/answer`
+  - Frontend: interactive question cards with option buttons or free-form input
+- **Multi-step planning** — LLM can create and track execution plans
+  - `plan_create` — Define goal + numbered steps
+  - `plan_update` — Mark steps as done/in_progress with results
+  - Progress tracking with visual indicators (✅ ⬜ 🔄)
+  - System prompt instructs LLM to plan before complex tasks
+- **Model management** — Pull and delete models from the UI
+  - `POST /api/models/pull` — Download models via SSE streaming progress
+  - `DELETE /api/models/{name}` — Remove installed models
+  - Consolidated models + ollama status routes into `models.py`
 - **RAG local** — BM25-based document search, zero external dependencies
   - Index documents from `~/.denai/documents/` (30+ file formats)
   - Smart text chunking with overlap for large files
@@ -35,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `DELETE /api/rag/documents/{name}` — Remove document
 - **Plugin system** — Autodiscovery from `~/.denai/plugins/` (single-file + directory plugins)
 - **Plugin API routes** — List and manage plugins via `/api/plugins`
-- **51 new tests** — RAG unit tests, API integration tests, tool tests, prompt tests (227 total)
+- **51 new tests** — RAG unit tests, API integration tests, tool tests, prompt tests (237 total)
 
 ## [0.2.0] - 2026-03-19
 

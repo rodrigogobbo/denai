@@ -1841,6 +1841,63 @@ body {
   border-radius: 50%;
   animation: toolSpinner 0.8s linear infinite;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   QUESTION CARD (interactive tool)
+   ═══════════════════════════════════════════════════════════ */
+.question-card {
+  margin: 10px 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(251,191,36,0.35);
+  border-left: 3px solid #fbbf24;
+  border-radius: var(--radius-sm);
+  background: rgba(251,191,36,0.06);
+  animation: messageSlideIn 0.3s ease;
+}
+.question-card .q-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+.question-card .q-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.question-card .q-opt-btn {
+  padding: 7px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-family: inherit; font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.question-card .q-opt-btn:hover {
+  border-color: #fbbf24;
+  color: var(--text-primary);
+  background: rgba(251,191,36,0.1);
+}
+.question-card .q-free { display: flex; gap: 8px; margin-top: 4px; }
+.question-card .q-free input {
+  flex: 1; padding: 8px 12px;
+  background: var(--bg-input); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 13px;
+}
+.question-card .q-free input:focus { outline: none; border-color: #fbbf24; }
+.question-card .q-free button {
+  padding: 8px 14px; background: #fbbf24; color: #000; border: none;
+  border-radius: var(--radius-sm); font-family: inherit; font-size: 13px;
+  font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background var(--transition-fast);
+}
+.question-card .q-free button:hover { background: #f59e0b; }
+.question-card.answered {
+  opacity: 0.7; pointer-events: none;
+  border-color: var(--border); background: var(--bg-tool);
+}
+.question-card .q-answer {
+  margin-top: 8px; font-size: 13px; color: var(--accent); font-weight: 500;
+}
 </style>
 </head>
 <body>
@@ -2304,6 +2361,33 @@ window.copyCode = function(btn) {
 // ─── Tool call toggle ───
 window.toggleToolCall = function(el) {
   el.closest('.tool-call-card').classList.toggle('expanded');
+};
+
+
+// ─── Answer question card ───
+window.answerQuestion = async function(qId, btnEl, optionText) {
+  const card = document.getElementById('qcard-' + qId);
+  if (!card || card.classList.contains('answered')) return;
+
+  let answer = optionText;
+  if (!answer) {
+    // Free-form: grab sibling input
+    const input = card.querySelector('.q-free input');
+    answer = input ? input.value.trim() : '';
+    if (!answer) return;
+  }
+
+  // Disable immediately
+  card.classList.add('answered');
+  card.insertAdjacentHTML('beforeend', `<div class="q-answer">✓ ${escapeHtml(answer)}</div>`);
+
+  try {
+    await apiPost(`/api/questions/${qId}/answer`, { answer });
+  } catch (e) {
+    card.classList.remove('answered');
+    card.querySelector('.q-answer')?.remove();
+    showToast('Erro ao enviar resposta', 'error');
+  }
 };
 
 
@@ -3280,6 +3364,25 @@ async function sendMessage() {
             bubbleEl.insertAdjacentHTML('beforeend', cardHtml);
             updateToolCounter(bubbleEl, toolCallCount - toolCallCompleted, toolCallCount);
             scrollToBottom();
+          }
+
+          // Handle question (interactive)
+          if (event.question) {
+            const q = event.question;
+            const qId = q.id || generateId();
+            let inner = `<div class="q-text">❓ ${escapeHtml(q.text)}</div>`;
+            if (q.options && q.options.length) {
+              inner += '<div class="q-options">' +
+                q.options.map(o => `<button class="q-opt-btn" onclick="answerQuestion('${escapeAttr(qId)}', this, '${escapeAttr(o)}')">${escapeHtml(o)}</button>`).join('') +
+                '</div>';
+            } else {
+              inner += `<div class="q-free">
+                <input type="text" placeholder="Digite sua resposta..." onkeydown="if(event.key==='Enter'){event.preventDefault();this.nextElementSibling.click();}">
+                <button onclick="answerQuestion('${escapeAttr(qId)}', this)">Responder</button>
+              </div>`;
+            }
+            bubbleEl.insertAdjacentHTML('beforeend', `<div class="question-card" id="qcard-${escapeAttr(qId)}">${inner}</div>`);
+            scrollToBottom(true);
           }
 
           // Handle tool results
