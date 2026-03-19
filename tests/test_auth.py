@@ -4,11 +4,7 @@ Valida a criação, leitura e verificação de API keys usadas para
 autenticar requisições ao DenAI.
 """
 
-import secrets
-from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from denai.security.auth import get_or_create_api_key, verify_api_key
 

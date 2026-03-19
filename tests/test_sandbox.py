@@ -7,8 +7,6 @@ ataques de path traversal.
 is_path_allowed() retorna (bool, str) — (allowed, reason).
 """
 
-import os
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest

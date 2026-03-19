@@ -6,7 +6,6 @@ desconhecidas retornam erro.
 """
 
 import pytest
-import pytest_asyncio
 
 from denai.tools.registry import TOOLS_SPEC, execute_tool
 
@@ -106,7 +105,7 @@ class TestExecuteTool:
         # Não deve levantar exceção (o erro deve ser retornado, não raised)
         try:
             await execute_tool("absolutely_fake_tool", {"key": "value"})
-        except (KeyError, ValueError, TypeError) as e:
+        except (KeyError, ValueError, TypeError):
             # Exceções controladas são aceitáveis
             pass
         except Exception as e:

@@ -8,8 +8,6 @@ da API.
 import time
 from unittest.mock import patch
 
-import pytest
-
 from denai.security.rate_limit import RateLimiter
 
 

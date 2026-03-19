@@ -1,7 +1,8 @@
 """Configurações compartilhadas dos testes do DenAI."""
 
-import pytest
 import asyncio
+
+import pytest
 
 
 @pytest.fixture(scope="session")

@@ -5,7 +5,7 @@ import secrets
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from ..config import STATIC_DIR, SHARE_MODE
+from ..config import STATIC_DIR
 from ..security.auth import API_KEY
 
 router = APIRouter()

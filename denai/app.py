@@ -7,12 +7,13 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
-from .config import HOST, PORT, OLLAMA_URL, DEFAULT_MODEL, DATA_DIR, SHARE_MODE
+from .config import DATA_DIR, DEFAULT_MODEL, HOST, OLLAMA_URL, PORT, SHARE_MODE, STATIC_DIR
 from .db import init_db
 from .network import LOCAL_IP
-from .security import API_KEY, verify_api_key, PUBLIC_PATHS, rate_limiter
 from .routes import all_routers
+from .security import API_KEY, PUBLIC_PATHS, rate_limiter, verify_api_key
 
 
 def create_app() -> FastAPI:
@@ -82,6 +83,11 @@ def create_app() -> FastAPI:
             "share_mode": SHARE_MODE,
             "local_ip": LOCAL_IP if SHARE_MODE else None,
         }
+
+    # ── Static files (vendor JS/CSS) ──
+    vendor_dir = STATIC_DIR / "vendor"
+    if vendor_dir.is_dir():
+        app.mount("/static/vendor", StaticFiles(directory=str(vendor_dir)), name="vendor")
 
     # ── Registrar routers ──
     for router in all_routers:

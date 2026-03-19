@@ -4,7 +4,7 @@ import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from ..config import OLLAMA_URL, DEFAULT_MODEL
+from ..config import DEFAULT_MODEL, OLLAMA_URL
 
 router = APIRouter()
 

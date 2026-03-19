@@ -2,8 +2,7 @@
 
 from pathlib import Path
 
-from ..security.sandbox import is_path_allowed, BLOCKED_PATHS
-
+from ..security.sandbox import BLOCKED_PATHS, is_path_allowed
 
 # ─── Specs ─────────────────────────────────────────────────────────────────
 

@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 
 import httpx
 
-from ..config import OLLAMA_URL, DEFAULT_MODEL
+from ..config import DEFAULT_MODEL, OLLAMA_URL
 from ..tools import TOOLS_SPEC, execute_tool
 from .prompt import build_system_prompt
 
@@ -41,7 +41,8 @@ async def stream_chat(
             ) as resp:
                 if resp.status_code != 200:
                     error_text = await resp.aread()
-                    yield f"data: {json.dumps({'error': f'Ollama error {resp.status_code}: {error_text.decode()}'})}\n\n"
+                    err_msg = f"Ollama error {resp.status_code}: {error_text.decode()}"
+                    yield f"data: {json.dumps({'error': err_msg})}\n\n"
                     return
 
                 async for line in resp.aiter_lines():
