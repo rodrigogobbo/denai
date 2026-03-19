@@ -84,8 +84,9 @@ def _get_ram_gb() -> float | None:
         pass
     try:
         import subprocess
+
         out = subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True)
-        return round(int(out.strip()) / (1024 ** 3), 1)
+        return round(int(out.strip()) / (1024**3), 1)
     except Exception:
         pass
     return None

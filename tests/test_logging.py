@@ -58,6 +58,7 @@ def test_log_writes_to_file(tmp_path):
         h.flush()
 
     from denai.logging_config import LOG_FILE
+
     if LOG_FILE.exists():
         content = LOG_FILE.read_text()
         assert "teste de log 12345" in content

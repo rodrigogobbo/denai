@@ -57,7 +57,7 @@ async def execute_tool(name: str, args: dict) -> str:
         log.debug("Tool %s executada — args=%s", name, list(args.keys()))
         return result
     except PermissionError:
-        target = args.get('path', args.get('command', '?'))
+        target = args.get("path", args.get("command", "?"))
         log.warning("PermissionError na tool %s: %s", name, target)
         return f"🔒 Sem permissão: {target}"
     except Exception as e:
