@@ -37,3 +37,20 @@ async def pull_model(request: Request):
         yield 'data: {"done": true}\n\n'
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.get("/api/ollama/status")
+async def ollama_status():
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            # Get version
+            ver_resp = await c.get(f"{OLLAMA_URL}/api/version")
+            version = ver_resp.json().get("version", "unknown") if ver_resp.status_code == 200 else "unknown"
+
+            # Get model count
+            tags_resp = await c.get(f"{OLLAMA_URL}/api/tags")
+            models_count = len(tags_resp.json().get("models", [])) if tags_resp.status_code == 200 else 0
+
+            return {"status": "online", "version": version, "models_count": models_count}
+    except Exception:
+        return {"status": "offline", "version": None, "models_count": 0}

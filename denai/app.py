@@ -3,6 +3,8 @@ FastAPI application — monta middleware, rotas e startup.
 Ponto central de wiring. Nenhuma lógica de negócio aqui.
 """
 
+from contextlib import asynccontextmanager
+
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,8 +18,16 @@ from .routes import all_routers
 from .security import API_KEY, PUBLIC_PATHS, rate_limiter, verify_api_key
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown events."""
+    await init_db()
+    _print_banner()
+    yield
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="DenAI", version="0.1.0")
+    app = FastAPI(title="DenAI", version="0.1.0", lifespan=lifespan)
 
     # ── CORS ──
     cors_origins = [
@@ -89,12 +99,6 @@ def create_app() -> FastAPI:
     # ── Registrar routers ──
     for router in all_routers:
         app.include_router(router)
-
-    # ── Startup ──
-    @app.on_event("startup")
-    async def startup():
-        await init_db()
-        _print_banner()
 
     return app
 
