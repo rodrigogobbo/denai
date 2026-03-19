@@ -15,8 +15,8 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 ## ✨ Features
 
 - 🔒 **100% Private** — Everything runs locally. No data leaves your machine. Ever.
-- 🧠 **Persistent Memory** — Remembers context across conversations
-- 🛠️ **Built-in Tools** — File I/O, web search, shell commands, and more
+- 🧠 **Persistent Memory** — Remembers context across conversations (SQLite)
+- 🛠️ **Built-in Tools** — File I/O, web search, shell commands, and more (10 tools)
 - 🌐 **Web UI** — Clean chat interface served automatically at `localhost:4078`
 - 🔄 **Model Switching** — Swap between Ollama models on the fly
 - 📡 **Share Mode** — Expose your instance with authentication via `--share`
@@ -88,9 +88,6 @@ denai
 ```
 
 Open your browser at **http://localhost:4078** — that's it! 🎉
-
-> **Screenshot placeholder**  
-> ![DenAI Screenshot](docs/screenshot.png)
 
 ---
 

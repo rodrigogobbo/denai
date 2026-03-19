@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="DenAI", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="DenAI", version="0.3.0", lifespan=lifespan)
 
     # ── CORS ──
     cors_origins = [
