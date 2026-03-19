@@ -723,6 +723,73 @@ O `q4_0` significa uma quantização mais agressiva — menor e mais rápido, co
 
 ---
 
+### ❌ "denai não é reconhecido como comando"
+
+Você instalou com `pip install denai`, deu tudo certo, mas ao digitar `denai` aparece:
+
+```
+'denai' não é reconhecido como um comando interno ou externo,
+programa operável ou arquivo em lotes.
+```
+
+**Por que isso acontece?** O `pip install` coloca o executável `denai.exe` na pasta `Scripts/` do Python. Se essa pasta não está no PATH do Windows, o terminal não encontra o comando.
+
+#### Solução 1: Usar `python -m denai` (mais fácil)
+
+Em vez de digitar `denai`, digite:
+
+```
+python -m denai
+```
+
+Isso funciona **sempre**, independente do PATH. Se funcionar, use esse comando!
+
+#### Solução 2: Descobrir onde o `denai.exe` foi instalado
+
+1. Abra o Prompt de Comando
+2. Digite:
+```
+pip show denai
+```
+3. Procure a linha **"Location:"** — algo como `c:\users\seunome\appdata\local\programs\python\python312\lib\site-packages`
+4. O executável está em uma pasta vizinha chamada `Scripts`. No exemplo acima, seria:
+```
+c:\users\seunome\appdata\local\programs\python\python312\Scripts\denai.exe
+```
+5. Tente rodar o caminho completo:
+```
+c:\users\seunome\appdata\local\programs\python\python312\Scripts\denai.exe
+```
+
+#### Solução 3: Adicionar Scripts ao PATH (definitivo)
+
+1. Descubra o caminho da pasta Scripts (veja Solução 2)
+2. Aperte **Windows + R**, digite `sysdm.cpl` e aperte Enter
+3. Clique na aba **"Avançado"** (ou "Advanced")
+4. Clique em **"Variáveis de Ambiente"** (ou "Environment Variables")
+5. Na seção **"Variáveis do usuário"**, encontre **Path** e clique em **"Editar"**
+6. Clique em **"Novo"**
+7. Cole o caminho da pasta Scripts (ex: `C:\Users\SeuNome\AppData\Local\Programs\Python\Python312\Scripts`)
+8. Clique **OK** em todas as janelas
+9. **Feche e reabra** o Prompt de Comando (o PATH só atualiza em janelas novas)
+10. Agora `denai` vai funcionar! ✅
+
+> 💡 **Dica:** Se você usou `pip install --user denai`, o executável pode estar em `C:\Users\SeuNome\AppData\Roaming\Python\Python312\Scripts`. Use `pip show denai` pra descobrir onde ficou.
+
+#### Solução 4: Reinstalar o Python marcando "Add to PATH"
+
+Se nada funciona, a forma mais simples é reinstalar o Python:
+
+1. Desinstale o Python (Configurações → Aplicativos → Python → Desinstalar)
+2. Baixe novamente em [python.org/downloads](https://www.python.org/downloads/)
+3. Ao instalar, **marque "Add python.exe to PATH"**
+4. Clique em **"Install Now"**
+5. Abra um **novo** Prompt de Comando
+6. Rode `pip install denai` novamente
+7. Agora `denai` deve funcionar!
+
+---
+
 ### ❌ "O servidor não inicia"
 
 #### Problema: "Porta 4078 já em uso"
