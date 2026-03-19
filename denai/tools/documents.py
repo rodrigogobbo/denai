@@ -24,10 +24,7 @@ CREATE_DOCUMENT_SPEC = {
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": (
-                        "Caminho do arquivo .docx a criar "
-                        "(ex: ~/Documents/relatorio.docx)"
-                    ),
+                    "description": ("Caminho do arquivo .docx a criar (ex: ~/Documents/relatorio.docx)"),
                 },
                 "content": {
                     "type": "array",
@@ -62,10 +59,7 @@ CREATE_SPREADSHEET_SPEC = {
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": (
-                        "Caminho do arquivo .xlsx a criar "
-                        "(ex: ~/Documents/dados.xlsx)"
-                    ),
+                    "description": ("Caminho do arquivo .xlsx a criar (ex: ~/Documents/dados.xlsx)"),
                 },
                 "sheets": {
                     "type": "array",
@@ -115,10 +109,7 @@ async def create_document(args: dict) -> str:
         from docx import Document
         from docx.shared import Pt
     except ImportError:
-        return (
-            "❌ python-docx não instalado. "
-            "Rode: pip install python-docx"
-        )
+        return "❌ python-docx não instalado. Rode: pip install python-docx"
 
     raw_path = args.get("path", "")
     content = args.get("content", [])
@@ -207,10 +198,7 @@ async def create_spreadsheet(args: dict) -> str:
         from openpyxl.styles import Font
         from openpyxl.utils import get_column_letter
     except ImportError:
-        return (
-            "❌ openpyxl não instalado. "
-            "Rode: pip install openpyxl"
-        )
+        return "❌ openpyxl não instalado. Rode: pip install openpyxl"
 
     raw_path = args.get("path", "")
     sheets = args.get("sheets", [])
@@ -283,10 +271,7 @@ async def create_spreadsheet(args: dict) -> str:
 
     wb.save(str(path))
     total_rows = sum(len(s.get("rows", [])) for s in sheets)
-    return (
-        f"✅ Planilha Excel criada: {path} "
-        f"({len(sheets)} aba(s), {total_rows} linhas)"
-    )
+    return f"✅ Planilha Excel criada: {path} ({len(sheets)} aba(s), {total_rows} linhas)"
 
 
 # ─── Registro ──────────────────────────────────────────────────────────────

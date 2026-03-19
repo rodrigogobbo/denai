@@ -100,6 +100,7 @@ def _auto_model() -> str:
     # Windows / macOS: tenta psutil ou ctypes
     try:
         import ctypes
+
         if hasattr(ctypes, "windll"):
             # Windows
             class MEMORYSTATUSEX(ctypes.Structure):
@@ -114,18 +115,20 @@ def _auto_model() -> str:
                     ("ullAvailVirtual", ctypes.c_ulonglong),
                     ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
                 ]
+
             stat = MEMORYSTATUSEX()
             stat.dwLength = ctypes.sizeof(stat)
             ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
-            total_gb = stat.ullTotalPhys / (1024 ** 3)
+            total_gb = stat.ullTotalPhys / (1024**3)
             return "llama3.2:3b" if total_gb < 12 else "llama3.1:8b"
     except Exception:
         pass
     # macOS: sysctl
     try:
         import subprocess
+
         out = subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True)
-        total_gb = int(out.strip()) / (1024 ** 3)
+        total_gb = int(out.strip()) / (1024**3)
         return "llama3.2:3b" if total_gb < 12 else "llama3.1:8b"
     except Exception:
         pass

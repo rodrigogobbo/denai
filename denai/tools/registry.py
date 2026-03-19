@@ -5,7 +5,10 @@ import pkgutil
 from pathlib import Path
 from typing import Callable
 
+from ..logging_config import get_logger
 from ..plugins import discover_plugins, get_plugin_tools
+
+log = get_logger("tools")
 
 # Registros globais
 TOOLS_SPEC: list[dict] = []
@@ -46,13 +49,19 @@ async def execute_tool(name: str, args: dict) -> str:
     """Dispatcher — executa uma tool pelo nome."""
     executor = _EXECUTORS.get(name)
     if not executor:
+        log.warning("Tool desconhecida chamada: %s", name)
         return f"❌ Tool desconhecida: {name}"
 
     try:
-        return await executor(args)
+        result = await executor(args)
+        log.debug("Tool %s executada — args=%s", name, list(args.keys()))
+        return result
     except PermissionError:
-        return f"🔒 Sem permissão: {args.get('path', args.get('command', '?'))}"
+        target = args.get("path", args.get("command", "?"))
+        log.warning("PermissionError na tool %s: %s", name, target)
+        return f"🔒 Sem permissão: {target}"
     except Exception as e:
+        log.error("Erro na tool %s: %s: %s", name, type(e).__name__, e, exc_info=True)
         return f"❌ Erro: {type(e).__name__}: {str(e)}"
 
 

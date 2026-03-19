@@ -9,10 +9,13 @@ from typing import AsyncGenerator
 import httpx
 
 from ..config import DEFAULT_MODEL, MAX_CONTEXT, MAX_TOOL_ROUNDS, OLLAMA_URL
+from ..logging_config import get_logger
 from ..rag import get_rag_context
 from ..tools import TOOLS_SPEC, execute_tool
 from .context import estimate_messages_tokens, llm_summarize, pick_context_size, summarize_old_messages
 from .prompt import build_system_prompt
+
+log = get_logger("llm")
 
 # ─── Config ────────────────────────────────────────────────────────────────
 
@@ -167,6 +170,7 @@ async def stream_chat(
 
                             # Erro de memória insuficiente — mensagem amigável
                             if "model requires more system memory" in err_msg:
+                                log.error("OOM: modelo requer mais RAM — %s", err_msg)
                                 friendly = (
                                     "⚠️ **Memória insuficiente para este modelo.**\n\n"
                                     f"Erro do Ollama: {err_msg}\n\n"
@@ -182,6 +186,7 @@ async def stream_chat(
                                 return
 
                             err_msg = f"Ollama error {resp.status_code}: {err_msg}"
+                            log.error("Ollama HTTP %d: %s", resp.status_code, err_msg)
 
                             if _is_transient_error(resp.status_code) and attempt < MAX_RETRIES:
                                 last_error = err_msg
@@ -217,6 +222,7 @@ async def stream_chat(
                     break  # Sucesso — sai do retry loop
 
                 except (httpx.ConnectError, httpx.ReadTimeout) as e:
+                    log.warning("Ollama connection error (tentativa %d/%d): %s", attempt + 1, MAX_RETRIES + 1, e)
                     if attempt < MAX_RETRIES:
                         last_error = str(e)
                         import asyncio
@@ -224,6 +230,7 @@ async def stream_chat(
                         await asyncio.sleep(attempt + 1)
                         continue
                     err = f"Ollama não respondeu após {MAX_RETRIES + 1} tentativas: {e}"
+                    log.error(err)
                     yield f"data: {json.dumps({'error': err})}\n\n"
                     return
 
