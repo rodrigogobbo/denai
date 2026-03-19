@@ -833,12 +833,17 @@ class TestPlanUpdate:
         assert "inválido" in result.lower() or "Passo inválido" in result
 
     @pytest.mark.asyncio
-    async def test_update_no_plan(self):
+    async def test_update_no_plan(self, tmp_path):
         """Deve retornar erro se não há plano ativo."""
-        from denai.tools.planning import plan_update
+        from denai.tools import planning
 
-        result = await plan_update({"step": 1, "status": "done"})
-        assert "❌" in result
+        original_db = planning.PLANS_DB
+        planning.PLANS_DB = tmp_path / "empty_test.db"
+        try:
+            result = await planning.plan_update({"step": 1, "status": "done"})
+            assert "❌" in result
+        finally:
+            planning.PLANS_DB = original_db
 
     @pytest.mark.asyncio
     async def test_full_plan_lifecycle(self):

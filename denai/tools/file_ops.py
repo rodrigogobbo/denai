@@ -1,10 +1,33 @@
-"""Tools de filesystem — ler, escrever e listar arquivos."""
+"""Tools de filesystem — ler, escrever, listar e editar arquivos com backup automático."""
 
 from __future__ import annotations
 
+import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 
+from ..config import DATA_DIR
 from ..security.sandbox import is_path_allowed
+
+# ─── Backup ────────────────────────────────────────────────────────────────
+
+BACKUP_DIR = DATA_DIR / "backups"
+
+
+def _create_backup(path: Path) -> str | None:
+    """Cria backup de um arquivo antes de modificá-lo. Retorna caminho do backup ou None."""
+    if not path.exists() or not path.is_file():
+        return None
+    try:
+        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        backup_name = f"{ts}_{path.name}"
+        backup_path = BACKUP_DIR / backup_name
+        shutil.copy2(str(path), str(backup_path))
+        return str(backup_path)
+    except Exception:
+        return None  # Backup é best-effort — não impede a operação
+
 
 # ─── Specs ─────────────────────────────────────────────────────────────────
 
@@ -14,7 +37,8 @@ FILE_READ_SPEC = {
         "name": "file_read",
         "description": (
             "Lê o conteúdo de um arquivo. Retorna o texto com números de linha. "
-            "Suporta offset e limit para arquivos grandes."
+            "Suporta offset e limit para arquivos grandes. "
+            "SEMPRE use file_read antes de file_edit para ver o conteúdo atual."
         ),
         "parameters": {
             "type": "object",
@@ -42,7 +66,9 @@ FILE_WRITE_SPEC = {
     "function": {
         "name": "file_write",
         "description": (
-            "Escreve conteúdo em um arquivo, criando diretórios se necessário. Sobrescreve o arquivo se já existir."
+            "Escreve conteúdo em um arquivo, criando diretórios se necessário. "
+            "SOBRESCREVE o arquivo inteiro se já existir (backup automático). "
+            "Prefira file_edit para mudanças cirúrgicas em arquivos existentes."
         ),
         "parameters": {
             "type": "object",
@@ -146,7 +172,7 @@ async def file_read(args: dict) -> str:
 
 
 async def file_write(args: dict) -> str:
-    """Escreve conteúdo em arquivo."""
+    """Escreve conteúdo em arquivo com backup automático."""
     path_str = args.get("path", "")
     content = args.get("content", "")
 
@@ -160,10 +186,16 @@ async def file_write(args: dict) -> str:
         return err
 
     try:
+        # Backup antes de sobrescrever
+        backup = _create_backup(path)
+
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
         size = path.stat().st_size
-        return f"✅ Arquivo salvo: {path} ({size} bytes)"
+        msg = f"✅ Arquivo salvo: {path} ({size} bytes)"
+        if backup:
+            msg += f"\n💾 Backup: {backup}"
+        return msg
     except Exception as e:
         return f"❌ Erro ao escrever: {e}"
 
@@ -236,8 +268,8 @@ FILE_EDIT_SPEC = {
         "name": "file_edit",
         "description": (
             "Edita um arquivo substituindo um trecho de texto por outro. "
-            "Funciona como search-and-replace exato. Ideal para fazer "
-            "mudanças cirúrgicas sem reescrever o arquivo inteiro."
+            "Funciona como search-and-replace exato (backup automático). "
+            "IMPORTANTE: Sempre use file_read antes para ver o conteúdo atual."
         ),
         "parameters": {
             "type": "object",
@@ -266,7 +298,7 @@ FILE_EDIT_SPEC = {
 
 
 async def file_edit(args: dict) -> str:
-    """Substitui trecho de texto em arquivo (search/replace exato)."""
+    """Substitui trecho de texto em arquivo (search/replace exato) com backup."""
     path_str = args.get("path", "")
     old_text = args.get("old_text", "")
     new_text = args.get("new_text", "")
@@ -299,6 +331,9 @@ async def file_edit(args: dict) -> str:
         # Mostrar contexto para ajudar a debugar
         preview = old_text[:80].replace("\n", "\\n")
         return f'❌ Texto não encontrado no arquivo.\nBuscado: "{preview}"\nArquivo: {path}'
+
+    # Backup antes de editar
+    _create_backup(path)
 
     # Substituir
     if replace_all:

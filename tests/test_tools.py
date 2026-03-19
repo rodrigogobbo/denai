@@ -9,7 +9,7 @@ import pytest
 
 from denai.tools.registry import TOOLS_SPEC, execute_tool
 
-# As 14 tools esperadas
+# As 16 tools esperadas
 EXPECTED_TOOLS = [
     "file_read",
     "file_write",
@@ -25,6 +25,8 @@ EXPECTED_TOOLS = [
     "question",
     "plan_create",
     "plan_update",
+    "grep",
+    "think",
 ]
 
 
@@ -66,8 +68,8 @@ class TestToolsSpec:
             assert params.get("type") == "object", f"Ferramenta '{name}' deve ter parameters.type='object'"
 
     def test_total_tools_count(self):
-        """Devem haver pelo menos 14 tools registradas."""
-        assert len(TOOLS_SPEC) >= 14
+        """Devem haver pelo menos 16 tools registradas."""
+        assert len(TOOLS_SPEC) >= 16
 
 
 class TestExecuteTool:
