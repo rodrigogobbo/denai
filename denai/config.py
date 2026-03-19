@@ -59,6 +59,11 @@ DEFAULT_MODEL = CLI.model or os.getenv("DENAI_MODEL", "llama3.1:8b")
 PORT = CLI.port or int(os.getenv("DENAI_PORT", "4078"))
 SHARE_MODE = CLI.compartilhar
 
+# ─── LLM Tuning ───────────────────────────────────────────────────────────
+
+MAX_TOOL_ROUNDS = int(os.getenv("DENAI_MAX_TOOL_ROUNDS", "25"))
+MAX_CONTEXT = int(os.getenv("DENAI_MAX_CONTEXT", "65536"))
+
 if CLI.host:
     HOST = CLI.host
 elif SHARE_MODE:

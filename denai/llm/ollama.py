@@ -7,10 +7,15 @@ from typing import AsyncGenerator
 
 import httpx
 
-from ..config import DEFAULT_MODEL, OLLAMA_URL
+from ..config import DEFAULT_MODEL, MAX_CONTEXT, MAX_TOOL_ROUNDS, OLLAMA_URL
 from ..rag import get_rag_context
 from ..tools import TOOLS_SPEC, execute_tool
+from .context import estimate_messages_tokens, pick_context_size, summarize_old_messages
 from .prompt import build_system_prompt
+
+# ─── Config ────────────────────────────────────────────────────────────────
+
+CONTEXT_SUMMARIZE_THRESHOLD = 20000  # Tokens — comprimir acima disso
 
 
 async def stream_chat(
@@ -18,7 +23,13 @@ async def stream_chat(
     model: str = DEFAULT_MODEL,
     use_tools: bool = True,
 ) -> AsyncGenerator[str, None]:
-    """Stream de chat com Ollama, com suporte a tool calling iterativo."""
+    """Stream de chat com Ollama, com suporte a tool calling iterativo.
+
+    Melhorias sobre a versão anterior:
+    - max_tool_rounds=25 (era 5) — suporta sessões longas
+    - Context auto-sizing — 8k→16k→32k→64k conforme a conversa cresce
+    - Summarization automática — comprime histórico antigo quando excede threshold
+    """
 
     # Extrair última mensagem do usuário para RAG context
     user_query = ""
@@ -39,14 +50,19 @@ async def stream_chat(
     full_messages = [system_msg] + messages
 
     async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=10.0)) as client:
-        max_tool_rounds = 5
+        for round_num in range(MAX_TOOL_ROUNDS):
+            # Auto-summarize se contexto ficou grande demais
+            if estimate_messages_tokens(full_messages) > CONTEXT_SUMMARIZE_THRESHOLD:
+                full_messages = summarize_old_messages(full_messages, keep_recent=12)
 
-        for _ in range(max_tool_rounds):
+            # Context size dinâmico baseado no tamanho real
+            num_ctx = pick_context_size(full_messages, max_context=MAX_CONTEXT)
+
             payload = {
                 "model": model,
                 "messages": full_messages,
                 "stream": True,
-                "options": {"temperature": 0.7, "num_ctx": 8192},
+                "options": {"temperature": 0.7, "num_ctx": num_ctx},
             }
             if use_tools and TOOLS_SPEC:
                 payload["tools"] = TOOLS_SPEC
@@ -103,12 +119,10 @@ async def stream_chat(
                 if tool_name == "question":
                     q_text = tool_args.get("question", "")
                     q_options = tool_args.get("options", [])
-                    # Pré-registrar a pergunta pra saber o ID
                     from ..tools.question import _next_id
 
                     q_id = _next_id()
                     yield f"data: {json.dumps({'question': {'id': q_id, 'text': q_text, 'options': q_options}})}\n\n"
-                    # Injetar o ID nos args pra tool usar
                     tool_args["_question_id"] = q_id
 
                 result = await execute_tool(tool_name, tool_args)
@@ -116,6 +130,10 @@ async def stream_chat(
                 yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': result[:2000]}})}\n\n"
 
                 full_messages.append({"role": "tool", "content": result})
+
+            # Emitir progresso do round pra UI saber que ainda tá trabalhando
+            if round_num > 0 and round_num % 5 == 0:
+                yield f"data: {json.dumps({'progress': {'round': round_num + 1, 'max': MAX_TOOL_ROUNDS}})}\n\n"
 
             tool_calls = []
             accumulated = ""
