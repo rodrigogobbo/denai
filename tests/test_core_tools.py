@@ -234,7 +234,9 @@ class TestCommandExec:
         with patch("denai.tools.command_exec.is_path_allowed", return_value=(True, "")):
             result = await command_exec({"command": "pwd", "workdir": str(tmp_path)})
 
-        assert str(tmp_path) in result
+        # No Windows, pwd retorna estilo MSYS (/c/Users/...) mas tmp_path
+        # usa backslashes (C:\Users\...). Comparar pelo nome do diretório.
+        assert tmp_path.name in result
 
     @pytest.mark.asyncio
     async def test_curl_pipe_bash_blocked(self):
