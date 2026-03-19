@@ -34,10 +34,7 @@ def _build_recovery_hint(tool_name: str, error_msg: str) -> str:
             "Use file_read para ver o conteúdo atual antes de tentar file_edit novamente."
         )
     if tool_name == "file_read" and "não encontrado" in error_msg.lower():
-        return (
-            "\n💡 Dica: O arquivo não existe. Use list_files para verificar "
-            "quais arquivos existem no diretório."
-        )
+        return "\n💡 Dica: O arquivo não existe. Use list_files para verificar quais arquivos existem no diretório."
     if tool_name == "command_exec" and ("permissão" in error_msg.lower() or "permission" in error_msg.lower()):
         return "\n💡 Dica: Sem permissão para executar este comando. Tente uma abordagem alternativa."
     if "🔒" in error_msg:

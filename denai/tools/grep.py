@@ -57,9 +57,20 @@ def _resolve_path(path_str: str) -> Path:
 
 # Diretórios a ignorar na busca
 _SKIP_DIRS = {
-    ".git", ".hg", ".svn", "__pycache__", "node_modules", ".venv",
-    "venv", ".tox", ".mypy_cache", ".pytest_cache", "dist", "build",
-    ".eggs", "*.egg-info",
+    ".git",
+    ".hg",
+    ".svn",
+    "__pycache__",
+    "node_modules",
+    ".venv",
+    "venv",
+    ".tox",
+    ".mypy_cache",
+    ".pytest_cache",
+    "dist",
+    "build",
+    ".eggs",
+    "*.egg-info",
 }
 
 

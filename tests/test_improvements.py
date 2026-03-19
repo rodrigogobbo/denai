@@ -165,10 +165,12 @@ class TestPlanningPersisted:
         original_db = planning.PLANS_DB
         planning.PLANS_DB = tmp_path / "plans.db"
         try:
-            result = await planning.plan_create({
-                "goal": "Testar persistência",
-                "steps": ["Passo 1", "Passo 2"],
-            })
+            result = await planning.plan_create(
+                {
+                    "goal": "Testar persistência",
+                    "steps": ["Passo 1", "Passo 2"],
+                }
+            )
             assert "📋" in result
             assert "Testar persistência" in result
 
@@ -189,15 +191,19 @@ class TestPlanningPersisted:
         original_db = planning.PLANS_DB
         planning.PLANS_DB = tmp_path / "plans.db"
         try:
-            await planning.plan_create({
-                "goal": "Test update",
-                "steps": ["Passo A", "Passo B"],
-            })
-            result = await planning.plan_update({
-                "step": 1,
-                "status": "done",
-                "result": "Concluído!",
-            })
+            await planning.plan_create(
+                {
+                    "goal": "Test update",
+                    "steps": ["Passo A", "Passo B"],
+                }
+            )
+            result = await planning.plan_update(
+                {
+                    "step": 1,
+                    "status": "done",
+                    "result": "Concluído!",
+                }
+            )
             assert "✅" in result
             assert "Concluído!" in result
 
@@ -219,10 +225,12 @@ class TestPlanningPersisted:
         original_db = planning.PLANS_DB
         planning.PLANS_DB = tmp_path / "plans.db"
         try:
-            await planning.plan_create({
-                "goal": "Sobreviver restart",
-                "steps": ["Única etapa"],
-            })
+            await planning.plan_create(
+                {
+                    "goal": "Sobreviver restart",
+                    "steps": ["Única etapa"],
+                }
+            )
             # Simular "restart" limpando cache e relendo
             plan = planning._get_current_plan()
             assert plan is not None
@@ -314,11 +322,13 @@ class TestFileBackup:
         try:
             with patch("denai.tools.file_ops.is_path_allowed", return_value=(True, "")):
                 with patch("denai.tools.file_ops._resolve_path", return_value=f):
-                    result = await file_ops.file_edit({
-                        "path": str(f),
-                        "old_text": "hello",
-                        "new_text": "bye",
-                    })
+                    result = await file_ops.file_edit(
+                        {
+                            "path": str(f),
+                            "old_text": "hello",
+                            "new_text": "bye",
+                        }
+                    )
 
             assert "✅" in result
             # Verificar backup

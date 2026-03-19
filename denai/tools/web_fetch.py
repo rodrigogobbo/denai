@@ -49,10 +49,27 @@ TIMEOUT = 15  # seconds
 
 # IPs internos bloqueados (SSRF protection)
 BLOCKED_RANGES = [
-    "10.", "172.16.", "172.17.", "172.18.", "172.19.", "172.20.",
-    "172.21.", "172.22.", "172.23.", "172.24.", "172.25.", "172.26.",
-    "172.27.", "172.28.", "172.29.", "172.30.", "172.31.", "192.168.",
-    "127.", "0.", "169.254.",
+    "10.",
+    "172.16.",
+    "172.17.",
+    "172.18.",
+    "172.19.",
+    "172.20.",
+    "172.21.",
+    "172.22.",
+    "172.23.",
+    "172.24.",
+    "172.25.",
+    "172.26.",
+    "172.27.",
+    "172.28.",
+    "172.29.",
+    "172.30.",
+    "172.31.",
+    "192.168.",
+    "127.",
+    "0.",
+    "169.254.",
 ]
 
 
@@ -105,9 +122,7 @@ def _is_url_safe(url: str) -> tuple[bool, str]:
 def _is_url(query: str) -> bool:
     """Heurística: é uma URL ou uma query de busca?"""
     q = query.strip()
-    return q.startswith(("http://", "https://")) or (
-        "." in q and " " not in q and len(q) < 200
-    )
+    return q.startswith(("http://", "https://")) or ("." in q and " " not in q and len(q) < 200)
 
 
 # ─── DuckDuckGo Search ────────────────────────────────────────────────────
@@ -193,7 +208,7 @@ async def _search_ddg(query: str, max_results: int = 5) -> str:
     if not results:
         return f"📭 Nenhum resultado encontrado para: {query}"
 
-    header = f"🔍 {len(results)} resultado(s) para \"{query}\":\n"
+    header = f'🔍 {len(results)} resultado(s) para "{query}":\n'
     return header + "\n\n".join(results)
 
 
