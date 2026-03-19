@@ -568,6 +568,32 @@ Você pode trocar o "cérebro" da IA a qualquer momento, sem perder suas convers
 
 ---
 
+### ⚙️ Configurações Avançadas
+
+O DenAI funciona sem configurar nada, mas se quiser personalizar, use variáveis de ambiente:
+
+```bash
+# Windows (PowerShell)
+$env:DENAI_MAX_TOOL_ROUNDS = "50"     # Mais rodadas de ferramentas (padrão: 25)
+$env:DENAI_MAX_CONTEXT = "131072"     # Janela de contexto maior (padrão: 65536)
+$env:DENAI_MODEL = "qwen2.5-coder:32b"  # Modelo padrão
+denai
+
+# Linux / macOS
+DENAI_MAX_TOOL_ROUNDS=50 DENAI_MAX_CONTEXT=131072 denai
+```
+
+| Variável | Padrão | O que faz |
+|----------|--------|-----------|
+| `DENAI_MODEL` | `llama3.1:8b` | Modelo que a IA usa |
+| `DENAI_PORT` | `4078` | Porta do servidor web |
+| `DENAI_MAX_TOOL_ROUNDS` | `25` | Quantas vezes a IA pode usar ferramentas por mensagem |
+| `DENAI_MAX_CONTEXT` | `65536` | Tamanho máximo da "memória de curto prazo" (em tokens) |
+
+> 💡 **O que é contexto?** É o quanto a IA consegue "lembrar" da conversa atual. O DenAI ajusta automaticamente de 8k a 64k tokens conforme a conversa cresce. Se a conversa ficar muito longa, ele resume as mensagens antigas automaticamente.
+
+---
+
 ## 🔧 Resolução de Problemas
 
 Algo deu errado? Calma! Vamos resolver. Encontre o seu problema abaixo:
@@ -929,7 +955,7 @@ Resposta honesta — **depende do modelo e da sua RAM:**
 **Resumo prático:**
 - Com **16 GB de RAM** (modelo 7-8B): é um ótimo assistente pra conversa e código. Pra uso do dia a dia, resolve 80% do que vc precisa.
 - Com **32 GB de RAM** (modelo 32B): chega perto do ChatGPT em qualidade. Tool calling funciona bem, consegue planejar e executar tarefas em sequência.
-- O gap principal é o **tamanho do contexto** — modelos locais trabalham com 8-32k tokens vs 128k+ dos modelos cloud. Pra arquivos muito grandes ou conversas muito longas, o cloud ainda ganha.
+- O gap principal era o **tamanho do contexto**, mas agora o DenAI escala automaticamente de 8k a 64k tokens e sumariza mensagens antigas quando necessário. Ainda fica abaixo dos 128k+ do cloud, mas a diferença é bem menor.
 
 > 💡 **Dica:** Se vc já tem um PC com 16 GB, comece com o `qwen2.5-coder:7b`. Se quiser investir, 32 GB de RAM é a melhor upgrade — custa ~R$300-500 e desbloqueia modelos muito melhores.
 
@@ -1163,7 +1189,7 @@ O **processador** — o "cérebro" do computador. É ele que faz todos os cálcu
 A **memória temporária** do computador — o "espaço de trabalho". Quando você abre um programa, ele vai pra RAM. Quando desliga o PC, a RAM é apagada. A IA precisa de bastante RAM pra funcionar, porque o modelo inteiro precisa ser carregado nela. É medida em **GB** (gigabytes): 8 GB, 16 GB, 32 GB.
 
 ### 🪙 Token
-A menor unidade de texto que a IA processa. Uma palavra pode ser 1 ou mais tokens. Por exemplo, "computador" pode ser 2 tokens: "compu" + "tador". Quando falamos que um modelo aceita "8K tokens de contexto", significa que ele consegue "lembrar" de aproximadamente 6.000 palavras de conversa.
+A menor unidade de texto que a IA processa. Uma palavra pode ser 1 ou mais tokens. Por exemplo, "computador" pode ser 2 tokens: "compu" + "tador". Quando falamos que um modelo aceita "8K tokens de contexto", significa que ele consegue "lembrar" de aproximadamente 6.000 palavras de conversa. O DenAI escala automaticamente a janela de contexto de 8k a 64k tokens conforme a conversa cresce, e sumariza mensagens antigas quando necessário.
 
 ### 📦 Quantização
 Uma técnica pra **comprimir** modelos de IA, tornando-os menores e mais rápidos, com uma leve perda de qualidade. É como converter um CD (alta qualidade, grande) pra MP3 (qualidade menor, mas pequeno e prático). Modelos com `q4` ou `q5` no nome são quantizados.

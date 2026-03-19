@@ -26,6 +26,8 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 - 🔍 **Search** — Find conversations by title or content
 - 🧙 **Setup Wizard** — Guided first-boot experience for beginners
 - 🧩 **Extensible** — Drop a Python file in `denai/tools/` and it's auto-discovered
+- 🧠 **Smart Context** — Dynamic context window (8k→32k→64k) with auto-summarization
+- 🔄 **Deep Tool Chains** — Up to 25 tool call rounds per message (configurable)
 - 🌍 **Offline First** — Works without internet after initial setup
 
 ---
@@ -134,12 +136,12 @@ Resposta honesta:
 | Gerar código | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
 | Tool calling (ler/editar/executar) | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ |
 | Planning multi-step | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ |
-| Contexto longo (100k+ tokens) | ⭐⭐⭐⭐⭐ | ⭐⭐ (8k ctx) | ⭐⭐⭐ (32k ctx) |
+| Contexto longo (100k+ tokens) | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ (auto 8-32k) | ⭐⭐⭐⭐ (auto 32-64k) |
 | Privacidade | ❌ Dados vão pra nuvem | ✅ 100% local | ✅ 100% local |
 | Custo | $20-200/mês | **Grátis** | **Grátis** |
 | Funciona offline | ❌ | ✅ | ✅ |
 
-> 💡 **Resumo prático:** Com **8 GB RAM + modelo 8B**, o DenAI é um bom assistente de conversa e código, mas erra em tool calling complexo. Com **32 GB RAM + qwen2.5-coder:32b**, chega perto da experiência de cloud — tool calling confiável, planning, edição de arquivos em sequência. O gap principal é o contexto (8-32k vs 128k dos modelos cloud).
+> 💡 **Resumo prático:** Com **8 GB RAM + modelo 8B**, o DenAI é um bom assistente de conversa e código, mas erra em tool calling complexo. Com **32 GB RAM + qwen2.5-coder:32b**, chega perto da experiência de cloud — tool calling confiável, planning, edição de arquivos em sequência. O contexto agora escala automaticamente de 8k a 64k tokens, com sumarização automática de mensagens antigas para sessões longas.
 
 ### Qual computador comprar?
 
@@ -170,6 +172,25 @@ ollama pull <model-name>
 
 # List installed models
 ollama list
+```
+
+---
+
+## ⚙️ Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DENAI_HOST` | `127.0.0.1` | Bind address |
+| `DENAI_PORT` | `4078` | Server port |
+| `DENAI_MODEL` | `llama3.1:8b` | Default Ollama model |
+| `DENAI_OLLAMA_URL` | `http://localhost:11434` | Ollama API endpoint |
+| `DENAI_MAX_TOOL_ROUNDS` | `25` | Max tool call rounds per message |
+| `DENAI_MAX_CONTEXT` | `65536` | Max context window size (tokens) |
+| `DENAI_SHARE` | `false` | Enable share mode |
+
+```bash
+# Example: larger context + custom model
+DENAI_MAX_CONTEXT=131072 DENAI_MODEL=qwen2.5-coder:32b denai
 ```
 
 ---

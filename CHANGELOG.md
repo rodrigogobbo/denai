@@ -46,6 +46,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Plugin system** — Autodiscovery from `~/.denai/plugins/` (single-file + directory plugins)
 - **Plugin API routes** — List and manage plugins via `/api/plugins`
 - **51 new tests** — RAG unit tests, API integration tests, tool tests, prompt tests (237 total)
+- **Dynamic context management** — Auto-scales context window 8k→32k→64k based on conversation length
+  - Token estimation for messages (model-agnostic, ~4 chars/token heuristic)
+  - Auto-summarization when context exceeds 60% capacity (compresses old messages)
+  - Configurable via `DENAI_MAX_CONTEXT` (default: 65536)
+- **Extended tool rounds** — Up to 25 tool call rounds per message (was 5)
+  - Configurable via `DENAI_MAX_TOOL_ROUNDS` (default: 25)
+  - Enables long multi-step sessions (file editing, planning, research workflows)
+- **New env vars** — `DENAI_MAX_TOOL_ROUNDS`, `DENAI_MAX_CONTEXT` for power users
+- **12 new tests** — Context management module (249 total)
 
 ## [0.2.0] - 2026-03-19
 
