@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.0] - 2026-03-20
 
 ### Added
+- **Core tools** — 7 new tools that transform DenAI from chatbot to assistant
+  - `file_read` — Read files with line numbers, offset/limit for large files
+  - `file_write` — Write files with auto directory creation
+  - `list_files` — List directory contents with glob pattern support
+  - `command_exec` — Execute shell commands with security sandbox
+  - `memory_save` — Persistent memory across sessions (SQLite)
+  - `memory_search` — Search past memories by keywords and type
+  - `web_search` — Fetch web URLs with HTML stripping and SSRF protection
 - **RAG local** — BM25-based document search, zero external dependencies
   - Index documents from `~/.denai/documents/` (30+ file formats)
   - Smart text chunking with overlap for large files
@@ -23,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `DELETE /api/rag/documents/{name}` — Remove document
 - **Plugin system** — Autodiscovery from `~/.denai/plugins/` (single-file + directory plugins)
 - **Plugin API routes** — List and manage plugins via `/api/plugins`
-- **51 new tests** — RAG unit tests, API integration tests, tool tests, prompt tests (167 total)
+- **51 new tests** — RAG unit tests, API integration tests, tool tests, prompt tests (208 total)
 
 ## [0.2.0] - 2026-03-19
 

@@ -9,6 +9,20 @@ import pytest
 
 from denai.tools.registry import TOOLS_SPEC, execute_tool
 
+# As 10 tools esperadas
+EXPECTED_TOOLS = [
+    "file_read",
+    "file_write",
+    "list_files",
+    "command_exec",
+    "memory_save",
+    "memory_search",
+    "web_search",
+    "rag_search",
+    "rag_index",
+    "rag_stats",
+]
+
 
 class TestToolsSpec:
     """Testes para o registro de ferramentas (TOOLS_SPEC)."""
@@ -18,47 +32,38 @@ class TestToolsSpec:
         assert TOOLS_SPEC is not None
         assert len(TOOLS_SPEC) > 0, "TOOLS_SPEC não deve estar vazio"
 
-    @pytest.mark.parametrize(
-        "tool_name",
-        [
-            "file_read",
-            "file_write",
-            "list_files",
-            "command_exec",
-            "memory_save",
-            "memory_search",
-            "web_search",
-        ],
-    )
+    def test_all_expected_tools_registered(self):
+        """Todas as 10 tools core devem estar registradas."""
+        registered = [t.get("function", {}).get("name") for t in TOOLS_SPEC]
+        for name in EXPECTED_TOOLS:
+            assert name in registered, f"Tool '{name}' não encontrada. Registradas: {registered}"
+
+    @pytest.mark.parametrize("tool_name", EXPECTED_TOOLS)
     def test_expected_tool_registered(self, tool_name: str):
         """Ferramenta '{tool_name}' deve estar registrada."""
-        tool_names = [t.get("name", t.get("function", {}).get("name")) for t in TOOLS_SPEC]
-
-        # Fallback: tenta checar como dict com chave do nome
-        if not tool_names or all(n is None for n in tool_names):
-            # Talvez TOOLS_SPEC seja um dict
-            if isinstance(TOOLS_SPEC, dict):
-                assert tool_name in TOOLS_SPEC, (
-                    f"Ferramenta '{tool_name}' não encontrada no registro. Disponíveis: {list(TOOLS_SPEC.keys())}"
-                )
-                return
-
+        tool_names = [t.get("function", {}).get("name") for t in TOOLS_SPEC]
         assert tool_name in tool_names, f"Ferramenta '{tool_name}' não encontrada. Registradas: {tool_names}"
 
     def test_each_tool_has_description(self):
         """Cada ferramenta deve ter uma descrição."""
-        if isinstance(TOOLS_SPEC, dict):
-            for name, spec in TOOLS_SPEC.items():
-                desc = spec.get("description", "")
-                assert desc, f"Ferramenta '{name}' não tem descrição"
-        elif isinstance(TOOLS_SPEC, list):
-            for tool in TOOLS_SPEC:
-                name = tool.get("name", tool.get("function", {}).get("name", "?"))
-                desc = tool.get(
-                    "description",
-                    tool.get("function", {}).get("description", ""),
-                )
-                assert desc, f"Ferramenta '{name}' não tem descrição"
+        for tool in TOOLS_SPEC:
+            fn = tool.get("function", {})
+            name = fn.get("name", "?")
+            desc = fn.get("description", "")
+            assert desc, f"Ferramenta '{name}' não tem descrição"
+
+    def test_each_tool_has_parameters(self):
+        """Cada ferramenta deve ter definição de parâmetros."""
+        for tool in TOOLS_SPEC:
+            fn = tool.get("function", {})
+            name = fn.get("name", "?")
+            params = fn.get("parameters", {})
+            assert params, f"Ferramenta '{name}' não tem parâmetros definidos"
+            assert params.get("type") == "object", f"Ferramenta '{name}' deve ter parameters.type='object'"
+
+    def test_total_tools_count(self):
+        """Devem haver pelo menos 10 tools registradas."""
+        assert len(TOOLS_SPEC) >= 10
 
 
 class TestExecuteTool:
@@ -68,45 +73,20 @@ class TestExecuteTool:
     async def test_unknown_tool_returns_error(self):
         """Executar ferramenta desconhecida deve retornar indicação de erro."""
         result = await execute_tool("nonexistent_tool_xyz", {})
-
-        # O resultado deve indicar erro (pode ser dict, string, ou exceção)
-        if isinstance(result, dict):
-            has_error = (
-                result.get("error") is not None
-                or result.get("success") is False
-                or "erro" in str(result).lower()
-                or "error" in str(result).lower()
-                or "desconhecida" in str(result).lower()
-            )
-            assert has_error, f"Deveria retornar erro para ferramenta desconhecida, got: {result}"
-        elif isinstance(result, str):
-            result_lower = result.lower()
-            has_error = any(
-                word in result_lower for word in ["error", "erro", "not found", "desconhecida", "unknown", "❌"]
-            )
-            assert has_error, f"Deveria indicar erro, got: {result}"
-        else:
-            pytest.fail(f"Tipo de retorno inesperado para ferramenta desconhecida: {type(result)} = {result}")
+        assert "❌" in result or "desconhecida" in result.lower()
 
     @pytest.mark.asyncio
     async def test_unknown_tool_does_not_crash(self):
-        """Executar ferramenta desconhecida não deve lançar exceção não tratada."""
-        # Não deve levantar exceção (o erro deve ser retornado, não raised)
+        """Executar ferramenta desconhecida não deve lançar exceção."""
         try:
             await execute_tool("absolutely_fake_tool", {"key": "value"})
         except (KeyError, ValueError, TypeError):
-            # Exceções controladas são aceitáveis
             pass
         except Exception as e:
-            pytest.fail(f"Exceção inesperada ao executar ferramenta desconhecida: {type(e).__name__}: {e}")
+            pytest.fail(f"Exceção inesperada ao executar tool desconhecida: {type(e).__name__}: {e}")
 
     @pytest.mark.asyncio
     async def test_empty_tool_name_returns_error(self):
         """Nome de ferramenta vazio deve retornar erro."""
         result = await execute_tool("", {})
-
-        if isinstance(result, dict):
-            has_error = result.get("error") is not None or result.get("success") is False
-            assert has_error, "Deveria retornar erro para nome vazio"
-        elif isinstance(result, str):
-            assert "erro" in result.lower() or "error" in result.lower() or "❌" in result or len(result) > 0
+        assert "❌" in result or "desconhecida" in result.lower()
