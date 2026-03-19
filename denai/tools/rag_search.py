@@ -76,12 +76,9 @@ async def rag_search(args: dict) -> str:
     results = search_documents(query, top_k=int(top_k))
 
     if not results:
-        return (
-            "📭 Nenhum documento encontrado. "
-            "Coloque arquivos em ~/.denai/documents/ e use rag_index para indexar."
-        )
+        return "📭 Nenhum documento encontrado. Coloque arquivos em ~/.denai/documents/ e use rag_index para indexar."
 
-    parts = [f"📄 {len(results)} resultado(s) para \"{query}\":\n"]
+    parts = [f'📄 {len(results)} resultado(s) para "{query}":\n']
     for i, r in enumerate(results, 1):
         score = r["score"]
         source = r["source"]

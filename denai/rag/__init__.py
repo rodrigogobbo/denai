@@ -104,6 +104,7 @@ def tokenize(text: str) -> list[str]:
 
 # ── Chunker ─────────────────────────────────────────────────────
 
+
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 100) -> list[str]:
     """Divide texto em chunks com overlap."""
     words = text.split()
@@ -123,6 +124,7 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 100) -> list[str
 
 # ── BM25 Index ─────────────────────────────────────────────────────
 
+
 class BM25Index:
     """Índice BM25 simples para busca por similaridade textual."""
 
@@ -138,11 +140,13 @@ class BM25Index:
     def add_document(self, text: str, source: str = ""):
         """Adiciona um documento ao índice."""
         tokens = tokenize(text)
-        self.documents.append({
-            "text": text,
-            "source": source,
-            "tokens": tokens,
-        })
+        self.documents.append(
+            {
+                "text": text,
+                "source": source,
+                "tokens": tokens,
+            }
+        )
 
     def build(self):
         """Constrói o índice (calcular df, avg_doc_len)."""
@@ -192,11 +196,13 @@ class BM25Index:
         results = []
         for idx, score in scores[:top_k]:
             doc = self.documents[idx]
-            results.append({
-                "text": doc["text"],
-                "source": doc["source"],
-                "score": round(score, 4),
-            })
+            results.append(
+                {
+                    "text": doc["text"],
+                    "source": doc["source"],
+                    "score": round(score, 4),
+                }
+            )
 
         return results
 
@@ -322,10 +328,7 @@ def get_rag_context(query: str, max_chars: int = 3000) -> str:
     if not context_parts:
         return ""
 
-    return (
-        "Contexto de documentos locais (use para responder):\n\n"
-        + "\n\n---\n\n".join(context_parts)
-    )
+    return "Contexto de documentos locais (use para responder):\n\n" + "\n\n---\n\n".join(context_parts)
 
 
 def get_index_stats() -> dict:

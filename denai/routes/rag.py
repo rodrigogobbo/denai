@@ -64,12 +64,14 @@ async def list_documents():
 
         try:
             stat = f.stat()
-            docs.append({
-                "name": f.name,
-                "path": str(f.relative_to(DOCS_DIR)),
-                "size": stat.st_size,
-                "extension": f.suffix.lower(),
-            })
+            docs.append(
+                {
+                    "name": f.name,
+                    "path": str(f.relative_to(DOCS_DIR)),
+                    "size": stat.st_size,
+                    "extension": f.suffix.lower(),
+                }
+            )
         except Exception:
             continue
 
