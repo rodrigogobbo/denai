@@ -287,9 +287,7 @@ window.togglePlansPanel = function() {
 
 async function loadPlans() {
   try {
-    const resp = await apiGet('/api/plans');
-    if (!resp.ok) return;
-    const plans = await resp.json();
+    const plans = await apiGet('/api/plans');
 
     $plansBadge.textContent = plans.length;
     $plansBadge.style.display = plans.length > 0 ? 'inline' : 'none';
@@ -322,9 +320,7 @@ window.loadPlans = loadPlans;
 
 window.viewPlan = async function(planId) {
   try {
-    const resp = await apiGet('/api/plans/' + planId);
-    if (!resp.ok) return;
-    const plan = await resp.json();
+    const plan = await apiGet('/api/plans/' + planId);
 
     const statusIcon = { pending: '⬜', in_progress: '🔄', done: '✅' };
     const stepsHtml = plan.steps.map((s, i) => `

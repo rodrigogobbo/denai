@@ -13,17 +13,22 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import DATA_DIR, DEFAULT_MODEL, HOST, OLLAMA_URL, PORT, SHARE_MODE, STATIC_DIR
 from .db import init_db
+from .logging_config import LOG_FILE, setup_logging
 from .network import LOCAL_IP
 from .routes import all_routers
 from .security import API_KEY, PUBLIC_PATHS, rate_limiter, verify_api_key
+
+logger = setup_logging()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     await init_db()
+    logger.info("DenAI v0.5.1 iniciado — model=%s, port=%s", DEFAULT_MODEL, PORT)
     _print_banner()
     yield
+    logger.info("DenAI encerrado.")
 
 
 def create_app() -> FastAPI:
@@ -120,11 +125,12 @@ def _print_banner():
   💡 Pra compartilhar: python -m denai --compartilhar"""
 
     print(f"""
-  🐺 DenAI v0.2.0
+  🐺 DenAI v0.5.1
   ─────────────────────────────────────
   URL:     http://{HOST}:{PORT}
   Ollama:  {OLLAMA_URL}
   Dados:   {DATA_DIR}
+  Logs:    {LOG_FILE}
   🔒 Auth + Sandbox + Rate Limit
 {share_block}
   ─────────────────────────────────────
