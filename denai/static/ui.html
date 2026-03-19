@@ -1032,14 +1032,11 @@ body {
 }
 
 .tool-call-body {
-  display: none;
-  border-top: 1px solid var(--border);
-  padding: 10px 12px;
   font-size: 12px;
 }
 
 .tool-call-card.expanded .tool-call-body {
-  display: block;
+  /* see enhanced CSS below */
 }
 
 .tool-call-section-label {
@@ -1424,6 +1421,426 @@ body {
     max-width: 90%;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   FIRST-BOOT WIZARD
+   ═══════════════════════════════════════════════════════════ */
+.wizard-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+}
+
+.wizard-overlay.visible {
+  display: flex;
+  animation: fadeIn 0.4s ease;
+}
+
+.wizard-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 40px 36px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  animation: dialogSlideIn 0.35s ease;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.wizard-step {
+  display: none;
+}
+
+.wizard-step.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+.wizard-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  display: block;
+  animation: wolfBounce 2s ease infinite;
+}
+
+.wizard-card h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, var(--accent), #4ade80);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.wizard-card p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.wizard-card p.wizard-subtle {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-bottom: 24px;
+}
+
+.wizard-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-top: 8px;
+}
+
+.wizard-btn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.wizard-btn:active {
+  transform: translateY(0);
+}
+
+.wizard-btn.secondary {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.wizard-btn.secondary:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-light);
+}
+
+.wizard-btn.link {
+  background: none;
+  color: var(--accent);
+  padding: 8px 16px;
+  font-size: 13px;
+  border: none;
+}
+
+.wizard-btn.link:hover {
+  text-decoration: underline;
+  transform: none;
+}
+
+.wizard-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.wizard-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-dim-border);
+  border-radius: var(--radius-md);
+  margin: 20px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.wizard-check .check-icon {
+  font-size: 22px;
+}
+
+.wizard-offline-instructions {
+  text-align: left;
+  margin: 20px 0;
+  padding: 16px 20px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.wizard-offline-instructions p {
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.wizard-offline-instructions .step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  font-size: 12px;
+  font-weight: 700;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+/* Wizard: Model cards */
+.wizard-model-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.wizard-model-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.wizard-model-card:hover {
+  border-color: var(--accent-dim-border);
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.wizard-model-card.pulling {
+  border-color: var(--accent-dim-border);
+  background: var(--accent-dim);
+  cursor: default;
+  transform: none;
+}
+
+.wizard-model-card .model-emoji {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.wizard-model-card .model-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.wizard-model-card .model-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.wizard-model-card .model-desc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.wizard-model-card .model-size {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  padding: 3px 8px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.wizard-pull-progress {
+  margin-top: 16px;
+  display: none;
+}
+
+.wizard-pull-progress.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+.wizard-pull-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.wizard-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-input);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.wizard-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #4ade80);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+/* Wizard: dots indicator */
+.wizard-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.wizard-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-light);
+  transition: all var(--transition-fast);
+}
+
+.wizard-dot.active {
+  background: var(--accent);
+  width: 24px;
+  border-radius: 4px;
+}
+
+.wizard-dot.done {
+  background: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOOL CALL ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Pulse animation on running status */
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.tool-call-status.running {
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tool-call-status.running::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+  animation: statusPulse 1.5s ease infinite;
+  flex-shrink: 0;
+}
+
+/* Spinner for running tool calls */
+@keyframes toolSpinner {
+  to { transform: rotate(360deg); }
+}
+
+.tool-call-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: #fbbf24;
+  border-radius: 50%;
+  animation: toolSpinner 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Progress bar at bottom of running tool cards */
+@keyframes toolProgressSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.tool-call-card.running-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-call-card.running-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #fbbf24, var(--accent), transparent);
+  animation: toolProgressSlide 1.8s ease infinite;
+}
+
+/* Flash green on completion */
+@keyframes toolCompleteFlash {
+  0% { border-color: var(--accent); box-shadow: 0 0 12px rgba(33, 194, 94, 0.3); }
+  100% { border-color: var(--border); box-shadow: none; }
+}
+
+.tool-call-card.completed-flash {
+  animation: toolCompleteFlash 1s ease forwards;
+}
+
+/* Smooth expand/collapse transition */
+.tool-call-body {
+  display: block;
+  max-height: 0;
+  overflow: hidden;
+  border-top: none;
+  padding: 0 12px;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease, border-top 0s 0.35s;
+}
+
+.tool-call-card.expanded .tool-call-body {
+  max-height: 600px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease, border-top 0s;
+}
+
+/* Tool counter badge */
+.tool-counter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--bg-tool);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 8px 0;
+}
+
+.tool-counter-badge .counter-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--border);
+  border-top-color: #fbbf24;
+  border-radius: 50%;
+  animation: toolSpinner 0.8s linear infinite;
+}
 </style>
 </head>
 <body>
@@ -1567,6 +1984,113 @@ body {
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- First-Boot Wizard -->
+<div class="wizard-overlay" id="wizardOverlay">
+  <div class="wizard-card">
+    <!-- Step 1: Welcome -->
+    <div class="wizard-step active" id="wizardStep1">
+      <span class="wizard-icon">🐺</span>
+      <h2>Bem-vindo ao DenAI</h2>
+      <p>Seu assistente IA local, 100% privado.</p>
+      <p class="wizard-subtle">Vamos configurar em 2 minutos.</p>
+      <button class="wizard-btn" onclick="wizardNext(2)">Começar →</button>
+      <div class="wizard-dots">
+        <span class="wizard-dot active"></span>
+        <span class="wizard-dot"></span>
+        <span class="wizard-dot"></span>
+        <span class="wizard-dot"></span>
+      </div>
+    </div>
+
+    <!-- Step 2: Install Ollama -->
+    <div class="wizard-step" id="wizardStep2">
+      <span class="wizard-icon" style="font-size:48px; animation:none;">⚙️</span>
+      <h2>Verificando Ollama</h2>
+      <div id="wizardOllamaOnline" style="display:none;">
+        <div class="wizard-check">
+          <span class="check-icon">✅</span>
+          Ollama detectado! <span id="wizardOllamaVersion"></span>
+        </div>
+      </div>
+      <div id="wizardOllamaOffline" style="display:none;">
+        <div class="wizard-offline-instructions">
+          <p><span class="step-num">1</span>Instale o Ollama no seu sistema</p>
+          <p style="margin-bottom:4px;"><span class="step-num">2</span>Inicie o Ollama e volte aqui</p>
+        </div>
+        <a href="https://ollama.com/download" target="_blank" rel="noopener" class="wizard-btn" style="text-decoration:none; margin-bottom:10px;">
+          Baixar Ollama ↗
+        </a>
+        <br>
+        <button class="wizard-btn secondary" id="wizardRecheckBtn" onclick="wizardCheckOllama()">
+          Verificar novamente
+        </button>
+      </div>
+      <div id="wizardOllamaChecking">
+        <p style="margin-top:20px; color: var(--text-tertiary);">Verificando conexão...</p>
+      </div>
+      <div class="wizard-dots">
+        <span class="wizard-dot done"></span>
+        <span class="wizard-dot active"></span>
+        <span class="wizard-dot"></span>
+        <span class="wizard-dot"></span>
+      </div>
+    </div>
+
+    <!-- Step 3: Pull Model -->
+    <div class="wizard-step" id="wizardStep3">
+      <span class="wizard-icon" style="font-size:48px; animation:none;">📦</span>
+      <h2>Escolha um modelo</h2>
+      <p>Selecione um modelo para baixar:</p>
+      <div class="wizard-model-cards" id="wizardModelCards">
+        <div class="wizard-model-card" onclick="wizardPullModel('llama3.2:3b', this)">
+          <span class="model-emoji">⚡</span>
+          <div class="model-info">
+            <div class="model-name">llama3.2:3b</div>
+            <div class="model-desc">Rápido e leve — ideal pra começar</div>
+          </div>
+          <span class="model-size">~2 GB</span>
+        </div>
+        <div class="wizard-model-card" onclick="wizardPullModel('llama3.1:8b', this)">
+          <span class="model-emoji">🧠</span>
+          <div class="model-info">
+            <div class="model-name">llama3.1:8b</div>
+            <div class="model-desc">Mais inteligente — melhor qualidade</div>
+          </div>
+          <span class="model-size">~4.7 GB</span>
+        </div>
+      </div>
+      <div class="wizard-pull-progress" id="wizardPullProgress">
+        <div class="wizard-pull-label" id="wizardPullLabel">Preparando download...</div>
+        <div class="wizard-progress-bar">
+          <div class="wizard-progress-fill" id="wizardProgressFill"></div>
+        </div>
+      </div>
+      <button class="wizard-btn link" onclick="wizardNext(4)">Já tenho modelos →</button>
+      <div class="wizard-dots">
+        <span class="wizard-dot done"></span>
+        <span class="wizard-dot done"></span>
+        <span class="wizard-dot active"></span>
+        <span class="wizard-dot"></span>
+      </div>
+    </div>
+
+    <!-- Step 4: Ready -->
+    <div class="wizard-step" id="wizardStep4">
+      <span class="wizard-icon">🎉</span>
+      <h2>Tudo pronto!</h2>
+      <p>Seu DenAI está configurado.</p>
+      <p class="wizard-subtle">Agora é só escolher um modelo na barra lateral e conversar.</p>
+      <button class="wizard-btn" onclick="wizardFinish()">Começar a conversar</button>
+      <div class="wizard-dots">
+        <span class="wizard-dot done"></span>
+        <span class="wizard-dot done"></span>
+        <span class="wizard-dot done"></span>
+        <span class="wizard-dot active"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <script>
 /* ═══════════════════════════════════════════════════════════
@@ -1664,6 +2188,12 @@ const $exportDropdown = document.getElementById('exportDropdown');
 const $btnTheme = document.getElementById('btnTheme');
 const $themeIconMoon = document.getElementById('themeIconMoon');
 const $themeIconSun = document.getElementById('themeIconSun');
+const $wizardOverlay = document.getElementById('wizardOverlay');
+
+
+// ─── Wizard State ───
+let wizardCurrentStep = 1;
+let wizardPulling = false;
 
 
 // ─── Helpers ───
@@ -1775,6 +2305,189 @@ window.copyCode = function(btn) {
 window.toggleToolCall = function(el) {
   el.closest('.tool-call-card').classList.toggle('expanded');
 };
+
+
+// ─── First-Boot Wizard ───
+function showWizard() {
+  wizardCurrentStep = 1;
+  // Reset all steps
+  document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('wizardStep1').classList.add('active');
+  $wizardOverlay.classList.add('visible');
+}
+
+window.wizardNext = function(step) {
+  wizardCurrentStep = step;
+  document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('wizardStep' + step).classList.add('active');
+
+  // Auto-check Ollama on step 2
+  if (step === 2) {
+    wizardCheckOllama();
+  }
+};
+
+window.wizardCheckOllama = async function() {
+  const onlineEl = document.getElementById('wizardOllamaOnline');
+  const offlineEl = document.getElementById('wizardOllamaOffline');
+  const checkingEl = document.getElementById('wizardOllamaChecking');
+  const recheckBtn = document.getElementById('wizardRecheckBtn');
+
+  onlineEl.style.display = 'none';
+  offlineEl.style.display = 'none';
+  checkingEl.style.display = 'block';
+  if (recheckBtn) recheckBtn.disabled = true;
+
+  try {
+    const data = await apiGet('/api/ollama/status');
+    checkingEl.style.display = 'none';
+
+    if (data.status === 'online') {
+      onlineEl.style.display = 'block';
+      const versionEl = document.getElementById('wizardOllamaVersion');
+      if (versionEl && data.version) versionEl.textContent = `v${data.version}`;
+
+      // Auto-advance after 1.5s
+      setTimeout(() => {
+        if (wizardCurrentStep === 2) {
+          // If there are already models, skip to step 4
+          if (data.models_count > 0) {
+            wizardNext(4);
+          } else {
+            wizardNext(3);
+          }
+        }
+      }, 1500);
+    } else {
+      offlineEl.style.display = 'block';
+      if (recheckBtn) recheckBtn.disabled = false;
+    }
+  } catch (e) {
+    checkingEl.style.display = 'none';
+    offlineEl.style.display = 'block';
+    if (recheckBtn) recheckBtn.disabled = false;
+  }
+};
+
+window.wizardPullModel = async function(modelName, cardEl) {
+  if (wizardPulling) return;
+  wizardPulling = true;
+
+  // Mark card as pulling
+  document.querySelectorAll('.wizard-model-card').forEach(c => c.style.pointerEvents = 'none');
+  if (cardEl) cardEl.classList.add('pulling');
+
+  const progressContainer = document.getElementById('wizardPullProgress');
+  const progressLabel = document.getElementById('wizardPullLabel');
+  const progressFill = document.getElementById('wizardProgressFill');
+  progressContainer.classList.add('active');
+  progressLabel.textContent = `Baixando ${modelName}...`;
+  progressFill.style.width = '0%';
+
+  try {
+    const res = await fetch(API_BASE + '/api/pull', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ model: modelName }),
+    });
+
+    if (!res.ok) throw new Error(`Erro: ${res.status}`);
+
+    if (res.body) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let lastStatus = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value, { stream: true });
+        const lines = text.split('\n').filter(l => l.trim());
+        for (const line of lines) {
+          try {
+            const parsed = JSON.parse(line);
+            lastStatus = parsed.status || lastStatus;
+            if (parsed.total && parsed.completed) {
+              const pct = Math.round((parsed.completed / parsed.total) * 100);
+              progressLabel.textContent = `${lastStatus} ${pct}%`;
+              progressFill.style.width = pct + '%';
+            } else {
+              progressLabel.textContent = lastStatus;
+            }
+          } catch (e) {
+            progressLabel.textContent = line;
+          }
+        }
+      }
+    }
+
+    progressLabel.textContent = `✓ ${modelName} pronto!`;
+    progressFill.style.width = '100%';
+
+    // Advance to ready step after a moment
+    setTimeout(() => {
+      wizardNext(4);
+      wizardPulling = false;
+    }, 1200);
+
+  } catch (e) {
+    progressLabel.textContent = `✗ Erro: ${e.message}`;
+    progressFill.style.width = '0%';
+    wizardPulling = false;
+    document.querySelectorAll('.wizard-model-card').forEach(c => c.style.pointerEvents = '');
+    if (cardEl) cardEl.classList.remove('pulling');
+  }
+};
+
+window.wizardFinish = async function() {
+  localStorage.setItem('denai-wizard-done', '1');
+  $wizardOverlay.classList.remove('visible');
+
+  // Refresh models and ollama status
+  await Promise.all([loadModels(), checkOllamaStatus()]);
+  $messageInput.focus();
+};
+
+
+// ─── Tool Call Counter ───
+let toolCallCounters = {}; // per-message tracking
+
+function getToolCounterHtml(current, total) {
+  return `<div class="tool-counter-badge">
+    <span class="counter-spinner"></span>
+    Executando ferramenta ${current} de ${total}...
+  </div>`;
+}
+
+function updateToolCounter(bubbleEl, current, total) {
+  let counterEl = bubbleEl.querySelector('.tool-counter-badge');
+  if (total <= 1) {
+    if (counterEl) counterEl.remove();
+    return;
+  }
+  if (current > total) {
+    // All done
+    if (counterEl) counterEl.remove();
+    return;
+  }
+  if (!counterEl) {
+    bubbleEl.insertAdjacentHTML('beforeend', getToolCounterHtml(current, total));
+  } else {
+    counterEl.innerHTML = `<span class="counter-spinner"></span> Executando ferramenta ${current} de ${total}...`;
+  }
+}
+
+function markToolCardComplete(cardEl) {
+  // Remove running class, add completion flash
+  cardEl.classList.remove('running-card');
+  cardEl.classList.add('completed-flash');
+  // Update status
+  const statusEl = cardEl.querySelector('.tool-call-status');
+  if (statusEl) {
+    statusEl.className = 'tool-call-status done';
+    statusEl.textContent = '✓ concluído';
+  }
+}
 
 
 // ─── Sidebar ───
@@ -2149,17 +2862,20 @@ function renderToolCallCard(toolCall, result) {
   const argsStr = typeof args === 'string' ? args : JSON.stringify(args, null, 2);
   const resultStr = result ? (typeof result === 'string' ? result : JSON.stringify(result, null, 2)) : null;
   const statusClass = resultStr ? 'done' : 'running';
-  const statusText = resultStr ? '✓ concluído' : '⏳ executando';
+  const cardClass = resultStr ? '' : ' running-card';
+  const statusIcon = resultStr
+    ? '✓ concluído'
+    : '<span class="tool-call-spinner"></span> executando';
 
   return `
-    <div class="tool-call-card">
+    <div class="tool-call-card${cardClass}">
       <div class="tool-call-header" onclick="toggleToolCall(this)">
         <svg class="tool-call-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="9 18 15 12 9 6"></polyline>
         </svg>
         <span class="tool-call-icon">🔧</span>
         <span class="tool-call-name">${escapeHtml(name)}</span>
-        <span class="tool-call-status ${statusClass}">${statusText}</span>
+        <span class="tool-call-status ${statusClass}">${statusIcon}</span>
       </div>
       <div class="tool-call-body">
         <div class="tool-call-section-label">Argumentos</div>
@@ -2480,6 +3196,8 @@ async function sendMessage() {
     const bubbleEl = msgDiv.querySelector('.message-bubble');
     let fullContent = '';
     let pendingToolCalls = {};
+    let toolCallCount = 0;
+    let toolCallCompleted = 0;
 
     // Parse SSE stream
     const reader = response.body.getReader();
@@ -2556,9 +3274,11 @@ async function sendMessage() {
             const tc = event.tool_call;
             const tcId = tc.id || generateId();
             pendingToolCalls[tcId] = tc;
+            toolCallCount++;
 
             const cardHtml = renderToolCallCard(tc, null);
             bubbleEl.insertAdjacentHTML('beforeend', cardHtml);
+            updateToolCounter(bubbleEl, toolCallCount - toolCallCompleted, toolCallCount);
             scrollToBottom();
           }
 
@@ -2566,26 +3286,32 @@ async function sendMessage() {
           if (event.tool_result) {
             const tr = event.tool_result;
             const tcId = tr.tool_call_id || tr.id;
-            if (tcId && pendingToolCalls[tcId]) {
-              // Update existing card — find the last tool card and update status
-              const cards = bubbleEl.querySelectorAll('.tool-call-card');
-              if (cards.length > 0) {
-                const lastCard = cards[cards.length - 1];
-                const statusEl = lastCard.querySelector('.tool-call-status');
-                if (statusEl) {
-                  statusEl.className = 'tool-call-status done';
-                  statusEl.textContent = '✓ concluído';
-                }
-                const bodyEl = lastCard.querySelector('.tool-call-body');
-                if (bodyEl) {
-                  const resultContent = typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result, null, 2);
-                  bodyEl.insertAdjacentHTML('beforeend', `
-                    <div class="tool-call-section-label">Resultado</div>
-                    <pre>${escapeHtml(resultContent)}</pre>`);
-                }
+            toolCallCompleted++;
+
+            // Find the matching running card
+            const cards = bubbleEl.querySelectorAll('.tool-call-card.running-card');
+            const targetCard = cards.length > 0 ? cards[0] : bubbleEl.querySelector('.tool-call-card:last-of-type');
+
+            if (targetCard) {
+              // Flash green + update status
+              markToolCardComplete(targetCard);
+
+              const bodyEl = targetCard.querySelector('.tool-call-body');
+              if (bodyEl) {
+                const resultContent = typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result, null, 2);
+                bodyEl.insertAdjacentHTML('beforeend', `
+                  <div class="tool-call-section-label">Resultado</div>
+                  <pre>${escapeHtml(resultContent)}</pre>`);
               }
-              scrollToBottom();
             }
+
+            // Update or remove counter
+            if (toolCallCompleted >= toolCallCount) {
+              updateToolCounter(bubbleEl, toolCallCount + 1, toolCallCount); // will remove
+            } else {
+              updateToolCounter(bubbleEl, toolCallCount - toolCallCompleted, toolCallCount);
+            }
+            scrollToBottom();
           }
 
           // Handle done
@@ -2735,6 +3461,11 @@ document.addEventListener('keydown', (e) => {
 
   // Escape — close dialogs
   if (e.key === 'Escape') {
+    if ($wizardOverlay.classList.contains('visible')) {
+      // Allow escape to dismiss wizard
+      wizardFinish();
+      return;
+    }
     if ($confirmOverlay.classList.contains('visible')) {
       $confirmOverlay.classList.remove('visible');
       if (confirmResolve) { confirmResolve(false); confirmResolve = null; }
@@ -2768,11 +3499,37 @@ async function init() {
 
   const healthy = await checkHealth();
   if (healthy) {
-    await Promise.all([loadModels(), loadConversations(), checkOllamaStatus()]);
+    const [, , ollamaStatus] = await Promise.all([
+      loadModels(),
+      loadConversations(),
+      checkOllamaStatus().then(async () => {
+        try {
+          return await apiGet('/api/ollama/status');
+        } catch (e) {
+          return { status: 'offline', models_count: 0 };
+        }
+      })
+    ]);
+
+    // Determine if wizard should show
+    const wizardDone = localStorage.getItem('denai-wizard-done') === '1';
+    const ollamaOffline = $ollamaBadge.classList.contains('offline');
+    const noModels = $modelSelect.options.length === 0 ||
+                     ($modelSelect.options.length === 1 && $modelSelect.options[0].value === '');
+
+    if (!wizardDone && (ollamaOffline || noModels)) {
+      showWizard();
+    }
   } else {
     showToast('Servidor não encontrado. Verifique se o backend está rodando.', 'error');
     $ollamaBadge.className = 'ollama-badge offline';
     $ollamaLabel.textContent = 'Desconectado';
+
+    // Show wizard if never completed
+    const wizardDone = localStorage.getItem('denai-wizard-done') === '1';
+    if (!wizardDone) {
+      showWizard();
+    }
   }
 
   // Periodic checks

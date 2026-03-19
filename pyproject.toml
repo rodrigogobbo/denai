@@ -4,9 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "denai"
-version = "0.1.0"
+version = "0.2.0"
 description = "🐺 Your private AI den. Local LLM assistant with tools, memory and zero cloud dependency."
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
@@ -15,7 +15,10 @@ authors = [
 keywords = ["ai", "llm", "ollama", "local", "assistant", "tools", "privacy"]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -23,6 +26,9 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Communications :: Chat",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Typing :: Typed",
 ]
 dependencies = [
     "fastapi>=0.115",
@@ -37,21 +43,32 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=1.0",
     "ruff>=0.8",
+    "build",
 ]
 
 [project.urls]
 Homepage = "https://github.com/rodrigogobbo/denai"
 Repository = "https://github.com/rodrigogobbo/denai"
 Issues = "https://github.com/rodrigogobbo/denai/issues"
+Changelog = "https://github.com/rodrigogobbo/denai/releases"
 
 [project.scripts]
 denai = "denai.__main__:main"
 
 [tool.hatch.build.targets.sdist]
-include = ["denai/"]
+include = [
+    "denai/",
+    "LICENSE",
+    "README.md",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["denai"]
+
+[tool.hatch.build]
+artifacts = [
+    "denai/static/**",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

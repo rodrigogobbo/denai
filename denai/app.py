@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="DenAI", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="DenAI", version="0.2.0", lifespan=lifespan)
 
     # ── CORS ──
     cors_origins = [
@@ -83,7 +83,7 @@ def create_app() -> FastAPI:
             pass
         return {
             "status": "ok",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "ollama": ollama_ok,
             "ollama_version": ollama_version,
             "model": DEFAULT_MODEL,
@@ -117,7 +117,7 @@ def _print_banner():
   💡 Pra compartilhar: python -m denai --compartilhar"""
 
     print(f"""
-  🐺 DenAI v0.1.0
+  🐺 DenAI v0.2.0
   ─────────────────────────────────────
   URL:     http://{HOST}:{PORT}
   Ollama:  {OLLAMA_URL}

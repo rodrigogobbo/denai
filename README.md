@@ -4,6 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![PyPI version](https://img.shields.io/pypi/v/denai.svg)](https://pypi.org/project/denai/)
 [![GitHub stars](https://img.shields.io/github/stars/rodrigogobbo/denai?style=social)](https://github.com/rodrigogobbo/denai)
 [![Tests](https://github.com/rodrigogobbo/denai/actions/workflows/ci.yml/badge.svg)](https://github.com/rodrigogobbo/denai/actions/workflows/ci.yml)
 
@@ -20,6 +21,10 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 - 🔄 **Model Switching** — Swap between Ollama models on the fly
 - 📡 **Share Mode** — Expose your instance with authentication via `--share`
 - ⚡ **Streaming** — Real-time token-by-token responses
+- 🎨 **Dark/Light Mode** — Toggle with `Ctrl+T`, persists across sessions
+- 📤 **Export** — Download conversations as JSON or Markdown
+- 🔍 **Search** — Find conversations by title or content
+- 🧙 **Setup Wizard** — Guided first-boot experience for beginners
 - 🧩 **Extensible** — Drop a Python file in `denai/tools/` and it's auto-discovered
 - 🌍 **Offline First** — Works without internet after initial setup
 
