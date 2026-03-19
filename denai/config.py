@@ -10,13 +10,15 @@ from pathlib import Path
 
 # ─── CLI ───────────────────────────────────────────────────────────────────
 
+
 def parse_args():
     parser = argparse.ArgumentParser(
         prog="denai",
         description="🐺 DenAI — Your private AI den",
     )
     parser.add_argument(
-        "--compartilhar", action="store_true",
+        "--compartilhar",
+        action="store_true",
         help="Ativa modo rede local — permite acesso de outros dispositivos",
     )
     parser.add_argument("--host", default=None, help="Endereço de bind")

@@ -15,8 +15,7 @@ router = APIRouter()
 async def list_conversations():
     async with get_db() as db:
         rows = await db.execute_fetchall(
-            "SELECT id, title, model, created_at, updated_at "
-            "FROM conversations ORDER BY updated_at DESC LIMIT 50"
+            "SELECT id, title, model, created_at, updated_at FROM conversations ORDER BY updated_at DESC LIMIT 50"
         )
         return {"conversations": [dict(r) for r in rows]}
 
@@ -40,8 +39,7 @@ async def create_conversation(request: Request):
 async def get_messages(conv_id: str):
     async with get_db() as db:
         rows = await db.execute_fetchall(
-            "SELECT id, role, content, created_at FROM messages "
-            "WHERE conversation_id = ? ORDER BY created_at",
+            "SELECT id, role, content, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at",
             (conv_id,),
         )
         return {"messages": [dict(r) for r in rows]}

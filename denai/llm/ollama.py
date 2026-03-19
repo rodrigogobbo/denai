@@ -36,9 +36,7 @@ async def stream_chat(
             accumulated = ""
             tool_calls = []
 
-            async with client.stream(
-                "POST", f"{OLLAMA_URL}/api/chat", json=payload
-            ) as resp:
+            async with client.stream("POST", f"{OLLAMA_URL}/api/chat", json=payload) as resp:
                 if resp.status_code != 200:
                     error_text = await resp.aread()
                     err_msg = f"Ollama error {resp.status_code}: {error_text.decode()}"
@@ -68,11 +66,13 @@ async def stream_chat(
                 break
 
             # Executar tool calls
-            full_messages.append({
-                "role": "assistant",
-                "content": accumulated,
-                "tool_calls": tool_calls,
-            })
+            full_messages.append(
+                {
+                    "role": "assistant",
+                    "content": accumulated,
+                    "tool_calls": tool_calls,
+                }
+            )
 
             for tc in tool_calls:
                 fn = tc.get("function", {})

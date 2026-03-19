@@ -39,15 +39,11 @@ class TestToolsSpec:
             # Talvez TOOLS_SPEC seja um dict
             if isinstance(TOOLS_SPEC, dict):
                 assert tool_name in TOOLS_SPEC, (
-                    f"Ferramenta '{tool_name}' não encontrada no registro. "
-                    f"Disponíveis: {list(TOOLS_SPEC.keys())}"
+                    f"Ferramenta '{tool_name}' não encontrada no registro. Disponíveis: {list(TOOLS_SPEC.keys())}"
                 )
                 return
 
-        assert tool_name in tool_names, (
-            f"Ferramenta '{tool_name}' não encontrada. "
-            f"Registradas: {tool_names}"
-        )
+        assert tool_name in tool_names, f"Ferramenta '{tool_name}' não encontrada. Registradas: {tool_names}"
 
     def test_each_tool_has_description(self):
         """Cada ferramenta deve ter uma descrição."""
@@ -82,22 +78,15 @@ class TestExecuteTool:
                 or "error" in str(result).lower()
                 or "desconhecida" in str(result).lower()
             )
-            assert has_error, (
-                f"Deveria retornar erro para ferramenta desconhecida, got: {result}"
-            )
+            assert has_error, f"Deveria retornar erro para ferramenta desconhecida, got: {result}"
         elif isinstance(result, str):
             result_lower = result.lower()
-            has_error = any(word in result_lower for word in [
-                "error", "erro", "not found", "desconhecida", "unknown", "❌"
-            ])
-            assert has_error, (
-                f"Deveria indicar erro, got: {result}"
+            has_error = any(
+                word in result_lower for word in ["error", "erro", "not found", "desconhecida", "unknown", "❌"]
             )
+            assert has_error, f"Deveria indicar erro, got: {result}"
         else:
-            pytest.fail(
-                f"Tipo de retorno inesperado para ferramenta desconhecida: "
-                f"{type(result)} = {result}"
-            )
+            pytest.fail(f"Tipo de retorno inesperado para ferramenta desconhecida: {type(result)} = {result}")
 
     @pytest.mark.asyncio
     async def test_unknown_tool_does_not_crash(self):
@@ -109,10 +98,7 @@ class TestExecuteTool:
             # Exceções controladas são aceitáveis
             pass
         except Exception as e:
-            pytest.fail(
-                f"Exceção inesperada ao executar ferramenta desconhecida: "
-                f"{type(e).__name__}: {e}"
-            )
+            pytest.fail(f"Exceção inesperada ao executar ferramenta desconhecida: {type(e).__name__}: {e}")
 
     @pytest.mark.asyncio
     async def test_empty_tool_name_returns_error(self):
@@ -120,10 +106,7 @@ class TestExecuteTool:
         result = await execute_tool("", {})
 
         if isinstance(result, dict):
-            has_error = (
-                result.get("error") is not None
-                or result.get("success") is False
-            )
+            has_error = result.get("error") is not None or result.get("success") is False
             assert has_error, "Deveria retornar erro para nome vazio"
         elif isinstance(result, str):
             assert "erro" in result.lower() or "error" in result.lower() or "❌" in result or len(result) > 0

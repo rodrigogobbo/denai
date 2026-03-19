@@ -20,9 +20,7 @@ class TestRateLimiterBasic:
         ip = "192.168.1.1"
 
         for i in range(5):
-            assert limiter.is_allowed(ip) is True, (
-                f"Requisição {i + 1} deveria ser permitida (limite: 5)"
-            )
+            assert limiter.is_allowed(ip) is True, f"Requisição {i + 1} deveria ser permitida (limite: 5)"
 
     def test_blocks_after_exceeding_limit(self):
         """Requisições acima do limite devem ser bloqueadas."""
@@ -76,9 +74,7 @@ class TestRateLimiterIsolation:
 
         for i in range(100):
             ip = f"10.0.0.{i}"
-            assert limiter.is_allowed(ip) is True, (
-                f"Primeiro request do IP {ip} deveria ser permitido"
-            )
+            assert limiter.is_allowed(ip) is True, f"Primeiro request do IP {ip} deveria ser permitido"
 
 
 class TestRateLimiterWindowExpiry:
@@ -113,9 +109,7 @@ class TestRateLimiterWindowExpiry:
             assert limiter.is_allowed(ip) is False
 
         # Avança 61 segundos
-        with patch(
-            "denai.security.rate_limit.time.time", return_value=base_time + 61
-        ):
+        with patch("denai.security.rate_limit.time.time", return_value=base_time + 61):
             assert limiter.is_allowed(ip) is True
 
 

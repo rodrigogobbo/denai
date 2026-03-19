@@ -45,12 +45,18 @@ async def command_exec(args: dict) -> str:
         if sys.platform == "win32":
             result = subprocess.run(
                 ["powershell", "-NoProfile", "-Command", cmd],
-                capture_output=True, text=True, timeout=30, cwd=workdir,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=workdir,
             )
         else:
             result = subprocess.run(
                 ["bash", "-c", cmd],
-                capture_output=True, text=True, timeout=30, cwd=workdir,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=workdir,
             )
 
         output = ""

@@ -30,9 +30,7 @@ async def pull_model(request: Request):
 
     async def generate():
         async with httpx.AsyncClient(timeout=httpx.Timeout(3600.0, connect=10.0)) as client:
-            async with client.stream(
-                "POST", f"{OLLAMA_URL}/api/pull", json={"name": model_name}
-            ) as resp:
+            async with client.stream("POST", f"{OLLAMA_URL}/api/pull", json={"name": model_name}) as resp:
                 async for line in resp.aiter_lines():
                     if line.strip():
                         yield f"data: {line}\n\n"

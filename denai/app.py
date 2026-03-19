@@ -49,10 +49,7 @@ def create_app() -> FastAPI:
                 status_code=429,
             )
 
-        provided_key = (
-            request.headers.get("X-API-Key")
-            or request.query_params.get("key")
-        )
+        provided_key = request.headers.get("X-API-Key") or request.query_params.get("key")
         if not verify_api_key(provided_key):
             return JSONResponse(
                 {"error": "API key inválida ou ausente."},

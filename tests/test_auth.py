@@ -80,9 +80,7 @@ class TestGetOrCreateApiKey:
         with patch("denai.security.auth.API_KEY_PATH", key_file):
             key = get_or_create_api_key()
 
-        assert len(key) >= 32, (
-            f"API key muito curta: {len(key)} chars (mínimo: 32)"
-        )
+        assert len(key) >= 32, f"API key muito curta: {len(key)} chars (mínimo: 32)"
 
 
 class TestVerifyApiKey:

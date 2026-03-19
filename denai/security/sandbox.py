@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-# Paths proibidos mesmo dentro do home
+# Paths proibidos mesmo dentro do home (sempre com / como separador)
 BLOCKED_PATHS = [
     ".ssh",
     ".gnupg",
@@ -18,7 +18,7 @@ BLOCKED_PATHS = [
 ]
 
 
-def is_path_allowed(path_str: str, write: bool = False) -> tuple[bool, str]:
+def is_path_allowed(path_str: str, write: bool = False) -> tuple:
     """Verifica se o caminho está dentro do sandbox.
 
     Returns:
@@ -35,9 +35,10 @@ def is_path_allowed(path_str: str, write: bool = False) -> tuple[bool, str]:
     except ValueError:
         return False, f"Acesso negado: só é permitido acessar arquivos dentro de {home}"
 
-    rel = str(path.relative_to(home))
+    # Normalizar pra forward slash pra comparação cross-platform
+    rel = path.relative_to(home).as_posix()
     for blocked in BLOCKED_PATHS:
-        if rel == blocked or rel.startswith(blocked + "/") or rel.startswith(blocked + "\\"):
+        if rel == blocked or rel.startswith(blocked + "/"):
             return False, f"Acesso negado: {blocked} é protegido por segurança"
 
     return True, ""

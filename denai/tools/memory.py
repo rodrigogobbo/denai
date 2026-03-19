@@ -32,9 +32,7 @@ MEMORY_SEARCH_SPEC = {
         "description": "Busca informações na memória persistente.",
         "parameters": {
             "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Termo de busca"}
-            },
+            "properties": {"query": {"type": "string", "description": "Termo de busca"}},
             "required": ["query"],
         },
     },
@@ -68,6 +66,4 @@ async def memory_search(args: dict) -> str:
         )
     if not rows:
         return "Nenhuma memória encontrada."
-    return "\n".join(
-        f"[{r[0]}] {r[1]} (tags: {r[2]}, {r[3][:10]})" for r in rows
-    )
+    return "\n".join(f"[{r[0]}] {r[1]} (tags: {r[2]}, {r[3][:10]})" for r in rows)

@@ -36,9 +36,7 @@ async def chat(request: Request):
                 (conv_id, user_message[:50], model, now, now),
             )
         else:
-            rows = await db.execute_fetchall(
-                "SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (conv_id,)
-            )
+            rows = await db.execute_fetchall("SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (conv_id,))
             if rows[0][0] == 0:
                 await db.execute(
                     "UPDATE conversations SET title = ? WHERE id = ?",
@@ -64,9 +62,7 @@ async def chat(request: Request):
 
     # Memórias
     async with get_db() as db:
-        mem_rows = await db.execute_fetchall(
-            "SELECT type, content FROM memories ORDER BY created_at DESC LIMIT 20"
-        )
+        mem_rows = await db.execute_fetchall("SELECT type, content FROM memories ORDER BY created_at DESC LIMIT 20")
         if mem_rows:
             mem_text = "\n".join(f"- [{r[0]}] {r[1]}" for r in mem_rows)
             messages.insert(0, {"role": "system", "content": f"Memórias persistentes:\n{mem_text}"})
@@ -94,9 +90,7 @@ async def chat(request: Request):
                     "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
                     (resp_id, conv_id, "assistant", response_text, now2),
                 )
-                await db.execute(
-                    "UPDATE conversations SET updated_at = ? WHERE id = ?", (now2, conv_id)
-                )
+                await db.execute("UPDATE conversations SET updated_at = ? WHERE id = ?", (now2, conv_id))
                 await db.commit()
 
     return StreamingResponse(

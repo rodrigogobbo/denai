@@ -11,9 +11,7 @@ SPEC = {
         "description": "Pesquisa na web usando DuckDuckGo. Use para buscar informações atualizadas.",
         "parameters": {
             "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Termo de pesquisa"}
-            },
+            "properties": {"query": {"type": "string", "description": "Termo de pesquisa"}},
             "required": ["query"],
         },
     },
@@ -29,9 +27,7 @@ async def web_search(args: dict) -> str:
         resp = await client.get(
             "https://html.duckduckgo.com/html/",
             params={"q": query},
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DenAI/1.0"
-            },
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DenAI/1.0"},
         )
 
     text = resp.text

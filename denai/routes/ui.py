@@ -21,10 +21,7 @@ async def serve_ui(request: Request):
     - Remoto (rede): mostra login ou valida cookie
     """
     if not UI_HTML.exists():
-        return HTMLResponse(
-            "<h1>ui.html não encontrado</h1>"
-            "<p>Coloque o arquivo em denai/static/ui.html</p>"
-        )
+        return HTMLResponse("<h1>ui.html não encontrado</h1><p>Coloque o arquivo em denai/static/ui.html</p>")
 
     client_ip = request.client.host if request.client else "unknown"
     is_local = client_ip in ("127.0.0.1", "::1", "localhost")

@@ -13,9 +13,7 @@ FILE_READ_SPEC = {
         "description": "Lê o conteúdo de um arquivo dentro do diretório home do usuário.",
         "parameters": {
             "type": "object",
-            "properties": {
-                "path": {"type": "string", "description": "Caminho do arquivo (dentro do home)"}
-            },
+            "properties": {"path": {"type": "string", "description": "Caminho do arquivo (dentro do home)"}},
             "required": ["path"],
         },
     },
@@ -61,6 +59,7 @@ TOOLS = [
 
 
 # ─── Executors ─────────────────────────────────────────────────────────────
+
 
 async def file_read(args: dict) -> str:
     path_str = args["path"]
