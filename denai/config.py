@@ -82,45 +82,21 @@ _yaml_cfg = _load_yaml_config(CONFIG_YAML_PATH)
 # ─── Server ────────────────────────────────────────────────────────────────
 # Priority: CLI args > env vars > config.yaml > hardcoded defaults
 
-OLLAMA_URL = (
-    os.getenv("DENAI_OLLAMA_URL")
-    or _yaml_cfg.get("ollama_url")
-    or "http://localhost:11434"
-)
+OLLAMA_URL = os.getenv("DENAI_OLLAMA_URL") or _yaml_cfg.get("ollama_url") or "http://localhost:11434"
 
-DEFAULT_MODEL = (
-    CLI.model
-    or os.getenv("DENAI_MODEL")
-    or _yaml_cfg.get("model")
-    or "llama3.1:8b"
-)
+DEFAULT_MODEL = CLI.model or os.getenv("DENAI_MODEL") or _yaml_cfg.get("model") or "llama3.1:8b"
 
-PORT = (
-    CLI.port
-    or int(os.getenv("DENAI_PORT", "0")) or None
-    or _yaml_cfg.get("port")
-    or 4078
-)
+PORT = CLI.port or int(os.getenv("DENAI_PORT", "0")) or None or _yaml_cfg.get("port") or 4078
 
 SHARE_MODE = (
-    CLI.compartilhar
-    or os.getenv("DENAI_SHARE", "").lower() in ("1", "true", "yes")
-    or _yaml_cfg.get("share", False)
+    CLI.compartilhar or os.getenv("DENAI_SHARE", "").lower() in ("1", "true", "yes") or _yaml_cfg.get("share", False)
 )
 
 # ─── LLM Tuning ───────────────────────────────────────────────────────────
 
-MAX_TOOL_ROUNDS = int(
-    os.getenv("DENAI_MAX_TOOL_ROUNDS")
-    or _yaml_cfg.get("max_tool_rounds")
-    or 25
-)
+MAX_TOOL_ROUNDS = int(os.getenv("DENAI_MAX_TOOL_ROUNDS") or _yaml_cfg.get("max_tool_rounds") or 25)
 
-MAX_CONTEXT = int(
-    os.getenv("DENAI_MAX_CONTEXT")
-    or _yaml_cfg.get("max_context")
-    or 65536
-)
+MAX_CONTEXT = int(os.getenv("DENAI_MAX_CONTEXT") or _yaml_cfg.get("max_context") or 65536)
 
 # ─── Host ──────────────────────────────────────────────────────────────────
 

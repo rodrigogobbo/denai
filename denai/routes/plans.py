@@ -17,9 +17,7 @@ router = APIRouter(prefix="/api", tags=["plans"])
 async def list_plans() -> list[dict[str, Any]]:
     """Lista todos os planos (sem steps completos)."""
     conn = _get_db()
-    rows = conn.execute(
-        "SELECT id, goal, steps, created_at, updated_at FROM plans ORDER BY id DESC"
-    ).fetchall()
+    rows = conn.execute("SELECT id, goal, steps, created_at, updated_at FROM plans ORDER BY id DESC").fetchall()
     conn.close()
 
     result = []

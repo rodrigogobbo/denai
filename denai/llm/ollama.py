@@ -21,10 +21,18 @@ MAX_RETRIES = 2  # Retries para erros transientes do Ollama
 CIRCUIT_BREAKER_LIMIT = 3  # Falhas consecutivas na mesma tool → para
 
 # Tools que são read-only e podem rodar em paralelo
-PARALLEL_SAFE_TOOLS = frozenset({
-    "file_read", "list_files", "grep", "think",
-    "memory_search", "rag_search", "rag_stats", "web_search",
-})
+PARALLEL_SAFE_TOOLS = frozenset(
+    {
+        "file_read",
+        "list_files",
+        "grep",
+        "think",
+        "memory_search",
+        "rag_search",
+        "rag_stats",
+        "web_search",
+    }
+)
 
 
 def _is_transient_error(status_code: int) -> bool:
@@ -48,9 +56,7 @@ def _build_recovery_hint(tool_name: str, error_msg: str) -> str:
     return ""
 
 
-def _batch_tool_calls(
-    tool_calls: list[dict], tool_failures: Counter
-) -> list[list[dict]]:
+def _batch_tool_calls(tool_calls: list[dict], tool_failures: Counter) -> list[list[dict]]:
     """Agrupa tool calls consecutivas em batches para execução paralela.
 
     Tools parallel-safe consecutivas são agrupadas. Qualquer tool não-parallel-safe
@@ -63,10 +69,7 @@ def _batch_tool_calls(
     for tc in tool_calls:
         fn = tc.get("function", {})
         name = fn.get("name", "unknown")
-        is_parallel = (
-            name in PARALLEL_SAFE_TOOLS
-            and tool_failures[name] < CIRCUIT_BREAKER_LIMIT
-        )
+        is_parallel = name in PARALLEL_SAFE_TOOLS and tool_failures[name] < CIRCUIT_BREAKER_LIMIT
 
         if not current_batch:
             current_batch = [tc]
@@ -217,8 +220,7 @@ async def stream_chat(
 
             for batch in batches:
                 if len(batch) == 1 or not all(
-                    tc.get("function", {}).get("name", "") in PARALLEL_SAFE_TOOLS
-                    for tc in batch
+                    tc.get("function", {}).get("name", "") in PARALLEL_SAFE_TOOLS for tc in batch
                 ):
                     # Execução sequencial
                     for tc in batch:

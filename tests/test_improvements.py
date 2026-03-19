@@ -484,6 +484,7 @@ class TestToolCount:
 
 # ─── Parallel tool batching tests ─────────────────────────────────────────
 
+
 class TestToolBatching:
     """Tests for _batch_tool_calls parallel grouping."""
 
@@ -494,6 +495,7 @@ class TestToolBatching:
         from collections import Counter
 
         from denai.llm.ollama import _batch_tool_calls
+
         tcs = [self._make_tc("file_read")]
         batches = _batch_tool_calls(tcs, Counter())
         assert len(batches) == 1
@@ -503,6 +505,7 @@ class TestToolBatching:
         from collections import Counter
 
         from denai.llm.ollama import _batch_tool_calls
+
         tcs = [self._make_tc("file_read"), self._make_tc("grep"), self._make_tc("think")]
         batches = _batch_tool_calls(tcs, Counter())
         assert len(batches) == 1
@@ -512,6 +515,7 @@ class TestToolBatching:
         from collections import Counter
 
         from denai.llm.ollama import _batch_tool_calls
+
         tcs = [self._make_tc("file_read"), self._make_tc("file_write"), self._make_tc("grep")]
         batches = _batch_tool_calls(tcs, Counter())
         assert len(batches) == 3  # [file_read], [file_write], [grep]
@@ -520,6 +524,7 @@ class TestToolBatching:
         from collections import Counter
 
         from denai.llm.ollama import _batch_tool_calls
+
         tcs = [self._make_tc("file_write"), self._make_tc("file_edit"), self._make_tc("command_exec")]
         batches = _batch_tool_calls(tcs, Counter())
         assert len(batches) == 3  # each alone
@@ -528,6 +533,7 @@ class TestToolBatching:
         from collections import Counter
 
         from denai.llm.ollama import _batch_tool_calls
+
         tcs = [
             self._make_tc("file_read"),
             self._make_tc("memory_search"),
@@ -545,6 +551,7 @@ class TestToolBatching:
         from collections import Counter
 
         from denai.llm.ollama import CIRCUIT_BREAKER_LIMIT, _batch_tool_calls
+
         failures = Counter({"file_read": CIRCUIT_BREAKER_LIMIT})
         tcs = [self._make_tc("grep"), self._make_tc("file_read"), self._make_tc("think")]
         batches = _batch_tool_calls(tcs, failures)
@@ -555,4 +562,5 @@ class TestToolBatching:
         from collections import Counter
 
         from denai.llm.ollama import _batch_tool_calls
+
         assert _batch_tool_calls([], Counter()) == []
