@@ -358,6 +358,9 @@ async def rag_client(tmp_path):
     ):
         _app = create_app()
         from denai.security.auth import API_KEY
+        from denai.security.rate_limit import rate_limiter
+
+        rate_limiter.reset()
 
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=_app),
