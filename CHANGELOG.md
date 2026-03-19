@@ -55,6 +55,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enables long multi-step sessions (file editing, planning, research workflows)
 - **New env vars** — `DENAI_MAX_TOOL_ROUNDS`, `DENAI_MAX_CONTEXT` for power users
 - **12 new tests** — Context management module (249 total)
+- **Resilience improvements** — Error recovery, retry, circuit breaker
+  - Retry com backoff para erros transientes do Ollama (429, 500-504)
+  - Recovery hints injetados quando tools falham (ex: "use file_read antes de file_edit")
+  - Circuit breaker: tool que falha 3x consecutivas é bloqueada automaticamente
+- **System prompt reforçado** — Guias operacionais para modelos locais
+  - Regra "read before edit" — SEMPRE ler arquivo antes de editar
+  - Guidance de error recovery — parar após 2 falhas e perguntar ao usuário
+  - Instrução para usar `think` antes de ações complexas
+- **Planning persistido em SQLite** — Planos sobrevivem restart do servidor
+- **File backup automático** — `file_write` e `file_edit` criam backup em `~/.denai/backups/`
+- **`grep` tool** — Busca regex em arquivos com filtro por extensão, skip de diretórios comuns
+- **`think` tool** — Scratchpad para raciocínio sem side-effects (melhora qualidade em modelos menores)
+- **`web_search` com DuckDuckGo real** — Pesquisa por query (não só fetch de URL), retrocompatível
+- **33 new tests** — grep, think, planning SQLite, file backup, recovery hints, circuit breaker (282 total)
 
 ## [0.2.0] - 2026-03-19
 

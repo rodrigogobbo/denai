@@ -16,7 +16,7 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 
 - 🔒 **100% Private** — Everything runs locally. No data leaves your machine. Ever.
 - 🧠 **Persistent Memory** — Remembers context across conversations (SQLite)
-- 🛠️ **Built-in Tools** — File I/O, web search, shell commands, planning, and more (14 tools)
+- 🛠️ **Built-in Tools** — File I/O, grep, web search, shell commands, planning, and more (16 tools)
 - 🌐 **Web UI** — Clean chat interface served automatically at `localhost:4078`
 - 🔄 **Model Switching** — Swap between Ollama models on the fly
 - 📡 **Share Mode** — Expose your instance with authentication via `--share`
@@ -95,24 +95,26 @@ Open your browser at **http://localhost:4078** — that's it! 🎉
 
 ## 🛠️ Available Tools
 
-DenAI comes with **14 built-in tools** that the AI can use automatically:
+DenAI comes with **16 built-in tools** that the AI can use automatically:
 
 | Tool | Description | Internet? |
 |------|-------------|:-:|
 | `file_read` | Read files with line numbers (offset/limit for large files) | ❌ |
-| `file_write` | Create or overwrite files (auto-creates directories) | ❌ |
+| `file_write` | Create or overwrite files (auto-backup + auto-creates directories) | ❌ |
 | `list_files` | List directory contents with glob patterns | ❌ |
-| `file_edit` | Search/replace in files (exact text matching, replace_all) | ❌ |
+| `file_edit` | Search/replace in files (exact text matching, auto-backup) | ❌ |
+| `grep` | Regex search across files (include filter, skips .git/node_modules) | ❌ |
 | `command_exec` | Execute shell commands (sandboxed + filtered) | ❌ |
-| `web_search` | Fetch and extract text from any URL | ✅ |
+| `web_search` | Search DuckDuckGo or fetch content from any URL | ✅ |
 | `memory_save` | Save persistent memory (fact/decision/preference/observation) | ❌ |
 | `memory_search` | Search saved memories by keywords and type | ❌ |
 | `rag_search` | Search indexed local documents (BM25) | ❌ |
 | `rag_index` | Reindex `~/.denai/documents/` | ❌ |
 | `rag_stats` | Show RAG index statistics | ❌ |
 | `question` | Ask the user a question and wait for the answer | ❌ |
-| `plan_create` | Create a multi-step execution plan | ❌ |
+| `plan_create` | Create a multi-step execution plan (persisted in SQLite) | ❌ |
 | `plan_update` | Mark plan steps as done / in progress | ❌ |
+| `think` | Internal reasoning scratchpad (no side-effects) | ❌ |
 
 Tools are auto-discovered from `denai/tools/`. Drop a new `.py` file and it just works.
 
