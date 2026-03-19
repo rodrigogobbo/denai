@@ -6,14 +6,13 @@ e status do Ollama.
 
 import uuid
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import httpx
 import pytest
 
 from denai.app import create_app
 from denai.db import SCHEMA_SQL, get_db
-
 
 # ── Fixtures ────────────────────────────────────────────────────────────
 
@@ -66,7 +65,13 @@ async def client_with_conversation(app_with_client):
             (str(uuid.uuid4())[:12], conv_id, "user", "Qual a capital do Brasil?", now),
             (str(uuid.uuid4())[:12], conv_id, "assistant", "A capital do Brasil é Brasília.", now),
             (str(uuid.uuid4())[:12], conv_id, "user", "E a população?", now),
-            (str(uuid.uuid4())[:12], conv_id, "assistant", "Brasília tem aproximadamente 3 milhões de habitantes.", now),
+            (
+                str(uuid.uuid4())[:12],
+                conv_id,
+                "assistant",
+                "Brasília tem aproximadamente 3 milhões de habitantes.",
+                now,
+            ),
         ]
         await db.executemany(
             "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -94,7 +99,13 @@ async def client_with_multiple_conversations(app_with_client):
             await db.execute("UPDATE conversations SET title = ? WHERE id = ?", (title, conv_id))
             await db.execute(
                 "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
-                (str(uuid.uuid4())[:12], conv_id, "user", f"Conversa sobre {title.lower()}", datetime.now().isoformat()),
+                (
+                    str(uuid.uuid4())[:12],
+                    conv_id,
+                    "user",
+                    f"Conversa sobre {title.lower()}",
+                    datetime.now().isoformat(),
+                ),
             )
             await db.commit()
 

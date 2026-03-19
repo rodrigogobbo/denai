@@ -1,9 +1,11 @@
-"""Registry de tools — autodiscovery + dispatcher."""
+"""Registry de tools — autodiscovery + plugins + dispatcher."""
 
 import importlib
 import pkgutil
 from pathlib import Path
 from typing import Callable
+
+from ..plugins import discover_plugins, get_plugin_tools
 
 # Registros globais
 TOOLS_SPEC: list[dict] = []
@@ -29,6 +31,17 @@ def _discover_tools():
                 _EXECUTORS[func_name] = executor
 
 
+def _discover_plugin_tools():
+    """Descobre e registra tools de plugins em ~/.denai/plugins/."""
+    try:
+        discover_plugins()
+        specs, executors = get_plugin_tools()
+        TOOLS_SPEC.extend(specs)
+        _EXECUTORS.update(executors)
+    except Exception:
+        pass  # Plugins são opcionais — erros não devem quebrar o boot
+
+
 async def execute_tool(name: str, args: dict) -> str:
     """Dispatcher — executa uma tool pelo nome."""
     executor = _EXECUTORS.get(name)
@@ -45,3 +58,4 @@ async def execute_tool(name: str, args: dict) -> str:
 
 # Auto-discover no import
 _discover_tools()
+_discover_plugin_tools()
