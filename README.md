@@ -20,7 +20,7 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 - 🌐 **Web UI** — Clean chat interface served automatically at `localhost:4078`
 - 🔄 **Model Switching** — Swap between Ollama models on the fly
 - 📡 **Share Mode** — Expose your instance with authentication via `--share`
-- ⚡ **Streaming** — Real-time token-by-token responses
+- ⚡ **Streaming** — Real-time token-by-token responses with tool-specific icons
 - 🎨 **Dark/Light Mode** — Toggle with `Ctrl+T`, persists across sessions
 - 📤 **Export** — Download conversations as JSON or Markdown
 - 🔍 **Search** — Find conversations by title or content
@@ -28,6 +28,9 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 - 🧩 **Extensible** — Drop a Python file in `denai/tools/` and it's auto-discovered
 - 🧠 **Smart Context** — Dynamic context window (8k→32k→64k) with auto-summarization
 - 🔄 **Deep Tool Chains** — Up to 25 tool call rounds per message (configurable)
+- ⚡ **Parallel Tools** — Read-only tools run concurrently for faster responses
+- 📋 **Plans UI** — Visual plan management with progress tracking in sidebar
+- ⚙️ **config.yaml** — Persistent configuration in `~/.denai/config.yaml`
 - 🌍 **Offline First** — Works without internet after initial setup
 
 ---
@@ -274,7 +277,24 @@ denai --share
 
 ## ⚙️ Configuration
 
-All configuration is via environment variables or a `.env` file in `~/.denai/`:
+Configuration priority: **CLI args > env vars > `~/.denai/config.yaml` > defaults**
+
+### config.yaml (recommended)
+
+Create `~/.denai/config.yaml`:
+
+```yaml
+model: llama3.1:8b
+ollama_url: http://localhost:11434
+port: 4078
+share: false
+max_tool_rounds: 25
+max_context: 65536
+```
+
+A `config.example.yaml` is included in the repo as reference.
+
+### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -283,9 +303,8 @@ All configuration is via environment variables or a `.env` file in `~/.denai/`:
 | `DENAI_MODEL` | `llama3.1:8b` | Default Ollama model |
 | `DENAI_OLLAMA_URL` | `http://localhost:11434` | Ollama API endpoint |
 | `DENAI_API_KEY` | *(auto-generated)* | API key for share mode |
-| `DENAI_DATA_DIR` | `~/.denai` | Data directory (memory, history) |
-| `DENAI_LOG_LEVEL` | `info` | Logging level |
-| `DENAI_RATE_LIMIT` | `30` | Max requests per minute |
+| `DENAI_MAX_TOOL_ROUNDS` | `25` | Max tool call rounds per message |
+| `DENAI_MAX_CONTEXT` | `65536` | Max context window (tokens) |
 
 ---
 

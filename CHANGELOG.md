@@ -5,6 +5,41 @@ All notable changes to DenAI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-03-20
+
+### Added
+- **Tool-specific icons & colors** — Each tool has unique emoji + accent color in the UI
+  - Visual left border colors per tool type (blue=read, green=write, orange=exec, etc.)
+  - Tool metadata map (`TOOL_META`) for consistent styling
+- **Think tool inline rendering** — Reasoning scratchpad shows inline with dashed border
+  - Always expanded, no collapse — transparent thinking for the user
+  - Styled as italic "Raciocínio interno" with violet accent
+- **Tool result improvements** — Better UX for tool output
+  - Results > 2000 chars are truncated with "mostrar mais" toggle
+  - Copy button on every tool result card
+  - Results capped at 300px height with scroll
+- **Plans UI panel** — Visual plan management in sidebar
+  - Collapsible "📋 Planos" section with badge counter
+  - Plan list with progress bars (done/total percentage)
+  - Click-to-view modal with step status icons
+  - Plans API: `GET /api/plans`, `GET /api/plans/{id}`, `DELETE /api/plans/{id}`
+- **config.yaml support** — `~/.denai/config.yaml` for persistent configuration
+  - Priority chain: CLI args > env vars > config.yaml > defaults
+  - All settings supported: model, ollama_url, port, share, max_tool_rounds, max_context
+  - `config.example.yaml` template included
+  - Graceful fallback on malformed YAML (warning, not crash)
+- **Parallel tool execution** — Read-only tools run concurrently via `asyncio.gather`
+  - `file_read`, `grep`, `think`, `memory_search`, `rag_search`, `web_search` etc.
+  - Write tools (`file_write`, `command_exec`, etc.) stay sequential for safety
+  - Smart batching: consecutive parallel-safe tools are grouped automatically
+  - Circuit breaker integration — failed tools excluded from parallel batches
+- **13 new tests** — Plans routes (6), tool batching (7). Total: 295+
+
+### Changed
+- `renderToolCallCard` completely rewritten with per-tool styling
+- SSE tool_result handler enhanced with copy/truncation support
+- PyYAML added as dependency
+
 ## [0.3.0] - 2026-03-20
 
 ### Added
@@ -118,6 +153,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Windows installer scripts (BAT/PowerShell)
 - 84 unit tests
 
+[0.4.0]: https://github.com/rodrigogobbo/denai/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rodrigogobbo/denai/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rodrigogobbo/denai/compare/v0.1.0...v0.2.0
 [0.1.1]: https://github.com/rodrigogobbo/denai/compare/v0.1.0...v0.1.1
