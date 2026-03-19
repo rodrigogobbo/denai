@@ -1,7 +1,7 @@
 # 🐺 DenAI — Guia Completo para Iniciantes
 
-> **Versão:** 1.0  
-> **Última atualização:** Julho 2025  
+> **Versão:** 2.0  
+> **Última atualização:** Março 2026  
 > **Público-alvo:** Pessoas que nunca usaram terminal, programação ou IA local  
 > **Sistema:** Windows 10 / Windows 11
 
@@ -53,6 +53,8 @@ O DenAI é um programa que roda uma **inteligência artificial** (IA) diretament
 - ✅ **Executar comandos** — Automatizar tarefas no Windows
 - ✅ **Pesquisar na web** — Buscar informações atualizadas (precisa de internet pra isso)
 - ✅ **Lembrar coisas** — A IA tem memória entre conversas
+- ✅ **Criar documentos** — Word (.docx) e planilhas Excel (.xlsx) automaticamente
+- ✅ **Planejar tarefas** — A IA cria planos com passos e acompanha o progresso
 
 > 🔒 **Sobre privacidade:** Tudo que você digita fica **apenas no seu computador**. Nenhuma empresa recebe seus dados. Nenhum servidor externo é contatado. É como escrever num caderno que só você tem a chave.
 
@@ -238,6 +240,8 @@ No mesmo Prompt de Comando, digite:
 ```
 pip install denai
 ```
+
+> 💡 **O DenAI detecta automaticamente a RAM do seu PC** e escolhe o melhor modelo padrão. Se seu PC tem menos de 12 GB de RAM, ele usa o `llama3.2:3b` (mais leve). Com 12 GB+, usa o `llama3.1:8b`.
 
 Ou, se você clonou o repositório:
 
@@ -523,6 +527,47 @@ Encontre o erro nesse código: [cole o código]
 
 > 💡 **Para programação, o modelo `qwen2.5-coder:7b` é o melhor.** Ele foi treinado especificamente pra código.
 
+#### 📝 Criar Documentos Word e Excel
+
+A IA pode criar documentos Word e planilhas Excel diretamente:
+
+```
+Crie um relatório em Word sobre os resultados do trimestre, com título,
+3 parágrafos e uma tabela de métricas
+```
+
+```
+Crie uma planilha Excel com uma aba "Vendas" (produto, quantidade, valor)
+e outra aba "Resumo" com os totais
+```
+
+Os arquivos são salvos onde você pedir (ex: `C:\Users\SeuNome\Documents\relatorio.docx`).
+
+> 💡 **Formatos suportados:** .docx (Word) e .xlsx (Excel). Não cria Google Docs online — os arquivos ficam no seu computador.
+
+#### 📋 Planos de Execução
+
+Quando você pede algo complexo, a IA pode criar um **plano** com vários passos:
+
+```
+Crie um sistema de controle de despesas pessoais
+```
+
+A IA vai:
+1. Criar um plano com os passos necessários
+2. Executar cada passo, marcando como ✅ conforme conclui
+3. Você pode acompanhar no painel **"Planos"** no menu lateral
+
+#### 📊 Logs e Diagnóstico
+
+Se algo der errado, o DenAI salva logs automáticos:
+
+- **Arquivo de log:** encontre em `%USERPROFILE%\.denai\logs\denai.log`
+- **Via navegador:** acesse `localhost:4078/api/logs` para ver os últimos erros
+- **Diagnóstico:** acesse `localhost:4078/api/diagnostics` para info do sistema
+
+> 💡 Os logs rotacionam automaticamente (máximo 5 MB, 3 backups). Não ocupam espaço infinito.
+
 ---
 
 ### 📂 Gerenciando Conversas
@@ -590,7 +635,16 @@ DENAI_MAX_TOOL_ROUNDS=50 DENAI_MAX_CONTEXT=131072 denai
 | `DENAI_MAX_TOOL_ROUNDS` | `25` | Quantas vezes a IA pode usar ferramentas por mensagem |
 | `DENAI_MAX_CONTEXT` | `65536` | Tamanho máximo da "memória de curto prazo" (em tokens) |
 
-> 💡 **O que é contexto?** É o quanto a IA consegue "lembrar" da conversa atual. O DenAI ajusta automaticamente de 8k a 64k tokens conforme a conversa cresce. Se a conversa ficar muito longa, ele resume as mensagens antigas automaticamente.
+Ou use um arquivo de configuração persistente (`%USERPROFILE%\.denai\config.yaml`):
+
+```yaml
+model: llama3.1:8b
+port: 4078
+max_tool_rounds: 25
+max_context: 65536
+```
+
+> 💡 **O que é contexto?** É o quanto a IA consegue "lembrar" da conversa atual. O DenAI ajusta automaticamente de 8k a 64k tokens conforme a conversa cresce. Quando a conversa fica muito longa, o DenAI resume automaticamente as mensagens antigas usando a própria IA, mantendo o contexto sem perder informação importante. Se a conversa ficar muito longa, ele resume as mensagens antigas automaticamente.
 
 ---
 
@@ -1315,7 +1369,7 @@ Use e abuse:
 ---
 
 > **Criado com 🐺 por DenAI**  
-> Guia versão 1.0 — Julho 2025  
+> Guia versão 2.0 — Março 2026  
 > Licença: MIT — Livre para uso, cópia e distribuição.
 ll denai` + desinstalar Ollama |
 
@@ -1338,5 +1392,5 @@ Use e abuse:
 ---
 
 > **Criado com 🐺 por DenAI**  
-> Guia versão 1.0 — Julho 2025  
+> Guia versão 2.0 — Março 2026  
 > Licença: MIT — Livre para uso, cópia e distribuição.

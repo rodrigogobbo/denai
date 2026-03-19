@@ -16,7 +16,7 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 
 - 🔒 **100% Private** — Everything runs locally. No data leaves your machine. Ever.
 - 🧠 **Persistent Memory** — Remembers context across conversations (SQLite)
-- 🛠️ **Built-in Tools** — File I/O, grep, web search, shell commands, planning, and more (16 tools)
+- 🛠️ **Built-in Tools** — File I/O, grep, web search, shell commands, planning, and more (18 tools)
 - 🌐 **Web UI** — Clean chat interface served automatically at `localhost:4078`
 - 🔄 **Model Switching** — Swap between Ollama models on the fly
 - 📡 **Share Mode** — Expose your instance with authentication via `--share`
@@ -32,6 +32,9 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 - 📋 **Plans UI** — Visual plan management with progress tracking in sidebar
 - ⚙️ **config.yaml** — Persistent configuration in `~/.denai/config.yaml`
 - 🌍 **Offline First** — Works without internet after initial setup
+- 📝 **Word & Excel** — Create .docx and .xlsx documents with rich formatting
+- 📋 **Logging** — Persistent logs in ~/.denai/logs/ with rotation (5 MB, 3 backups)
+- 🔍 **Diagnostics API** — /api/logs and /api/diagnostics for troubleshooting
 
 ---
 
@@ -98,7 +101,7 @@ Open your browser at **http://localhost:4078** — that's it! 🎉
 
 ## 🛠️ Available Tools
 
-DenAI comes with **16 built-in tools** that the AI can use automatically:
+DenAI comes with **18 built-in tools** that the AI can use automatically:
 
 | Tool | Description | Internet? |
 |------|-------------|:-:|
@@ -118,6 +121,8 @@ DenAI comes with **16 built-in tools** that the AI can use automatically:
 | `plan_create` | Create a multi-step execution plan (persisted in SQLite) | ❌ |
 | `plan_update` | Mark plan steps as done / in progress | ❌ |
 | `think` | Internal reasoning scratchpad (no side-effects) | ❌ |
+| `create_document` | Create Word .docx files (headings, paragraphs, bullets, tables) | ❌ |
+| `create_spreadsheet` | Create Excel .xlsx files (multiple sheets, auto-width) | ❌ |
 
 Tools are auto-discovered from `denai/tools/`. Drop a new `.py` file and it just works.
 
@@ -141,7 +146,7 @@ Resposta honesta:
 | Gerar código | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
 | Tool calling (ler/editar/executar) | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ |
 | Planning multi-step | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ |
-| Contexto longo (100k+ tokens) | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ (auto 8-32k) | ⭐⭐⭐⭐ (auto 32-64k) |
+| Contexto longo (100k+ tokens) | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ (auto 8-32k with LLM summarization) | ⭐⭐⭐⭐ (auto 32-64k with LLM summarization) |
 | Privacidade | ❌ Dados vão pra nuvem | ✅ 100% local | ✅ 100% local |
 | Custo | $20-200/mês | **Grátis** | **Grátis** |
 | Funciona offline | ❌ | ✅ | ✅ |
@@ -171,31 +176,14 @@ Se está pensando em montar/comprar um PC pra rodar IA local:
 | `qwen2.5-coder:14b` | ~9 GB | 16 GB | Tool calling confiável, planning | 🔵 Devs com 16 GB |
 | `qwen2.5-coder:32b` | ~18 GB | 24 GB | Melhor tool calling + planning multi-step | 🏆 **Power users** |
 
+> 💡 DenAI auto-detects your RAM and picks the best default model: `llama3.2:3b` for <12 GB, `llama3.1:8b` for 12 GB+.
+
 ```bash
 # Install any model
 ollama pull <model-name>
 
 # List installed models
 ollama list
-```
-
----
-
-## ⚙️ Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DENAI_HOST` | `127.0.0.1` | Bind address |
-| `DENAI_PORT` | `4078` | Server port |
-| `DENAI_MODEL` | `llama3.1:8b` | Default Ollama model |
-| `DENAI_OLLAMA_URL` | `http://localhost:11434` | Ollama API endpoint |
-| `DENAI_MAX_TOOL_ROUNDS` | `25` | Max tool call rounds per message |
-| `DENAI_MAX_CONTEXT` | `65536` | Max context window size (tokens) |
-| `DENAI_SHARE` | `false` | Enable share mode |
-
-```bash
-# Example: larger context + custom model
-DENAI_MAX_CONTEXT=131072 DENAI_MODEL=qwen2.5-coder:32b denai
 ```
 
 ---
@@ -312,7 +300,7 @@ A `config.example.yaml` is included in the repo as reference.
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-org/denai.git
+git clone https://github.com/rodrigogobbo/denai.git
 cd denai
 
 # Create virtual environment
@@ -341,10 +329,12 @@ denai/
 │   ├── __main__.py          # CLI entrypoint
 │   ├── app.py               # FastAPI app factory
 │   ├── config.py            # Settings & env vars
+│   ├── logging_config.py      # Centralized logging (file + console)
 │   ├── db.py                # SQLite (aiosqlite)
 │   ├── network.py           # Local IP detection
 │   ├── llm/                 # LLM integration
 │   │   ├── ollama.py        # Ollama streaming + tool loop
+│   │   ├── context.py    # Context management + summarization
 │   │   └── prompt.py        # System prompt builder
 │   ├── rag/                 # RAG engine
 │   │   └── __init__.py      # BM25 index, tokenizer, chunker
@@ -353,6 +343,8 @@ denai/
 │   │   ├── conversations.py # CRUD conversations
 │   │   ├── models.py        # Ollama models
 │   │   ├── plugins.py       # Plugin management
+│   │   ├── diagnostics.py # /api/logs, /api/diagnostics
+│   │   ├── plans.py       # Plans CRUD
 │   │   └── rag.py           # RAG endpoints
 │   ├── security/            # Security layers
 │   │   ├── auth.py          # API key
@@ -367,8 +359,13 @@ denai/
 │       ├── command_exec.py  # command_exec
 │       ├── memory.py        # memory_save, memory_search
 │       ├── web_fetch.py     # web_search
-│       └── rag_search.py    # rag_search, rag_index, rag_stats
-├── tests/                   # 237 tests
+│       ├── rag_search.py    # rag_search, rag_index, rag_stats
+│       ├── documents.py    # create_document, create_spreadsheet
+│       ├── planning.py     # plan_create, plan_update
+│       ├── grep.py         # grep search
+│       ├── think.py        # Internal reasoning
+│       └── question.py     # Ask user questions
+├── tests/                   # 321 tests
 ├── examples/plugins/        # Example plugins
 ├── pyproject.toml
 ├── README.md
