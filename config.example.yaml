@@ -1,0 +1,23 @@
+# DenAI configuration file
+# Copy to ~/.denai/config.yaml to customize.
+#
+# Priority: CLI args > environment variables > config.yaml > defaults
+# All fields are optional — only set what you want to override.
+
+# Ollama model to use
+model: llama3.1:8b
+
+# Ollama server URL
+ollama_url: http://localhost:11434
+
+# Web UI port
+port: 4078
+
+# Allow LAN access (bind to 0.0.0.0)
+share: false
+
+# Max tool-call rounds per request
+max_tool_rounds: 25
+
+# Max context window (tokens)
+max_context: 65536

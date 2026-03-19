@@ -4,3 +4,4 @@ uvicorn[standard]>=0.34
 httpx>=0.28
 aiosqlite>=0.20
 python-multipart>=0.0.18
+pyyaml>=6.0

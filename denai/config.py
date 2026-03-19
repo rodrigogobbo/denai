@@ -1,12 +1,34 @@
 """
 Configuração centralizada do DenAI.
 Todas as constantes, env vars, paths e CLI args.
+
+Prioridade: CLI args > env vars > config.yaml > defaults
 """
+
+from __future__ import annotations
 
 import argparse
 import os
 import sys
 from pathlib import Path
+
+# ─── YAML Config ──────────────────────────────────────────────────────────
+
+
+def _load_yaml_config(path: Path) -> dict:
+    """Load config from YAML file. Returns empty dict on any error."""
+    if not path.is_file():
+        return {}
+    try:
+        import yaml
+
+        with open(path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception as exc:
+        print(f"⚠️  Warning: Failed to parse {path}: {exc}")
+        return {}
+
 
 # ─── CLI ───────────────────────────────────────────────────────────────────
 
@@ -49,20 +71,58 @@ DATA_DIR = Path.home() / ".denai"
 DB_PATH = DATA_DIR / "denai.db"
 API_KEY_PATH = DATA_DIR / "api.key"
 STATIC_DIR = Path(__file__).parent / "static"
+CONFIG_YAML_PATH = DATA_DIR / "config.yaml"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# ─── Server ────────────────────────────────────────────────────────────────
+# ─── Load YAML defaults ───────────────────────────────────────────────────
 
-OLLAMA_URL = os.getenv("DENAI_OLLAMA_URL", "http://localhost:11434")
-DEFAULT_MODEL = CLI.model or os.getenv("DENAI_MODEL", "llama3.1:8b")
-PORT = CLI.port or int(os.getenv("DENAI_PORT", "4078"))
-SHARE_MODE = CLI.compartilhar
+_yaml_cfg = _load_yaml_config(CONFIG_YAML_PATH)
+
+# ─── Server ────────────────────────────────────────────────────────────────
+# Priority: CLI args > env vars > config.yaml > hardcoded defaults
+
+OLLAMA_URL = (
+    os.getenv("DENAI_OLLAMA_URL")
+    or _yaml_cfg.get("ollama_url")
+    or "http://localhost:11434"
+)
+
+DEFAULT_MODEL = (
+    CLI.model
+    or os.getenv("DENAI_MODEL")
+    or _yaml_cfg.get("model")
+    or "llama3.1:8b"
+)
+
+PORT = (
+    CLI.port
+    or int(os.getenv("DENAI_PORT", "0")) or None
+    or _yaml_cfg.get("port")
+    or 4078
+)
+
+SHARE_MODE = (
+    CLI.compartilhar
+    or os.getenv("DENAI_SHARE", "").lower() in ("1", "true", "yes")
+    or _yaml_cfg.get("share", False)
+)
 
 # ─── LLM Tuning ───────────────────────────────────────────────────────────
 
-MAX_TOOL_ROUNDS = int(os.getenv("DENAI_MAX_TOOL_ROUNDS", "25"))
-MAX_CONTEXT = int(os.getenv("DENAI_MAX_CONTEXT", "65536"))
+MAX_TOOL_ROUNDS = int(
+    os.getenv("DENAI_MAX_TOOL_ROUNDS")
+    or _yaml_cfg.get("max_tool_rounds")
+    or 25
+)
+
+MAX_CONTEXT = int(
+    os.getenv("DENAI_MAX_CONTEXT")
+    or _yaml_cfg.get("max_context")
+    or 65536
+)
+
+# ─── Host ──────────────────────────────────────────────────────────────────
 
 if CLI.host:
     HOST = CLI.host
