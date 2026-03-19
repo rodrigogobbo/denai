@@ -84,7 +84,55 @@ _yaml_cfg = _load_yaml_config(CONFIG_YAML_PATH)
 
 OLLAMA_URL = os.getenv("DENAI_OLLAMA_URL") or _yaml_cfg.get("ollama_url") or "http://localhost:11434"
 
-DEFAULT_MODEL = CLI.model or os.getenv("DENAI_MODEL") or _yaml_cfg.get("model") or "llama3.1:8b"
+
+def _auto_model() -> str:
+    """Escolhe modelo padrão baseado na RAM disponível."""
+    try:
+        # Tenta pegar RAM real via /proc/meminfo (Linux)
+        with open("/proc/meminfo") as f:
+            for line in f:
+                if line.startswith("MemTotal:"):
+                    kb = int(line.split()[1])
+                    total_gb = kb / (1024 * 1024)
+                    return "llama3.2:3b" if total_gb < 12 else "llama3.1:8b"
+    except Exception:
+        pass
+    # Windows / macOS: tenta psutil ou ctypes
+    try:
+        import ctypes
+        if hasattr(ctypes, "windll"):
+            # Windows
+            class MEMORYSTATUSEX(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong),
+                    ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong),
+                    ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong),
+                    ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong),
+                    ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("sullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+            stat = MEMORYSTATUSEX()
+            stat.dwLength = ctypes.sizeof(stat)
+            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
+            total_gb = stat.ullTotalPhys / (1024 ** 3)
+            return "llama3.2:3b" if total_gb < 12 else "llama3.1:8b"
+    except Exception:
+        pass
+    # macOS: sysctl
+    try:
+        import subprocess
+        out = subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True)
+        total_gb = int(out.strip()) / (1024 ** 3)
+        return "llama3.2:3b" if total_gb < 12 else "llama3.1:8b"
+    except Exception:
+        pass
+    return "llama3.1:8b"  # Fallback otimista
+
+
+DEFAULT_MODEL = CLI.model or os.getenv("DENAI_MODEL") or _yaml_cfg.get("model") or _auto_model()
 
 PORT = CLI.port or int(os.getenv("DENAI_PORT", "0")) or None or _yaml_cfg.get("port") or 4078
 

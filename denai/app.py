@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="DenAI", version="0.5.0", lifespan=lifespan)
+    app = FastAPI(title="DenAI", version="0.5.1", lifespan=lifespan)
 
     # ── CORS ──
     cors_origins = [
@@ -83,7 +83,7 @@ def create_app() -> FastAPI:
             pass
         return {
             "status": "ok",
-            "version": "0.5.0",
+            "version": "0.5.1",
             "ollama": ollama_ok,
             "ollama_version": ollama_version,
             "model": DEFAULT_MODEL,

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "denai"
-version = "0.5.0"
+version = "0.5.1"
 description = "🐺 Your private AI den. Local LLM assistant with tools, memory and zero cloud dependency."
 readme = {file = "README.md", content-type = "text/markdown"}
 license = "MIT"
@@ -37,6 +37,8 @@ dependencies = [
     "aiosqlite>=0.20",
     "python-multipart>=0.0.18",
     "pyyaml>=6.0",
+    "python-docx>=1.1",
+    "openpyxl>=3.1",
 ]
 
 [project.optional-dependencies]

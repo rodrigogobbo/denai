@@ -123,5 +123,7 @@ window.TOOL_META = {
   question:      { icon: '❓', color: '#fbbf24' },
   plan_create:   { icon: '📋', color: '#4ade80' },
   plan_update:   { icon: '📝', color: '#4ade80' },
+  create_document:    { icon: '📝', color: '#2563eb' },
+  create_spreadsheet: { icon: '📊', color: '#16a34a' },
   _default:      { icon: '🔹', color: '#94a3b8' },
 };

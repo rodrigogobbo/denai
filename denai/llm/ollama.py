@@ -163,7 +163,25 @@ async def stream_chat(
                     async with client.stream("POST", f"{OLLAMA_URL}/api/chat", json=payload) as resp:
                         if resp.status_code != 200:
                             error_text = await resp.aread()
-                            err_msg = f"Ollama error {resp.status_code}: {error_text.decode()}"
+                            err_msg = error_text.decode()
+
+                            # Erro de memória insuficiente — mensagem amigável
+                            if "model requires more system memory" in err_msg:
+                                friendly = (
+                                    "⚠️ **Memória insuficiente para este modelo.**\n\n"
+                                    f"Erro do Ollama: {err_msg}\n\n"
+                                    "**Soluções:**\n"
+                                    "1. Use um modelo menor: "
+                                    "`ollama pull llama3.2:3b` (precisa ~2 GB)\n"
+                                    "2. Feche outros programas para liberar RAM\n"
+                                    "3. Troque o modelo no menu dropdown da interface\n\n"
+                                    "💡 Dica: com 8 GB de RAM, use modelos de até 3-4B. "
+                                    "Com 16 GB, modelos de 7-8B funcionam bem."
+                                )
+                                yield f"data: {json.dumps({'error': friendly})}\n\n"
+                                return
+
+                            err_msg = f"Ollama error {resp.status_code}: {err_msg}"
 
                             if _is_transient_error(resp.status_code) and attempt < MAX_RETRIES:
                                 last_error = err_msg
