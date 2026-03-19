@@ -4,6 +4,7 @@ from .chat import router as chat_router
 from .conversations import router as conversations_router
 from .memories import router as memories_router
 from .models import router as models_router
+from .plans import router as plans_router
 from .plugins import router as plugins_router
 from .questions import router as questions_router
 from .rag import router as rag_router
@@ -15,6 +16,7 @@ all_routers = [
     conversations_router,
     models_router,
     memories_router,
+    plans_router,
     plugins_router,
     rag_router,
     questions_router,
