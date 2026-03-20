@@ -1,5 +1,7 @@
 """Registry de tools — autodiscovery + plugins + dispatcher."""
 
+from __future__ import annotations
+
 import importlib
 import pkgutil
 from pathlib import Path
@@ -46,11 +48,22 @@ def _discover_plugin_tools():
 
 
 async def execute_tool(name: str, args: dict) -> str:
-    """Dispatcher — executa uma tool pelo nome."""
+    """Dispatcher — executa uma tool pelo nome, respeitando permissões."""
     executor = _EXECUTORS.get(name)
     if not executor:
         log.warning("Tool desconhecida chamada: %s", name)
         return f"❌ Tool desconhecida: {name}"
+
+    # Checar permissão
+    try:
+        from ..permissions import check_permission
+
+        perm = check_permission(name)
+        if not perm.allowed and perm.level == "deny":
+            log.warning("Tool %s bloqueada por permissão (deny)", name)
+            return f"🚫 Tool '{name}' está bloqueada. Altere em /api/permissions."
+    except ImportError:
+        pass  # Permissions module não disponível — permite tudo
 
     try:
         result = await executor(args)

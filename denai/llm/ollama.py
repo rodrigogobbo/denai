@@ -126,7 +126,16 @@ async def stream_chat(
         except Exception:
             pass  # RAG é best-effort — não quebra o chat
 
-    system_content = build_system_prompt(rag_context)
+    # Buscar skills ativas/triggered
+    skills_context = ""
+    try:
+        from ..skills import get_skills_context
+
+        skills_context = get_skills_context(message=user_query or "")
+    except Exception:
+        pass  # Skills são best-effort
+
+    system_content = build_system_prompt(rag_context, skills_context=skills_context)
     if prompt_prefix:
         system_content = prompt_prefix + system_content
     system_msg = {"role": "system", "content": system_content}
