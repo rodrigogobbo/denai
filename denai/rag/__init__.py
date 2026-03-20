@@ -88,7 +88,6 @@ _STOP_WORDS = {
     "for",
     "on",
     "with",
-    "as",
     "at",
     "by",
     "an",

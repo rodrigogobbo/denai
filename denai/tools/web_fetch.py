@@ -109,7 +109,7 @@ def _is_url_safe(url: str) -> tuple[bool, str]:
     except ValueError:
         pass
 
-    if host in ("localhost", "0.0.0.0", "[::]", "[::1]"):
+    if host in ("localhost", "0.0.0.0", "[::]", "[::1]"):  # noqa: S104 — checking, not binding
         return False, f"Host bloqueado: {host}"
 
     for prefix in BLOCKED_RANGES:

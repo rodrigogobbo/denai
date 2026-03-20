@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
 
 # ─── Spec ──────────────────────────────────────────────────────────────────
 
@@ -53,7 +52,7 @@ def _next_id() -> str:
     return f"q_{_counter}"
 
 
-def get_pending_question(question_id: str) -> Optional[dict]:
+def get_pending_question(question_id: str) -> dict | None:
     """Retorna dados da pergunta pendente (ou None)."""
     return _questions.get(question_id)
 

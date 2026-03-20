@@ -120,22 +120,26 @@ class TestGetAllPermissions:
                 assert perms["file_write"] == "ask"  # unchanged
 
     def test_config_yaml_overrides_defaults(self):
-        with patch("denai.permissions._load_overrides", return_value={}):
-            with patch(
+        with (
+            patch("denai.permissions._load_overrides", return_value={}),
+            patch(
                 "denai.permissions._load_from_config_yaml",
                 return_value={"command_exec": "allow"},
-            ):
-                perms = get_all_permissions()
-                assert perms["command_exec"] == "allow"
+            ),
+        ):
+            perms = get_all_permissions()
+            assert perms["command_exec"] == "allow"
 
     def test_permissions_yaml_wins_over_config(self):
-        with patch("denai.permissions._load_overrides", return_value={"grep": "deny"}):
-            with patch(
+        with (
+            patch("denai.permissions._load_overrides", return_value={"grep": "deny"}),
+            patch(
                 "denai.permissions._load_from_config_yaml",
                 return_value={"grep": "allow"},
-            ):
-                perms = get_all_permissions()
-                assert perms["grep"] == "deny"  # permissions.yaml wins
+            ),
+        ):
+            perms = get_all_permissions()
+            assert perms["grep"] == "deny"  # permissions.yaml wins
 
 
 class TestPermissionResult:

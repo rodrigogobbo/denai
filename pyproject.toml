@@ -48,6 +48,7 @@ dev = [
     "pytest-asyncio>=1.0",
     "pytest-cov>=6.0",
     "ruff>=0.8",
+    "pre-commit>=4.0",
     "build",
 ]
 
@@ -82,11 +83,31 @@ artifacts = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = "--strict-markers"
 
 [tool.ruff]
 line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W"]
-per-file-ignores = {"denai/routes/ui.py" = ["E501"]}
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "W",    # pycodestyle warnings
+    "B",    # flake8-bugbear
+    "S",    # flake8-bandit (security)
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "PT",   # flake8-pytest-style
+    "N",    # pep8-naming
+]
+ignore = [
+    "S110",   # try-except-pass — intentional in many graceful degradation paths
+    "S112",   # try-except-continue — intentional in batch processing loops
+    "SIM105", # contextlib.suppress — stylistic, try/except is clearer for us
+]
+
+[tool.ruff.lint.per-file-ignores]
+"denai/routes/ui.py" = ["E501"]
+"tests/**" = ["S101", "S105", "S106", "S108", "B008", "SIM117", "N806"]

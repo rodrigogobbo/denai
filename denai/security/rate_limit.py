@@ -1,8 +1,9 @@
 """Rate limiter por IP — janela deslizante."""
 
+from __future__ import annotations
+
 import time
 from collections import defaultdict
-from typing import Optional
 
 
 class RateLimiter:
@@ -21,7 +22,7 @@ class RateLimiter:
         self._requests[ip].append(now)
         return True
 
-    def reset(self, ip: Optional[str] = None):
+    def reset(self, ip: str | None = None):
         """Reset counters (útil pra testes)."""
         if ip:
             self._requests.pop(ip, None)

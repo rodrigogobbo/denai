@@ -16,7 +16,7 @@ class TestSafeCommands:
     """Testes para comandos que devem ser permitidos."""
 
     @pytest.mark.parametrize(
-        "cmd,desc",
+        ("cmd", "desc"),
         [
             ("ls", "listar arquivos"),
             ("ls -la", "listar arquivos com detalhes"),

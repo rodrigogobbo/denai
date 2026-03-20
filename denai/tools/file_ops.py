@@ -221,10 +221,7 @@ async def list_files(args: dict) -> str:
         return f"❌ Não é um diretório: {path}"
 
     try:
-        if pattern:
-            entries = sorted(path.glob(pattern))
-        else:
-            entries = sorted(path.iterdir())
+        entries = sorted(path.glob(pattern)) if pattern else sorted(path.iterdir())
     except Exception as e:
         return f"❌ Erro ao listar: {e}"
 

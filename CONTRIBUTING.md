@@ -26,8 +26,10 @@ git checkout -b feat/minha-feature
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
+make install               # installs deps + pre-commit hooks
 ```
+
+> 💡 `make install` runs `pip install -e ".[dev]"` and `pre-commit install` for you.
 
 ### 4. Faça suas alterações
 
@@ -104,14 +106,14 @@ A tool é registrada automaticamente na próxima execução do DenAI. Sem config
 
 ## 🧪 Testes
 
-Usamos **pytest**. Rode tudo com:
+Usamos **pytest** com **coverage mínimo de 75%**. Use o Makefile:
 
 ```bash
-# Todos os testes
-pytest
+# Todos os testes com coverage
+make test
 
-# Com cobertura
-pytest --cov=denai
+# Ou diretamente:
+pytest tests/ -v --cov=denai --cov-fail-under=75
 
 # Um arquivo específico
 pytest tests/test_chat.py
@@ -126,24 +128,34 @@ Novos PRs **devem** incluir testes para funcionalidades novas.
 
 ## 🎨 Estilo de código
 
-Usamos **ruff** pra linting e formatação:
+Usamos **ruff** pra linting e formatação, com **pre-commit hooks** que rodam automaticamente:
 
 ```bash
-# Checar problemas
-ruff check .
+# Checar tudo (CI equivalent)
+make lint
 
-# Corrigir automaticamente
-ruff check --fix .
-
-# Formatar
-ruff format .
+# Corrigir e formatar automaticamente
+make format
 ```
 
-### Regras principais
+### Regras de lint
 
-- Tamanho máximo de linha: **100 caracteres**
+- `E/W` — pycodestyle (erros e warnings)
+- `F` — pyflakes
+- `I` — isort (imports)
+- `B` — bugbear (bugs comuns)
+- `S` — bandit (segurança)
+- `UP` — pyupgrade (modernização)
+- `SIM` — simplificações
+- `PT` — pytest-style
+- `N` — PEP 8 naming
+
+### Regras gerais
+
+- Tamanho máximo de linha: **120 caracteres**
 - Docstrings em todas as funções públicas
 - Type hints nos parâmetros e retorno
+- `from __future__ import annotations` em todos os módulos
 - Imports organizados (ruff cuida disso)
 
 ---

@@ -573,6 +573,24 @@ denai/
 
 We'd love your help! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+### Quick Development Setup
+
+```bash
+# Clone and install
+git clone https://github.com/rodrigogobbo/denai.git
+cd denai
+python -m venv .venv && source .venv/bin/activate
+make install  # installs deps + pre-commit hooks
+
+# Available commands
+make help     # show all targets
+make test     # run tests with coverage (75% minimum)
+make lint     # ruff check + format check
+make format   # auto-format code
+make clean    # remove build artifacts
+make all      # lint + test (CI equivalent)
+```
+
 ---
 
 ## 📄 License

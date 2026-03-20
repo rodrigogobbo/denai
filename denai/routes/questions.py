@@ -17,8 +17,10 @@ async def get_pending_questions():
 
 
 @router.post("/api/questions/{question_id}/answer")
-async def post_answer(question_id: str, request_body: dict = {}):
+async def post_answer(question_id: str, request_body: dict = None):
     """Responde uma pergunta pendente."""
+    if request_body is None:
+        request_body = {}
     answer = request_body.get("answer", "")
     if not answer.strip():
         return JSONResponse({"error": "Resposta vazia"}, status_code=400)

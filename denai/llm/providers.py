@@ -8,8 +8,8 @@ a common format.
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from typing import AsyncGenerator
 
 import httpx
 
@@ -192,56 +192,58 @@ async def stream_chat_openai(
         if "num_ctx" in options:
             payload["max_tokens"] = options["num_ctx"]
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10)) as client:
-        async with client.stream(
+    async with (
+        httpx.AsyncClient(timeout=httpx.Timeout(300, connect=10)) as client,
+        client.stream(
             "POST",
             f"{provider.base_url}/v1/chat/completions",
             json=payload,
             headers=headers,
-        ) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                if not line.startswith("data: "):
-                    continue
-                data_str = line[6:]
-                if data_str.strip() == "[DONE]":
-                    yield {"done": True, "message": {"role": "assistant", "content": ""}}
-                    return
+        ) as resp,
+    ):
+        resp.raise_for_status()
+        async for line in resp.aiter_lines():
+            if not line.startswith("data: "):
+                continue
+            data_str = line[6:]
+            if data_str.strip() == "[DONE]":
+                yield {"done": True, "message": {"role": "assistant", "content": ""}}
+                return
 
-                try:
-                    chunk = json.loads(data_str)
-                except json.JSONDecodeError:
-                    continue
+            try:
+                chunk = json.loads(data_str)
+            except json.JSONDecodeError:
+                continue
 
-                delta = chunk.get("choices", [{}])[0].get("delta", {})
+            delta = chunk.get("choices", [{}])[0].get("delta", {})
 
-                # Content
-                if delta.get("content"):
-                    yield {
-                        "done": False,
-                        "message": {"role": "assistant", "content": delta["content"]},
-                    }
+            # Content
+            if delta.get("content"):
+                yield {
+                    "done": False,
+                    "message": {"role": "assistant", "content": delta["content"]},
+                }
 
-                # Tool calls
-                if delta.get("tool_calls"):
-                    for tc in delta["tool_calls"]:
-                        fn = tc.get("function", {})
-                        if fn.get("name"):
-                            yield {
-                                "done": False,
-                                "message": {
-                                    "role": "assistant",
-                                    "content": "",
-                                    "tool_calls": [
-                                        {
-                                            "function": {
-                                                "name": fn["name"],
-                                                "arguments": fn.get("arguments", {}),
-                                            }
+            # Tool calls
+            if delta.get("tool_calls"):
+                for tc in delta["tool_calls"]:
+                    fn = tc.get("function", {})
+                    if fn.get("name"):
+                        yield {
+                            "done": False,
+                            "message": {
+                                "role": "assistant",
+                                "content": "",
+                                "tool_calls": [
+                                    {
+                                        "function": {
+                                            "name": fn["name"],
+                                            "arguments": fn.get("arguments", {}),
                                         }
-                                    ],
-                                },
-                            }
+                                    }
+                                ],
+                            },
+                        }
 
 
 def _convert_messages_to_openai(messages: list[dict]) -> list[dict]:
