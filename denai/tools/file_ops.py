@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ..config import DATA_DIR
 from ..security.sandbox import is_path_allowed
+from ..undo import save_snapshot
 
 # ─── Backup ────────────────────────────────────────────────────────────────
 
@@ -189,6 +190,9 @@ async def file_write(args: dict) -> str:
         # Backup antes de sobrescrever
         backup = _create_backup(path)
 
+        # Snapshot para undo (antes de modificar)
+        save_snapshot(str(path))
+
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
         size = path.stat().st_size
@@ -334,6 +338,9 @@ async def file_edit(args: dict) -> str:
 
     # Backup antes de editar
     _create_backup(path)
+
+    # Snapshot para undo (antes de modificar)
+    save_snapshot(str(path))
 
     # Substituir
     if replace_all:

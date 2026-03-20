@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from ..security.sandbox import is_path_allowed
+from ..undo import save_snapshot
 
 # ─── Specs ─────────────────────────────────────────────────────────────────
 
@@ -135,6 +136,7 @@ async def create_document(args: dict) -> str:
         except json.JSONDecodeError:
             # Texto simples — cria um parágrafo
             doc.add_paragraph(content)
+            save_snapshot(str(path))
             doc.save(str(path))
             return f"✅ Documento criado: {path}"
 
@@ -186,6 +188,7 @@ async def create_document(args: dict) -> str:
             # Fallback: trata como parágrafo
             doc.add_paragraph(str(block.get("text", "")))
 
+    save_snapshot(str(path))
     doc.save(str(path))
     n_blocks = len(content) if isinstance(content, list) else 1
     return f"✅ Documento Word criado: {path} ({n_blocks} blocos)"
@@ -269,6 +272,7 @@ async def create_spreadsheet(args: dict) -> str:
             col_letter = get_column_letter(col_idx)
             ws.column_dimensions[col_letter].width = min(max_len + 3, 50)
 
+    save_snapshot(str(path))
     wb.save(str(path))
     total_rows = sum(len(s.get("rows", [])) for s in sheets)
     return f"✅ Planilha Excel criada: {path} ({len(sheets)} aba(s), {total_rows} linhas)"
