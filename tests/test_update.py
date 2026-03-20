@@ -100,7 +100,9 @@ async def test_check_update_returns_current_version(client):
     assert resp.status_code == 200
     data = resp.json()
     assert "current_version" in data
-    assert data["current_version"] == "0.7.0"
+    from denai.version import VERSION
+
+    assert data["current_version"] == VERSION
 
 
 @pytest.mark.asyncio

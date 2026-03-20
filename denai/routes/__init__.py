@@ -1,6 +1,7 @@
 """Pacote de rotas do DenAI."""
 
 from .chat import router as chat_router
+from .commands import router as commands_router
 from .conversations import router as conversations_router
 from .diagnostics import router as diagnostics_router
 from .marketplace import router as marketplace_router
@@ -11,12 +12,14 @@ from .plugins import router as plugins_router
 from .questions import router as questions_router
 from .rag import router as rag_router
 from .ui import router as ui_router
+from .undo import router as undo_router
 from .update import router as update_router
 from .voice import router as voice_router
 
 all_routers = [
     ui_router,
     chat_router,
+    commands_router,
     conversations_router,
     models_router,
     memories_router,
@@ -26,6 +29,7 @@ all_routers = [
     rag_router,
     questions_router,
     diagnostics_router,
+    undo_router,
     update_router,
     voice_router,
 ]

@@ -94,6 +94,9 @@ async def stream_chat(
     messages: list,
     model: str = DEFAULT_MODEL,
     use_tools: bool = True,
+    *,
+    tools_spec: list[dict] | None = None,
+    prompt_prefix: str = "",
 ) -> AsyncGenerator[str, None]:
     """Stream de chat com Ollama, com suporte a tool calling iterativo.
 
@@ -104,6 +107,8 @@ async def stream_chat(
     - Retry com backoff para erros transientes do Ollama
     - Circuit breaker — para tool que falha 3x consecutivas
     - Recovery hints — dicas de recuperação injetadas no contexto
+    - tools_spec: override da lista de tools (None = usa TOOLS_SPEC global)
+    - prompt_prefix: texto prefixado ao system prompt (ex: modo plano)
     """
 
     # Extrair última mensagem do usuário para RAG context
@@ -121,8 +126,14 @@ async def stream_chat(
         except Exception:
             pass  # RAG é best-effort — não quebra o chat
 
-    system_msg = {"role": "system", "content": build_system_prompt(rag_context)}
+    system_content = build_system_prompt(rag_context)
+    if prompt_prefix:
+        system_content = prompt_prefix + system_content
+    system_msg = {"role": "system", "content": system_content}
     full_messages = [system_msg] + messages
+
+    # Resolve effective tools list (override or global)
+    effective_tools = tools_spec if tools_spec is not None else TOOLS_SPEC
 
     # Circuit breaker: conta falhas consecutivas por tool
     tool_failures: Counter = Counter()
@@ -153,8 +164,8 @@ async def stream_chat(
                 "stream": True,
                 "options": {"temperature": 0.7, "num_ctx": num_ctx},
             }
-            if use_tools and TOOLS_SPEC:
-                payload["tools"] = TOOLS_SPEC
+            if use_tools and effective_tools:
+                payload["tools"] = effective_tools
 
             accumulated = ""
             tool_calls = []

@@ -12,6 +12,9 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from ..config import DEFAULT_MODEL
 from ..db import get_db
 from ..llm import stream_chat
+from ..modes import filter_tools_for_mode, get_system_prompt_prefix
+from ..tools import TOOLS_SPEC
+from ..undo import commit_changeset, start_changeset
 
 router = APIRouter()
 
@@ -22,6 +25,7 @@ async def chat(request: Request):
     conv_id = body.get("conversation_id")
     user_message = body.get("message", "")
     model = body.get("model", DEFAULT_MODEL)
+    mode = body.get("mode", "build")
 
     if not user_message.strip():
         return JSONResponse({"error": "Mensagem vazia"}, status_code=400)
@@ -69,11 +73,21 @@ async def chat(request: Request):
             mem_text = "\n".join(f"- [{r[0]}] {r[1]}" for r in mem_rows)
             messages.insert(0, {"role": "system", "content": f"Memórias persistentes:\n{mem_text}"})
 
+    # Filter tools and get prompt prefix based on mode
+    filtered_tools = filter_tools_for_mode(TOOLS_SPEC, mode)
+    prompt_prefix = get_system_prompt_prefix(mode)
+
     async def generate():
         full_response = []
+        start_changeset(f"chat:{conv_id}")
         yield f"data: {json.dumps({'conversation_id': conv_id})}\n\n"
 
-        async for chunk in stream_chat(messages, model):
+        async for chunk in stream_chat(
+            messages,
+            model,
+            tools_spec=filtered_tools,
+            prompt_prefix=prompt_prefix,
+        ):
             yield chunk
             try:
                 line = chunk.strip()
@@ -97,6 +111,9 @@ async def chat(request: Request):
                 )
                 await db.execute("UPDATE conversations SET updated_at = ? WHERE id = ?", (now2, conv_id))
                 await db.commit()
+
+        # Commit undo changeset após streaming completo
+        commit_changeset()
 
     return StreamingResponse(
         generate(),

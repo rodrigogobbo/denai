@@ -156,7 +156,7 @@ async def test_streaming_response_not_buffered(app_instance):
         conv_id = resp.json()["id"]
 
         # Mockar stream_chat para enviar chunks controlados
-        async def fake_stream(messages, model, use_tools=True):
+        async def fake_stream(messages, model, **kwargs):
             import json
 
             yield f"data: {json.dumps({'content': 'Hello'})}\n\n"

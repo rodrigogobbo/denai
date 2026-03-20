@@ -47,11 +47,23 @@ window.markToolCardComplete = markToolCardComplete;
 
 // ─── Send message ───
 async function sendMessage() {
-  const text = DOM.messageInput.value.trim();
+  let text = DOM.messageInput.value.trim();
   if (!text || window.isStreaming) return;
   if (!window.currentModel) {
     showToast('Selecione um modelo primeiro', 'error');
     return;
+  }
+
+  // Resolve custom commands
+  if (text.startsWith("/")) {
+    const resolved = await window.resolveCommand(text);
+    if (resolved) {
+      text = resolved.prompt;
+      // If command specifies a model, temporarily switch
+      if (resolved.model && window.currentModel !== resolved.model) {
+        // Store for reference, but don't force switch
+      }
+    }
   }
 
   window.lastUserMessage = text;  // Save for retry
@@ -114,6 +126,7 @@ async function sendMessage() {
         conversation_id: window.currentConversationId,
         message: text,
         model: window.currentModel,
+        mode: window.getCurrentMode ? window.getCurrentMode() : "build",
       }),
       signal: window.abortController.signal,
     });
