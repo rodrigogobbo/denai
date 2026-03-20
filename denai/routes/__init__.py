@@ -3,6 +3,7 @@
 from .chat import router as chat_router
 from .conversations import router as conversations_router
 from .diagnostics import router as diagnostics_router
+from .marketplace import router as marketplace_router
 from .memories import router as memories_router
 from .models import router as models_router
 from .plans import router as plans_router
@@ -11,6 +12,7 @@ from .questions import router as questions_router
 from .rag import router as rag_router
 from .ui import router as ui_router
 from .update import router as update_router
+from .voice import router as voice_router
 
 all_routers = [
     ui_router,
@@ -20,10 +22,12 @@ all_routers = [
     memories_router,
     plans_router,
     plugins_router,
+    marketplace_router,
     rag_router,
     questions_router,
     diagnostics_router,
     update_router,
+    voice_router,
 ]
 
 __all__ = ["all_routers"]
