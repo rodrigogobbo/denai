@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import httpx
 
@@ -336,7 +336,7 @@ async def stream_chat(
                     results = await asyncio.gather(*tasks, return_exceptions=True)
 
                     # Emitir resultados na mesma ordem
-                    for (tool_name, _), result in zip(tc_infos, results):
+                    for (tool_name, _), result in zip(tc_infos, results, strict=False):
                         if isinstance(result, Exception):
                             result = f"❌ Erro interno: {result}"
 

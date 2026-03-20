@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from ..logging_config import get_logger
 from ..plugins import discover_plugins, get_plugin_tools

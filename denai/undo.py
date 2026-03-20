@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from .logging_config import get_logger
 
@@ -16,7 +15,7 @@ class FileSnapshot:
     """A snapshot of a file's state before a change."""
 
     path: str
-    content: Optional[str]  # None means file didn't exist
+    content: str | None  # None means file didn't exist
     existed: bool
 
 
@@ -40,7 +39,7 @@ class ChangeSet:
 
 _undo_stack: list[ChangeSet] = []
 _redo_stack: list[ChangeSet] = []
-_current_changeset: Optional[ChangeSet] = None
+_current_changeset: ChangeSet | None = None
 
 MAX_UNDO_STACK = 50  # Maximum number of undo levels
 

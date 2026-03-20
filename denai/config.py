@@ -22,7 +22,7 @@ def _load_yaml_config(path: Path) -> dict:
     try:
         import yaml
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         return data if isinstance(data, dict) else {}
     except Exception as exc:
@@ -127,7 +127,7 @@ def _auto_model() -> str:
     try:
         import subprocess
 
-        out = subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True)
+        out = subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True)  # noqa: S607
         total_gb = int(out.strip()) / (1024**3)
         return "llama3.2:3b" if total_gb < 12 else "llama3.1:8b"
     except Exception:
@@ -154,6 +154,6 @@ MAX_CONTEXT = int(os.getenv("DENAI_MAX_CONTEXT") or _yaml_cfg.get("max_context")
 if CLI.host:
     HOST = CLI.host
 elif SHARE_MODE:
-    HOST = "0.0.0.0"
+    HOST = "0.0.0.0"  # noqa: S104 — intentional for share mode
 else:
     HOST = "127.0.0.1"

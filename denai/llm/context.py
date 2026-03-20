@@ -16,7 +16,7 @@ def estimate_messages_tokens(messages: list[dict]) -> int:
     for msg in messages:
         total += estimate_tokens(msg.get("content", ""))
         # Tool calls adicionam ~100 tokens por call
-        for tc in msg.get("tool_calls", []):
+        for _tc in msg.get("tool_calls", []):
             total += 100
     return total
 

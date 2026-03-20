@@ -162,7 +162,7 @@ async def memory_search(args: dict) -> str:
             where += " AND type = ?"
             params.append(mem_type)
 
-        sql = f"SELECT * FROM memories WHERE {where} ORDER BY created_at DESC LIMIT ?"
+        sql = f"SELECT * FROM memories WHERE {where} ORDER BY created_at DESC LIMIT ?"  # noqa: S608 — params are bind variables
         params.append(limit)
 
         rows = conn.execute(sql, params).fetchall()

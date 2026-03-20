@@ -18,7 +18,7 @@ async def voice_status():
 
 
 @router.post("/api/voice/transcribe")
-async def voice_transcribe(audio: UploadFile = File(...)):
+async def voice_transcribe(audio: UploadFile = File(...)):  # noqa: B008
     """Transcreve áudio para texto via Whisper."""
     if not WHISPER_AVAILABLE:
         return {"error": "Whisper não instalado. Execute: pip install openai-whisper", "text": ""}

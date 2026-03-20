@@ -84,10 +84,7 @@ async def command_exec(args: dict) -> str:
 
     # 4. Montar comando pra shell
     is_windows = platform.system() == "Windows"
-    if is_windows:
-        shell_cmd = ["cmd", "/c", command]
-    else:
-        shell_cmd = ["/bin/sh", "-c", command]
+    shell_cmd = ["cmd", "/c", command] if is_windows else ["/bin/sh", "-c", command]
 
     # 5. Executar
     try:

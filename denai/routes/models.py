@@ -107,21 +107,23 @@ async def pull_model(request: Request):
 
     async def generate():
         try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-                async with client.stream("POST", f"{OLLAMA_URL}/api/pull", json={"name": model_name}) as resp:
-                    async for line in resp.aiter_lines():
-                        if not line.strip():
-                            continue
-                        parsed = json.loads(line)
-                        event = {
-                            "status": parsed.get("status", ""),
-                            "completed": parsed.get("completed"),
-                            "total": parsed.get("total"),
-                            "digest": parsed.get("digest"),
-                        }
-                        # Remove None values for cleaner output
-                        event = {k: v for k, v in event.items() if v is not None}
-                        yield f"data: {json.dumps(event)}\n\n"
+            async with (
+                httpx.AsyncClient(timeout=_TIMEOUT) as client,
+                client.stream("POST", f"{OLLAMA_URL}/api/pull", json={"name": model_name}) as resp,
+            ):
+                async for line in resp.aiter_lines():
+                    if not line.strip():
+                        continue
+                    parsed = json.loads(line)
+                    event = {
+                        "status": parsed.get("status", ""),
+                        "completed": parsed.get("completed"),
+                        "total": parsed.get("total"),
+                        "digest": parsed.get("digest"),
+                    }
+                    # Remove None values for cleaner output
+                    event = {k: v for k, v in event.items() if v is not None}
+                    yield f"data: {json.dumps(event)}\n\n"
             yield f"data: {json.dumps({'status': 'success'})}\n\n"
         except httpx.ConnectError:
             yield f"data: {json.dumps({'status': 'error', 'error': 'Ollama não acessível'})}\n\n"

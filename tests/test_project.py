@@ -214,7 +214,7 @@ class TestProjectAPI:
         # Add router if not already included
         if project_router not in [r for r in app.router.routes]:
             app.include_router(project_router)
-        yield
+        return
 
     async def test_post_init(self, tmp_path: Path):
         (tmp_path / "pyproject.toml").write_text("[project]")

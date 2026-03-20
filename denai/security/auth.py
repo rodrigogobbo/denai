@@ -1,7 +1,8 @@
 """Geração e validação de API Key + middleware de autenticação."""
 
+from __future__ import annotations
+
 import secrets
-from typing import Optional
 
 from ..config import API_KEY_PATH
 
@@ -27,7 +28,7 @@ API_KEY = get_or_create_api_key()
 PUBLIC_PATHS = {"/", "/api/health", "/favicon.ico"}
 
 
-def verify_api_key(provided: Optional[str]) -> bool:
+def verify_api_key(provided: str | None) -> bool:
     """Compara API key de forma timing-safe."""
     if not provided:
         return False
