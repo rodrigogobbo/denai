@@ -3,12 +3,15 @@ FastAPI application — monta middleware, rotas e startup.
 Ponto central de wiring. Nenhuma lógica de negócio aqui.
 """
 
+from __future__ import annotations
+
+import json
 from contextlib import asynccontextmanager
+from urllib.parse import parse_qs
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import DATA_DIR, DEFAULT_MODEL, HOST, OLLAMA_URL, PORT, SHARE_MODE, STATIC_DIR
@@ -20,19 +23,80 @@ from .security import API_KEY, PUBLIC_PATHS, rate_limiter, verify_api_key
 
 logger = setup_logging()
 
+VERSION = "0.6.0"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     await init_db()
-    logger.info("DenAI v0.5.1 iniciado — model=%s, port=%s", DEFAULT_MODEL, PORT)
+    logger.info("DenAI v%s iniciado — model=%s, port=%s", VERSION, DEFAULT_MODEL, PORT)
     _print_banner()
     yield
     logger.info("DenAI encerrado.")
 
 
+class AuthMiddleware:
+    """ASGI middleware — não bufferiza StreamingResponse (ao contrário de @app.middleware)."""
+
+    def __init__(self, app):  # noqa: ANN001
+        self.app = app
+
+    async def __call__(self, scope, receive, send):  # noqa: ANN001
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
+
+        # Rotas públicas e estáticas passam direto
+        if path in PUBLIC_PATHS or path.startswith("/static"):
+            await self.app(scope, receive, send)
+            return
+
+        # Rate limit por IP
+        client = scope.get("client")
+        client_ip = client[0] if client else "unknown"
+        if not rate_limiter.is_allowed(client_ip):
+            await self._send_json(send, 429, {"error": "Rate limit excedido. Aguarde um momento."})
+            return
+
+        # Auth via header ou query param
+        headers_list = scope.get("headers", [])
+        api_key = ""
+        for name, value in headers_list:
+            if name == b"x-api-key":
+                api_key = value.decode()
+                break
+        if not api_key:
+            qs = scope.get("query_string", b"").decode()
+            params = parse_qs(qs)
+            api_key = params.get("key", [""])[0]
+
+        if not verify_api_key(api_key):
+            await self._send_json(send, 401, {"error": "API key inválida ou ausente."})
+            return
+
+        await self.app(scope, receive, send)
+
+    @staticmethod
+    async def _send_json(send, status: int, body: dict) -> None:  # noqa: ANN001
+        payload = json.dumps(body).encode()
+        await send(
+            {
+                "type": "http.response.start",
+                "status": status,
+                "headers": [
+                    [b"content-type", b"application/json"],
+                    [b"content-length", str(len(payload)).encode()],
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": payload})
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="DenAI", version="0.5.1", lifespan=lifespan)
+    app = FastAPI(title="DenAI", version=VERSION, lifespan=lifespan)
 
     # ── CORS ──
     cors_origins = [
@@ -49,29 +113,8 @@ def create_app() -> FastAPI:
         allow_headers=["Content-Type", "X-API-Key"],
     )
 
-    # ── Auth + Rate Limit middleware ──
-    @app.middleware("http")
-    async def auth_middleware(request: Request, call_next):
-        path = request.url.path
-
-        if path in PUBLIC_PATHS or path.startswith("/static"):
-            return await call_next(request)
-
-        client_ip = request.client.host if request.client else "unknown"
-        if not rate_limiter.is_allowed(client_ip):
-            return JSONResponse(
-                {"error": "Rate limit excedido. Aguarde um momento."},
-                status_code=429,
-            )
-
-        provided_key = request.headers.get("X-API-Key") or request.query_params.get("key")
-        if not verify_api_key(provided_key):
-            return JSONResponse(
-                {"error": "API key inválida ou ausente."},
-                status_code=401,
-            )
-
-        return await call_next(request)
+    # ── Auth + Rate Limit (ASGI — preserva streaming) ──
+    app.add_middleware(AuthMiddleware)
 
     # ── Health (público) ──
     @app.get("/api/health")
@@ -88,7 +131,7 @@ def create_app() -> FastAPI:
             pass
         return {
             "status": "ok",
-            "version": "0.5.1",
+            "version": VERSION,
             "ollama": ollama_ok,
             "ollama_version": ollama_version,
             "model": DEFAULT_MODEL,
@@ -125,7 +168,7 @@ def _print_banner():
   💡 Pra compartilhar: python -m denai --compartilhar"""
 
     print(f"""
-  🐺 DenAI v0.5.1
+  🐺 DenAI v{VERSION}
   ─────────────────────────────────────
   URL:     http://{HOST}:{PORT}
   Ollama:  {OLLAMA_URL}
