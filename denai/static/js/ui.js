@@ -368,6 +368,8 @@ async function init() {
         }
       })
     ]);
+    // Load providers after models (non-blocking)
+    loadProviders().catch(() => {});
 
     // Load plans badge count
     loadPlans();

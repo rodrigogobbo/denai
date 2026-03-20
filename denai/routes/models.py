@@ -1,4 +1,4 @@
-"""Rotas de modelos — listar, baixar e deletar."""
+"""Rotas de modelos — listar, baixar e deletar (multi-provider)."""
 
 from __future__ import annotations
 
@@ -9,24 +9,88 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..config import DEFAULT_MODEL, OLLAMA_URL
+from ..llm.providers import (
+    Provider,
+    get_all_providers,
+    get_provider,
+    list_models_for_provider,
+    register_provider,
+)
 
 router = APIRouter()
 
 _TIMEOUT = httpx.Timeout(3600.0, connect=10.0)
 
 
-@router.get("/api/models")
-async def list_models():
+# ── Providers ─────────────────────────────────────────────────────
+
+
+@router.get("/api/providers")
+async def list_providers():
+    """Lista providers configurados."""
+    providers = get_all_providers()
+    return {
+        "providers": [
+            {
+                "name": p.name,
+                "kind": p.kind,
+                "base_url": p.base_url,
+                "has_key": bool(p.api_key),
+            }
+            for p in providers
+        ]
+    }
+
+
+@router.post("/api/providers")
+async def add_provider(request: Request):
+    """Adiciona um provider OpenAI-compatible."""
+    body = await request.json()
     try:
-        async with httpx.AsyncClient(timeout=5) as c:
-            r = await c.get(f"{OLLAMA_URL}/api/tags")
-            if r.status_code == 200:
-                data = r.json()
-                models = [m["name"] for m in data.get("models", [])]
-                return {"models": models, "default": DEFAULT_MODEL}
-    except Exception:
-        pass
-    return {"models": [], "default": DEFAULT_MODEL, "error": "Ollama não acessível"}
+        provider = Provider(
+            name=body["name"],
+            kind=body.get("kind", "openai"),
+            base_url=body["base_url"],
+            api_key=body.get("api_key", ""),
+        )
+        register_provider(provider)
+        return {"ok": True, "provider": provider.name}
+    except (KeyError, TypeError) as e:
+        return {"error": str(e)}
+
+
+# ── Models (multi-provider) ──────────────────────────────────────
+
+
+@router.get("/api/models")
+async def list_models(provider: str | None = None):
+    """Lista modelos de todos os providers (ou de um específico)."""
+    if provider:
+        # Single provider
+        prov = get_provider(provider)
+        if not prov:
+            return {"models": [], "default": DEFAULT_MODEL, "error": f"Provider '{provider}' não encontrado"}
+        models = await list_models_for_provider(prov)
+        return {"models": models, "default": DEFAULT_MODEL, "provider": prov.name}
+
+    # All providers — collect from each
+    all_models: list[dict] = []
+    errors: list[str] = []
+
+    for prov in get_all_providers():
+        try:
+            models = await list_models_for_provider(prov)
+            all_models.extend(models)
+        except Exception as e:
+            errors.append(f"{prov.name}: {e}")
+
+    result: dict = {"models": all_models, "default": DEFAULT_MODEL}
+    if errors:
+        result["errors"] = errors
+    return result
+
+
+# ── Pull (Ollama only) ───────────────────────────────────────────
 
 
 @router.post("/api/models/pull")
@@ -66,6 +130,9 @@ async def pull_model(request: Request):
     )
 
 
+# ── Delete (Ollama only) ─────────────────────────────────────────
+
+
 @router.delete("/api/models/{name:path}")
 async def delete_model(name: str):
     try:
@@ -79,6 +146,9 @@ async def delete_model(name: str):
             )
     except httpx.ConnectError:
         return JSONResponse({"error": "Ollama não acessível"}, status_code=502)
+
+
+# ── Ollama status ─────────────────────────────────────────────────
 
 
 @router.get("/api/ollama/status")
