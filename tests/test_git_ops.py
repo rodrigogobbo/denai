@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import subprocess
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from denai.tools.git_ops import (
+    _DEFAULT_LOG_LIMIT,
+    _GIT_TIMEOUT,
+    _OPERATIONS,
+    _SUPPORTED_OPS,
+    _WRITE_OPS,
     GIT_SPEC,
+    _err,
+    _ok,
     _parse_branches,
     _parse_diff,
     _parse_log,
@@ -35,6 +43,62 @@ def _git_run(args, cwd):
         cwd=str(cwd),
         capture_output=True,
     )
+
+
+# ─── Constants tests ────────────────────────────────────────────────────
+
+
+class TestConstants:
+    """Test module-level constants."""
+
+    def test_git_timeout(self):
+        assert _GIT_TIMEOUT == 30
+
+    def test_default_log_limit(self):
+        assert _DEFAULT_LOG_LIMIT == 10
+
+    def test_write_ops_includes_branch(self):
+        assert "branch" in _WRITE_OPS
+
+    def test_write_ops_complete(self):
+        expected = {"add", "commit", "checkout", "stash", "branch"}
+        assert expected == _WRITE_OPS
+
+    def test_supported_ops_from_dispatch(self):
+        assert ", ".join(sorted(_OPERATIONS.keys())) == _SUPPORTED_OPS
+
+    def test_all_operations_registered(self):
+        expected = {"status", "diff", "log", "branch", "add", "commit", "checkout", "stash"}
+        assert set(_OPERATIONS.keys()) == expected
+
+
+# ─── Response helpers tests ──────────────────────────────────────────────
+
+
+class TestResponseHelpers:
+    """Test _ok() and _err() helpers."""
+
+    def test_ok_returns_json(self):
+        result = json.loads(_ok({"key": "value"}))
+        assert result == {"key": "value"}
+
+    def test_ok_with_nested_data(self):
+        data = {"files": [{"name": "a.py", "added": 1}]}
+        result = json.loads(_ok(data))
+        assert result["files"][0]["name"] == "a.py"
+
+    def test_err_basic(self):
+        result = json.loads(_err("something failed"))
+        assert result == {"error": "something failed"}
+
+    def test_err_with_suggestion(self):
+        result = json.loads(_err("failed", suggestion="try this"))
+        assert result["error"] == "failed"
+        assert result["suggestion"] == "try this"
+
+    def test_err_without_suggestion_no_key(self):
+        result = json.loads(_err("failed"))
+        assert "suggestion" not in result
 
 
 # ─── Parser tests ────────────────────────────────────────────────────────
@@ -189,50 +253,60 @@ class TestParseBranches:
         assert result["current"] == "main"
 
 
-# ─── Helper tests ────────────────────────────────────────────────────────
+# ─── Runner tests ────────────────────────────────────────────────────────
 
 
+@pytest.mark.asyncio
 class TestRunGit:
-    """Test _run_git helper."""
+    """Test _run_git helper (async)."""
 
-    def test_success(self):
-        ok, stdout, stderr = _run_git(["--version"])
+    async def test_success(self):
+        ok, stdout, stderr = await _run_git(["--version"])
         assert ok is True
         assert "git version" in stdout
 
-    def test_invalid_command(self):
-        ok, stdout, stderr = _run_git(["invalid-command-xyz"])
+    async def test_invalid_command(self):
+        ok, stdout, stderr = await _run_git(["invalid-command-xyz"])
         assert ok is False
 
-    def test_timeout(self):
+    async def test_timeout(self):
+        async def mock_communicate():
+            await asyncio.sleep(60)
+            return b"", b""
+
+        mock_proc = AsyncMock()
+        mock_proc.communicate = mock_communicate
+        mock_proc.returncode = 0
+
         with patch(
-            "denai.tools.git_ops.subprocess.run",
-            side_effect=subprocess.TimeoutExpired("git", 30),
+            "denai.tools.git_ops.asyncio.create_subprocess_exec",
+            return_value=mock_proc,
         ):
-            ok, stdout, stderr = _run_git(["status"])
+            ok, stdout, stderr = await _run_git(["status"])
             assert ok is False
             assert "timed out" in stderr
 
-    def test_git_not_found(self):
+    async def test_git_not_found(self):
         with patch(
-            "denai.tools.git_ops.subprocess.run",
+            "denai.tools.git_ops.asyncio.create_subprocess_exec",
             side_effect=FileNotFoundError,
         ):
-            ok, stdout, stderr = _run_git(["status"])
+            ok, stdout, stderr = await _run_git(["status"])
             assert ok is False
             assert "not installed" in stderr
 
 
+@pytest.mark.asyncio
 class TestValidateRepo:
-    """Test _validate_repo."""
+    """Test _validate_repo (async)."""
 
-    def test_valid_repo(self, tmp_path):
+    async def test_valid_repo(self, tmp_path):
         _git_init(tmp_path)
-        err = _validate_repo(str(tmp_path))
+        err = await _validate_repo(str(tmp_path))
         assert err is None
 
-    def test_invalid_repo(self, tmp_path):
-        err = _validate_repo(str(tmp_path))
+    async def test_invalid_repo(self, tmp_path):
+        err = await _validate_repo(str(tmp_path))
         assert err is not None
         assert "Not a git repository" in err
 
@@ -292,10 +366,12 @@ class TestGitFunction:
             ["-c", "user.name=Test", "-c", "user.email=test@test.com", "commit", "-m", "init"],
             tmp_path,
         )
-        result = await git({"operation": "branch", "cwd": str(tmp_path)})
-        data = json.loads(result)
-        assert "branches" in data
-        assert len(data["branches"]) >= 1
+        with patch("denai.tools.git_ops.check_permission") as mock_perm:
+            mock_perm.return_value = type("P", (), {"allowed": True, "level": "allow", "reason": ""})()
+            result = await git({"operation": "branch", "cwd": str(tmp_path)})
+            data = json.loads(result)
+            assert "branches" in data
+            assert len(data["branches"]) >= 1
 
     async def test_add_and_commit(self, tmp_path):
         _git_init(tmp_path)
@@ -386,6 +462,22 @@ class TestGitFunction:
             assert "added" in data
             assert data["added"] == ["file.txt"]
 
+    async def test_branch_create_requires_permission(self, tmp_path):
+        """Test that branch create/delete are write ops requiring permission."""
+        _git_init(tmp_path)
+        with patch("denai.tools.git_ops.check_permission") as mock_perm:
+            mock_perm.return_value = type("P", (), {"allowed": False, "level": "deny", "reason": "blocked"})()
+            result = await git({"operation": "branch", "create": "new-branch", "cwd": str(tmp_path)})
+            data = json.loads(result)
+            assert "error" in data
+            assert "Permission denied" in data["error"]
+
+    async def test_dispatch_covers_all_spec_ops(self):
+        """Ensure dispatch dict matches GIT_SPEC enum."""
+        spec_ops = set(GIT_SPEC["function"]["parameters"]["properties"]["operation"]["enum"])
+        dispatch_ops = set(_OPERATIONS.keys())
+        assert spec_ops == dispatch_ops
+
 
 # ─── Spec tests ──────────────────────────────────────────────────────────
 
@@ -404,14 +496,14 @@ class TestGitSpec:
 
     def test_spec_has_all_operations(self):
         ops = GIT_SPEC["function"]["parameters"]["properties"]["operation"]["enum"]
-        expected = [
-            "status",
-            "diff",
-            "log",
-            "branch",
-            "add",
-            "commit",
-            "checkout",
-            "stash",
-        ]
+        expected = sorted(["status", "diff", "log", "branch", "add", "commit", "checkout", "stash"])
         assert ops == expected
+
+    def test_spec_description_includes_ops(self):
+        desc = GIT_SPEC["function"]["description"]
+        for op in _OPERATIONS:
+            assert op in desc
+
+    def test_spec_enum_matches_dispatch(self):
+        ops = GIT_SPEC["function"]["parameters"]["properties"]["operation"]["enum"]
+        assert set(ops) == set(_OPERATIONS.keys())
