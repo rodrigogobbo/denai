@@ -7,7 +7,34 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
-_Nenhuma mudança desde v0.8.0 ainda._
+_Nenhuma mudança desde v0.9.0 ainda._
+
+## [0.9.0] - 2026-03-20
+
+### Adicionado
+- **⚡ Custom Commands** — crie prompts reutilizáveis em `~/.denai/commands/`
+  - `denai/commands.py` — discovery e parsing de arquivos `.md` com YAML frontmatter
+  - Suporte a `$ARGUMENTS`, `$1`, `$2`... com quoted strings
+  - `GET /api/commands` — lista comandos disponíveis
+  - `POST /api/commands/run` — renderiza comando com argumentos
+  - Autocomplete popup no input ao digitar `/`
+  - 3 exemplos bundled: test, review, explain
+- **📋 Plan Mode** — modo de análise read-only
+  - `denai/modes.py` — filtragem de tools (Build = todas, Plan = read-only)
+  - Toggle via click no indicador ou Tab com input vazio
+  - System prompt prefixado em modo plano
+  - Indicador visual: 🔨 Build (verde) / 📋 Plan (azul)
+  - Persiste em `sessionStorage`
+- **↩️ Undo/Redo** — reverta alterações do agente
+  - `denai/undo.py` — snapshots automáticos antes de cada modificação
+  - Agrupamento por turn (undo reverte todas as mudanças de uma resposta)
+  - Stack de até 50 níveis com redo invalidado por novas mudanças
+  - `POST /api/undo`, `POST /api/redo`, `GET /api/undo/status`
+  - Hooks em file_ops.py e documents.py
+- 47 testes novos (424 total)
+
+### Corrigido
+- `test_update.py` — versão não mais hardcoded (usa `VERSION` importado)
 
 ## [0.8.0] - 2026-03-20
 
