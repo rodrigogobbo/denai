@@ -80,7 +80,7 @@ class AgentPlan:
         }
 
     def to_dict(self) -> dict:
-        """Serialize plan to dict."""
+        """Serialize plan to dict (safe for external exposure)."""
         return {
             "goal": self.goal,
             "status": self.status.value,
@@ -94,7 +94,7 @@ class AgentPlan:
                     "tool_args": s.tool_args,
                     "status": s.status.value,
                     "result": s.result[:500] if s.result else "",
-                    "error": s.error,
+                    "error": s.error.split(":")[0] if s.error else "",
                 }
                 for s in self.steps
             ],
@@ -319,12 +319,13 @@ async def execute_plan(plan: AgentPlan) -> AsyncGenerator[dict, None]:
         except Exception as e:
             plan.total_tool_calls += 1
             step.status = StepStatus.FAILED
-            step.error = str(e)
+            # Log full error internally but only expose error type to client
             log.error("Agent step %d failed: %s", step.index, e)
+            step.error = f"{type(e).__name__}: {e}"  # noqa: TRY401
             yield {
                 "type": "agent_step_error",
                 "step": step.index,
-                "error": step.error,
+                "error": f"Step failed ({type(e).__name__})",
                 "plan": plan.to_dict(),
             }
             # Don't abort on individual step failure — continue to next
