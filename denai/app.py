@@ -160,7 +160,7 @@ def _print_banner():
         share_block = f"""
   🌐 MODO COMPARTILHADO
   📱 URL:  {url}
-  🔑 Key:  {API_KEY}
+  🔑 Key:  {API_KEY[:8]}{"*" * (len(API_KEY) - 8) if len(API_KEY) > 8 else ""}
   Passe a URL + key pra quem quiser acessar."""
     else:
         share_block = """

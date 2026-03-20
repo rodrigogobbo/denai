@@ -8,7 +8,10 @@ import sys
 import httpx
 from fastapi import APIRouter
 
+from ..logging_config import get_logger
 from ..version import VERSION
+
+log = get_logger("routes.update")
 
 router = APIRouter()
 
@@ -46,10 +49,11 @@ async def check_update():
                 "update_available": latest_t > current_t,
             }
     except Exception as e:
+        log.error("Erro ao verificar atualização no PyPI: %s", e)
         return {
             "update_available": False,
             "current_version": VERSION,
-            "error": str(e),
+            "error": "Não foi possível verificar atualizações",
         }
 
 
