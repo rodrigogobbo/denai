@@ -5,6 +5,7 @@ from .commands import router as commands_router
 from .conversations import router as conversations_router
 from .diagnostics import router as diagnostics_router
 from .marketplace import router as marketplace_router
+from .mcp import router as mcp_router
 from .memories import router as memories_router
 from .models import router as models_router
 from .permissions import router as permissions_router
@@ -26,6 +27,7 @@ all_routers = [
     conversations_router,
     models_router,
     memories_router,
+    mcp_router,
     permissions_router,
     plans_router,
     plugins_router,

@@ -9,6 +9,7 @@ from fastapi.responses import PlainTextResponse, Response
 
 from ..config import DEFAULT_MODEL
 from ..db import get_db
+from ..export_html import conversation_to_html
 
 router = APIRouter()
 
@@ -95,7 +96,7 @@ async def search_conversations(q: str = Query(..., min_length=1)):
 
 
 @router.get("/api/conversations/{conv_id}/export")
-async def export_conversation(conv_id: str, format: str = Query("json", pattern="^(json|markdown)$")):
+async def export_conversation(conv_id: str, format: str = Query("json", pattern="^(json|markdown|html)$")):
     async with get_db() as db:
         conv_row = await db.execute_fetchall(
             "SELECT id, title, model, created_at, updated_at FROM conversations WHERE id = ?",
@@ -135,6 +136,15 @@ async def export_conversation(conv_id: str, format: str = Query("json", pattern=
             content,
             media_type="text/markdown; charset=utf-8",
             headers={"Content-Disposition": f'attachment; filename="{safe_title}.md"'},
+        )
+
+    elif format == "html":
+        html_content = conversation_to_html(conv, messages)
+        filename = f"denai-{conv_id}.html"
+        return Response(
+            content=html_content,
+            media_type="text/html; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
     # JSON export
