@@ -331,8 +331,15 @@ def _walk_shallow(root: Path, max_depth: int = 3, _current: int = 0):
 
 
 def _project_hash(project_path: str) -> str:
-    """Generate a short hash from the absolute project path."""
-    abs_path = str(Path(project_path).resolve())
+    """Generate a short hash from the absolute project path.
+
+    Uses normpath instead of resolve to avoid following symlinks
+    into sensitive directories (CodeQL py/path-injection).
+    """
+    import os  # noqa: PLC0415
+
+    # Normalize without resolving symlinks to avoid path traversal
+    abs_path = os.path.normpath(os.path.abspath(project_path))  # noqa: PTH100
     return hashlib.sha256(abs_path.encode()).hexdigest()[:12]
 
 
