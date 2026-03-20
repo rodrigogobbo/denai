@@ -146,6 +146,7 @@ async function sendMessage() {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let streamDone = false;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -295,6 +296,7 @@ async function sendMessage() {
 
           // Handle done
           if (event.done === true) {
+            streamDone = true;
             break;
           }
 
@@ -313,6 +315,7 @@ async function sendMessage() {
           }
         }
       }
+      if (streamDone) break;
     }
 
     // If bubble is empty after stream, show a fallback

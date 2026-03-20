@@ -1,5 +1,7 @@
 """Rota /api/chat — streaming SSE."""
 
+from __future__ import annotations
+
 import json
 import uuid
 from datetime import datetime
@@ -74,7 +76,10 @@ async def chat(request: Request):
         async for chunk in stream_chat(messages, model):
             yield chunk
             try:
-                data = json.loads(chunk.replace("data: ", "").strip())
+                line = chunk.strip()
+                if line.startswith("data: "):
+                    line = line[6:]
+                data = json.loads(line)
                 if "content" in data:
                     full_response.append(data["content"])
             except Exception:
