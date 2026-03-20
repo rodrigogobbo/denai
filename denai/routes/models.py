@@ -16,6 +16,9 @@ from ..llm.providers import (
     list_models_for_provider,
     register_provider,
 )
+from ..logging_config import get_logger
+
+log = get_logger("routes.models")
 
 router = APIRouter()
 
@@ -56,7 +59,8 @@ async def add_provider(request: Request):
         register_provider(provider)
         return {"ok": True, "provider": provider.name}
     except (KeyError, TypeError) as e:
-        return {"error": str(e)}
+        log.error("Erro ao adicionar provider: %s", e)
+        return {"error": "Parâmetros inválidos para o provider"}
 
 
 # ── Models (multi-provider) ──────────────────────────────────────
@@ -82,7 +86,8 @@ async def list_models(provider: str | None = None):
             models = await list_models_for_provider(prov)
             all_models.extend(models)
         except Exception as e:
-            errors.append(f"{prov.name}: {e}")
+            log.error("Erro ao listar modelos do provider '%s': %s", prov.name, e)
+            errors.append(f"{prov.name}: erro ao listar modelos")
 
     result: dict = {"models": all_models, "default": DEFAULT_MODEL}
     if errors:
@@ -121,7 +126,8 @@ async def pull_model(request: Request):
         except httpx.ConnectError:
             yield f"data: {json.dumps({'status': 'error', 'error': 'Ollama não acessível'})}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'status': 'error', 'error': str(e)})}\n\n"
+            log.error("Erro ao baixar modelo '%s': %s", model_name, e)
+            yield f"data: {json.dumps({'status': 'error', 'error': 'Erro interno ao baixar modelo'})}\n\n"
 
     return StreamingResponse(
         generate(),

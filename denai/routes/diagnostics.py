@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from ..logging_config import LOG_FILE
+from ..logging_config import LOG_FILE, get_logger
+
+log = get_logger("routes.diagnostics")
 
 router = APIRouter(prefix="/api", tags=["diagnostics"])
 
@@ -32,7 +34,8 @@ async def get_logs(lines: int = 100):
             "path": str(LOG_FILE),
         }
     except Exception as e:
-        return {"error": str(e), "path": str(LOG_FILE)}
+        log.error("Erro ao ler arquivo de log: %s", e)
+        return {"error": "Erro interno ao ler logs", "path": str(LOG_FILE)}
 
 
 @router.get("/diagnostics")
