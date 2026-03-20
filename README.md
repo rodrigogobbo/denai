@@ -7,6 +7,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/denai.svg)](https://pypi.org/project/denai/)
 [![GitHub stars](https://img.shields.io/github/stars/rodrigogobbo/denai?style=social)](https://github.com/rodrigogobbo/denai)
 [![Tests](https://github.com/rodrigogobbo/denai/actions/workflows/ci.yml/badge.svg)](https://github.com/rodrigogobbo/denai/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/rodrigogobbo/denai/graph/badge.svg)](https://codecov.io/gh/rodrigogobbo/denai)
 
 A fully local AI assistant with tools, memory, and **zero cloud dependency**. Chat with LLMs on your machine — your data never leaves your computer.
 
@@ -248,6 +249,20 @@ denai --share
 - Generates a login page with API key authentication
 - Only authenticated users can access the chat
 - All traffic stays in your local network by default
+
+---
+
+## 🐳 Docker
+
+```bash
+# Iniciar DenAI + Ollama com um comando:
+docker compose up -d
+
+# Baixar um modelo (primeira vez):
+docker compose exec ollama ollama pull llama3.2:3b
+
+# Acessar: http://localhost:8080
+```
 
 ---
 
