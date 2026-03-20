@@ -28,7 +28,7 @@ FROM python:3.12-slim
 LABEL org.opencontainers.image.title="DenAI" \
       org.opencontainers.image.description="Your private AI den — local LLM assistant with tools, memory and zero cloud dependency." \
       org.opencontainers.image.source="https://github.com/rodrigogobbo/denai" \
-      org.opencontainers.image.version="0.6.0"
+      org.opencontainers.image.version="0.7.0"
 
 # Install curl for healthcheck
 RUN apt-get update \

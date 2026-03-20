@@ -10,6 +10,7 @@ from .plugins import router as plugins_router
 from .questions import router as questions_router
 from .rag import router as rag_router
 from .ui import router as ui_router
+from .update import router as update_router
 
 all_routers = [
     ui_router,
@@ -22,6 +23,7 @@ all_routers = [
     rag_router,
     questions_router,
     diagnostics_router,
+    update_router,
 ]
 
 __all__ = ["all_routers"]

@@ -12,6 +12,7 @@ import pytest
 
 from denai.app import create_app
 from denai.db import SCHEMA_SQL
+from denai.version import VERSION
 
 
 @pytest.fixture
@@ -105,7 +106,7 @@ async def test_health_is_public(app_instance):
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
-        assert data["version"] == "0.6.0"
+        assert data["version"] == VERSION
 
 
 # ── Rate Limiting ──

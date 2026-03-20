@@ -398,5 +398,45 @@ async function init() {
   setInterval(checkOllamaStatus, 15000);
 }
 
+// ─── Auto-Update Check ───
+async function checkForUpdates() {
+  try {
+    const data = await apiGet('/api/update/check');
+    if (data.update_available) {
+      const toast = document.createElement('div');
+      toast.className = 'toast info';
+      toast.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:8px;';
+      toast.innerHTML = `🆕 DenAI <b>${data.latest_version}</b> disponível!
+        <button onclick="installUpdate(this)" style="background:var(--accent);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;">Atualizar</button>`;
+      DOM.toastContainer.appendChild(toast);
+      // Don't auto-dismiss — user needs to act
+    }
+  } catch (e) {
+    // Silent fail — update check is non-critical
+    console.debug('Update check failed:', e);
+  }
+}
+window.checkForUpdates = checkForUpdates;
+
+window.installUpdate = async function(btn) {
+  btn.disabled = true;
+  btn.textContent = 'Atualizando…';
+  try {
+    const result = await apiPost('/api/update/install', {});
+    showToast(result.message, result.success ? 'success' : 'error');
+    // Remove the update toast
+    const toast = btn.closest('.toast');
+    if (toast) toast.remove();
+  } catch (e) {
+    showToast('Erro ao atualizar: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Atualizar';
+  }
+};
+
+
 // Start the app
 init();
+
+// Check for updates 5s after startup (non-blocking)
+setTimeout(checkForUpdates, 5000);
