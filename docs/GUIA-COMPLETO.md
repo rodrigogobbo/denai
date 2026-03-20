@@ -1,6 +1,6 @@
 # 🐺 DenAI — Guia Completo para Iniciantes
 
-> **Versão:** 2.0  
+> **Versão:** 3.0  
 > **Última atualização:** Março 2026  
 > **Público-alvo:** Pessoas que nunca usaram terminal, programação ou IA local  
 > **Sistema:** Windows 10 / Windows 11
@@ -13,11 +13,13 @@
 2. [Antes de começar](#-antes-de-começar)
 3. [Instalação Passo a Passo](#-instalação-passo-a-passo)
 4. [Como Usar](#-como-usar)
-5. [Resolução de Problemas](#-resolução-de-problemas)
-6. [Perguntas Frequentes](#-perguntas-frequentes)
-7. [Instalação Manual](#-instalação-manual-se-o-instalador-falhar)
-8. [Desinstalação](#-desinstalação)
-9. [Glossário](#-glossário)
+5. [Exportar e Compartilhar Conversas](#-exportar-e-compartilhar-conversas)
+6. [Usando Docker](#-usando-docker-alternativa-à-instalação-manual)
+7. [Resolução de Problemas](#-resolução-de-problemas)
+8. [Perguntas Frequentes](#-perguntas-frequentes)
+9. [Instalação Manual](#-instalação-manual-se-o-instalador-falhar)
+10. [Desinstalação Completa](#-desinstalação-completa)
+11. [Glossário](#-glossário)
 
 ---
 
@@ -55,6 +57,8 @@ O DenAI é um programa que roda uma **inteligência artificial** (IA) diretament
 - ✅ **Lembrar coisas** — A IA tem memória entre conversas
 - ✅ **Criar documentos** — Word (.docx) e planilhas Excel (.xlsx) automaticamente
 - ✅ **Planejar tarefas** — A IA cria planos com passos e acompanha o progresso
+- ✅ **Exportar conversas** — Salvar como HTML bonito, compartilhável, ou JSON/Markdown
+- ✅ **Conectar ferramentas externas** — Via protocolo MCP (Model Context Protocol)
 
 > 🔒 **Sobre privacidade:** Tudo que você digita fica **apenas no seu computador**. Nenhuma empresa recebe seus dados. Nenhum servidor externo é contatado. É como escrever num caderno que só você tem a chave.
 
@@ -648,6 +652,121 @@ max_context: 65536
 
 ---
 
+## 📤 Exportar e Compartilhar Conversas
+
+O DenAI permite exportar suas conversas em três formatos:
+
+### HTML (Compartilhável)
+
+Gera um **arquivo HTML bonito e autossuficiente** — pode abrir em qualquer navegador, sem precisar do DenAI instalado. Perfeito pra compartilhar com colegas.
+
+1. Na interface web, abra a conversa que quer exportar
+2. Clique no botão de **exportar** (📤) no topo
+3. Selecione **HTML**
+4. O arquivo `.html` será baixado automaticamente
+
+Características do HTML exportado:
+- 🎨 **Tema dark** bonito e responsivo (funciona no celular)
+- 🔒 **Autossuficiente** — não precisa de internet pra abrir
+- 🔧 **Tool cards** expansíveis — clique pra ver os detalhes das ferramentas usadas
+- 🛡️ **Seguro** — todo conteúdo é sanitizado contra XSS
+
+> 💡 **O que é XSS?** É um tipo de ataque onde alguém coloca código malicioso num texto. O DenAI escapa todo o conteúdo, então o HTML exportado é seguro pra abrir em qualquer lugar.
+
+### JSON
+
+Exporta a conversa como dados estruturados — útil pra processamento automático ou backup.
+
+### Markdown
+
+Exporta como texto formatado — pode abrir no Bloco de Notas, Word, ou qualquer editor.
+
+### Via API (avançado)
+
+```bash
+# HTML
+curl http://localhost:4078/api/conversations/SEU-ID/export?format=html -o conversa.html
+
+# JSON
+curl http://localhost:4078/api/conversations/SEU-ID/export?format=json -o conversa.json
+
+# Markdown
+curl http://localhost:4078/api/conversations/SEU-ID/export?format=markdown -o conversa.md
+```
+
+---
+
+## 🐳 Usando Docker (alternativa à instalação manual)
+
+Se você já tem Docker instalado, pode rodar o DenAI **sem instalar Python ou Ollama** na sua máquina.
+
+### O que é Docker?
+
+Docker é um programa que cria "contêineres" — como mini-computadores virtuais dentro do seu computador. O DenAI e o Ollama rodam cada um em seu contêiner, isolados do resto do sistema.
+
+**Vantagens:**
+- ✅ Não precisa instalar Python nem Ollama
+- ✅ Não "suja" o seu sistema com dependências
+- ✅ Fácil de remover completamente
+- ✅ Mesmo comportamento em qualquer sistema operacional
+
+**Desvantagens:**
+- ❌ Precisa instalar o Docker primeiro (~500 MB)
+- ❌ Consome um pouco mais de RAM
+- ❌ GPU NVIDIA requer configuração extra
+
+### Passo a passo
+
+#### 1. Instalar o Docker Desktop
+
+1. Acesse [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/)
+2. Baixe e instale o Docker Desktop
+3. Reinicie o computador se pedido
+4. Abra o Docker Desktop e espere ele iniciar (ícone na bandeja do sistema)
+
+#### 2. Baixar e iniciar o DenAI
+
+```bash
+# Baixar o código
+git clone https://github.com/rodrigogobbo/denai.git
+cd denai
+
+# Iniciar tudo (DenAI + Ollama)
+docker compose up -d
+
+# Baixar um modelo de IA (primeira vez)
+docker compose exec ollama ollama pull llama3.2:3b
+```
+
+#### 3. Usar
+
+Abra o navegador em **http://localhost:8080** — pronto! 🎉
+
+> ⚠️ **Nota:** No Docker, a porta é **8080** (não 4078 como na instalação normal).
+
+#### Comandos úteis
+
+```bash
+# Ver os logs
+docker compose logs -f denai
+
+# Parar tudo
+docker compose down
+
+# Remover tudo (inclusive modelos baixados)
+docker compose down -v
+```
+
+#### GPU NVIDIA no Docker
+
+Se você tem placa NVIDIA e quer usá-la no Docker:
+
+1. Instale o [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+2. Edite o `docker-compose.yml` e descomente o bloco `deploy` no serviço `ollama`
+3. Reinicie: `docker compose down && docker compose up -d`
+
+---
+
 ## 🔧 Resolução de Problemas
 
 Algo deu errado? Calma! Vamos resolver. Encontre o seu problema abaixo:
@@ -1204,66 +1323,162 @@ python -m denai
 
 ---
 
-## 🗑️ Desinstalação
+## 🗑️ Desinstalação Completa
 
-Se quiser remover tudo do computador:
+Se quiser remover **absolutamente tudo** do computador, siga estes passos na ordem.
 
-### Remover o DenAI
+> 💡 Cada passo é opcional — remova apenas o que quiser. Por exemplo, pode manter o Ollama pra usar com outros programas.
+
+---
+
+### Passo 1: Remover o DenAI (programa)
+
+Abra o Prompt de Comando e digite:
 
 ```
-pip uninstall denai
+pip uninstall denai -y
 ```
 
-E, opcionalmente, delete a pasta de dados:
+---
 
+### Passo 2: Remover os dados do DenAI (conversas, memórias, config)
+
+⚠️ **ATENÇÃO: Isso apaga todas as suas conversas, memórias e configurações!** Faça backup se quiser manter algo.
+
+**Windows:**
 1. Aperte **Windows + R**
 2. Digite `%USERPROFILE%\.denai` e aperte Enter
-3. Delete a pasta inteira (isso remove conversas e memórias)
+3. Se a pasta abrir, selecione **tudo** (Ctrl + A) e delete
 
-### Remover os modelos de IA
+Ou pelo Prompt de Comando:
+```
+rmdir /s /q "%USERPROFILE%\.denai"
+```
 
-1. Abra o Prompt de Comando
-2. Veja os modelos instalados:
+**Linux / macOS:**
+```bash
+rm -rf ~/.denai
+```
+
+**O que está nessa pasta:**
+
+| Subpasta | Conteúdo |
+|----------|----------|
+| `denai.db` | Conversas e mensagens (SQLite) |
+| `memory.json` | Memórias persistentes |
+| `config.yaml` | Suas configurações |
+| `plugins/` | Plugins instalados |
+| `skills/` | Skills configuradas |
+| `documents/` | Documentos do RAG |
+| `backups/` | Backups automáticos de arquivos editados |
+| `logs/` | Logs do sistema |
+
+---
+
+### Passo 3: Remover os modelos de IA (libera 5-50 GB)
+
+Os modelos ocupam bastante espaço. Para removê-los:
+
 ```
 ollama list
 ```
-3. Remova cada um:
+
+Isso mostra todos os modelos instalados. Remova cada um:
+
 ```
 ollama rm llama3.1:8b
 ollama rm llama3.2:3b
+ollama rm qwen2.5-coder:7b
 ```
-(repita para cada modelo)
 
-Ou delete a pasta de modelos diretamente:
-1. Aperte **Windows + R**
-2. Digite `%USERPROFILE%\.ollama` e aperte Enter
-3. Delete a pasta `models` (isso apaga TODOS os modelos de uma vez)
+Ou apague todos de uma vez:
 
-### Remover o Ollama
+**Windows:**
+```
+rmdir /s /q "%USERPROFILE%\.ollama\models"
+```
 
+**Linux / macOS:**
+```bash
+rm -rf ~/.ollama/models
+```
+
+---
+
+### Passo 4: Desinstalar o Ollama
+
+**Windows:**
 1. Aperte **Windows + I** (Configurações)
-2. Vá em **Aplicativos** → **Aplicativos instalados** (ou "Aplicativos e recursos")
+2. Vá em **Aplicativos** → **Aplicativos instalados**
 3. Procure por **"Ollama"**
-4. Clique nele → **"Desinstalar"**
-5. Confirme
+4. Clique → **"Desinstalar"**
 
-### Remover o Python (opcional)
+**macOS:**
+- Se instalou via Homebrew: `brew uninstall ollama`
+- Se instalou o app: arraste o Ollama de /Applications para a Lixeira
 
-> ⚠️ **Cuidado:** Se você usa Python pra outras coisas (programação, outros programas), **NÃO desinstale!**
+**Linux:**
+```bash
+sudo rm /usr/local/bin/ollama
+sudo rm -rf /usr/share/ollama
+sudo userdel ollama
+sudo groupdel ollama
+```
 
+---
+
+### Passo 5: Desinstalar o Python (CUIDADO!)
+
+> ⚠️ **Só desinstale o Python se você NÃO usa ele pra mais nada!** Muitos programas dependem do Python. Se não tem certeza, **não desinstale**.
+
+**Windows:**
 1. Configurações → Aplicativos → Aplicativos instalados
 2. Procure por **"Python"**
 3. Clique → **"Desinstalar"**
 
-### Verificar se tudo foi removido
+**Linux / macOS:** Não recomendado — o Python do sistema é usado por muitos programas.
 
-Depois de desinstalar tudo, essas pastas podem ter sobrado (pode deletar):
-- `C:\Users\SeuNome\.ollama` — Dados do Ollama
-- `C:\Users\SeuNome\.denai` — Dados do DenAI (conversas, memórias)
-- `C:\Users\SeuNome\AppData\Local\Programs\Python` — Python (se desinstalou)
-- `C:\Users\SeuNome\AppData\Local\Ollama` — Cache do Ollama
+---
 
-> 💡 **Como acessar AppData:** Aperte **Windows + R**, digite `%LOCALAPPDATA%` e aperte Enter. Isso abre a pasta AppData\Local.
+### Passo 6: Remover Docker (se usou)
+
+```bash
+# Remove containers e volumes (inclusive modelos)
+docker compose down -v
+
+# Remove a imagem construída
+docker rmi denai-denai 2>/dev/null
+
+# Desinstalar Docker Desktop — via Configurações > Aplicativos > Docker Desktop
+```
+
+---
+
+### Verificar que tudo foi removido
+
+Depois de desinstalar, essas pastas **NÃO devem existir** mais:
+
+| Pasta | O que era |
+|-------|-----------|
+| `%USERPROFILE%\.denai` (Windows) ou `~/.denai` (Linux/Mac) | Dados do DenAI |
+| `%USERPROFILE%\.ollama` (Windows) ou `~/.ollama` (Linux/Mac) | Dados do Ollama |
+| `%LOCALAPPDATA%\Ollama` (Windows) | Cache do Ollama |
+
+Para verificar:
+
+**Windows:**
+```
+dir "%USERPROFILE%\.denai" 2>nul && echo EXISTE || echo REMOVIDO
+dir "%USERPROFILE%\.ollama" 2>nul && echo EXISTE || echo REMOVIDO
+```
+
+**Linux / macOS:**
+```bash
+ls -la ~/.denai 2>/dev/null && echo "EXISTE" || echo "REMOVIDO"
+ls -la ~/.ollama 2>/dev/null && echo "EXISTE" || echo "REMOVIDO"
+```
+
+> 💡 Se a pasta não existe, o output será "REMOVIDO" — significa que deu tudo certo!
 
 ---
 
@@ -1347,6 +1562,8 @@ Software cujo **código-fonte é público** — qualquer pessoa pode ver como fu
 | **Baixar modelo** | `ollama pull nome-do-modelo` no terminal |
 | **Ver modelos** | `ollama list` no terminal |
 | **Remover modelo** | `ollama rm nome-do-modelo` no terminal |
+| **Exportar conversa** | Botão 📤 na interface ou API |
+| **Docker** | `docker compose up -d` |
 | **Atualizar** | `pip install --upgrade denai` |
 | **Desinstalar** | `pip uninstall denai` + desinstalar Ollama |
 
@@ -1369,28 +1586,5 @@ Use e abuse:
 ---
 
 > **Criado com 🐺 por DenAI**  
-> Guia versão 2.0 — Março 2026  
-> Licença: MIT — Livre para uso, cópia e distribuição.
-ll denai` + desinstalar Ollama |
-
----
-
-## 💌 Palavras Finais
-
-Parabéns por chegar até aqui! 🎉
-
-Você agora tem uma **inteligência artificial pessoal, privada e gratuita** rodando no seu computador. Sem assinaturas, sem limites, sem ninguém espionando suas conversas.
-
-Use e abuse:
-- Pergunte qualquer coisa
-- Peça ajuda com textos, e-mails, relatórios
-- Estude com ela como um tutor particular
-- Explore, experimente, divirta-se!
-
-> 🐺 **O DenAI está aqui pra te ajudar. Sempre que precisar, é só chamar.**
-
----
-
-> **Criado com 🐺 por DenAI**  
-> Guia versão 2.0 — Março 2026  
+> Guia versão 3.0 — Março 2026  
 > Licença: MIT — Livre para uso, cópia e distribuição.
