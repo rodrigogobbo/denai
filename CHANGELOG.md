@@ -7,7 +7,35 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
-_Nenhuma mudança desde v0.7.0 ainda._
+_Nenhuma mudança desde v0.8.0 ainda._
+
+## [0.8.0] - 2026-03-20
+
+### Adicionado
+- **🎙️ Voice Input (Whisper)** — transcrição de voz por IA (#7)
+  - `denai/voice.py` — módulo de transcrição com lazy-load do modelo Whisper
+  - `POST /api/voice/transcribe` — recebe áudio e retorna texto
+  - `GET /api/voice/status` — verifica se Whisper está disponível
+  - Botão de microfone na UI com MediaRecorder API
+  - Pulse animation durante gravação, atalho Ctrl+Shift+M
+  - Graceful degradation: sem Whisper instalado, botão fica oculto
+  - Dep opcional: `pip install denai[voice]`
+- **🔌 Multi-model backends** — suporte a múltiplos provedores de LLM (#8)
+  - `denai/llm/providers.py` — registry de providers (Ollama, OpenAI-compatible, GPT4All)
+  - Streaming adapter OpenAI SSE → formato Ollama (reutiliza tool-calling existente)
+  - `GET /api/providers` — lista providers configurados
+  - `POST /api/providers` — adiciona provider OpenAI-compatible (LM Studio, LocalAI, etc.)
+  - `GET /api/models` agora lista modelos de todos os providers
+  - UI: badges de provider no sidebar, dialog para adicionar endpoints
+  - Configurável via `config.yaml` seção `providers`
+- **🏪 Plugin Marketplace** — instale plugins pela UI (#10)
+  - `denai/marketplace.py` — registry bundled + fetch de GitHub
+  - 3 plugins built-in: 🌤️ Weather (Open-Meteo), 🌐 Translator, 🍅 Pomodoro
+  - `GET /api/marketplace` — lista plugins disponíveis
+  - `POST /api/marketplace/install` / `uninstall` — gerencia plugins
+  - UI: modal marketplace com grid de cards, busca, install/remove
+  - `registry/plugins.json` — placeholder para plugins da comunidade
+- 33 testes novos (377 total)
 
 ## [0.7.0] - 2026-03-20
 
