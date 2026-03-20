@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import subprocess
+import asyncio
+import json
 
 from ..logging_config import get_logger
 from ..permissions import check_permission
@@ -10,34 +11,65 @@ from ..security.sandbox import is_path_allowed
 
 log = get_logger("git_ops")
 
-# ─── Read Operations ──────────────────────────────────────────────────────
+# ─── Constants ───────────────────────────────────────────────────────────
 
-_WRITE_OPS = {"add", "commit", "checkout", "stash"}
+_GIT_TIMEOUT = 30
+_DEFAULT_LOG_LIMIT = 10
+
+_WRITE_OPS = {"add", "commit", "checkout", "stash", "branch"}
 
 
-def _run_git(args: list[str], cwd: str | None = None) -> tuple[bool, str, str]:
-    """Run a git command and return (success, stdout, stderr)."""
+# ─── Response Helpers ────────────────────────────────────────────────────
+
+
+def _ok(data: dict) -> str:
+    """Return a successful JSON response."""
+    return json.dumps(data)
+
+
+def _err(msg: str, *, suggestion: str = "") -> str:
+    """Return an error JSON response with optional suggestion."""
+    result: dict = {"error": msg}
+    if suggestion:
+        result["suggestion"] = suggestion
+    return json.dumps(result)
+
+
+# ─── Git Runner ──────────────────────────────────────────────────────────
+
+
+async def _run_git(args: list[str], cwd: str | None = None) -> tuple[bool, str, str]:
+    """Run a git command asynchronously and return (success, stdout, stderr)."""
     try:
-        result = subprocess.run(  # noqa: S603
-            ["git", *args],  # noqa: S607
-            capture_output=True,
-            text=True,
-            timeout=30,
+        proc = await asyncio.create_subprocess_exec(
+            "git",
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
             cwd=cwd,
         )
-        return result.returncode == 0, result.stdout, result.stderr
-    except subprocess.TimeoutExpired:
-        return False, "", "Git command timed out after 30 seconds"
+        stdout_bytes, stderr_bytes = await asyncio.wait_for(
+            proc.communicate(),
+            timeout=_GIT_TIMEOUT,
+        )
+        stdout = stdout_bytes.decode() if stdout_bytes else ""
+        stderr = stderr_bytes.decode() if stderr_bytes else ""
+        return proc.returncode == 0, stdout, stderr
+    except (TimeoutError, asyncio.TimeoutError):
+        return False, "", f"Git command timed out after {_GIT_TIMEOUT} seconds"
     except FileNotFoundError:
         return False, "", "Git is not installed or not in PATH"
 
 
-def _validate_repo(cwd: str | None = None) -> str | None:
+async def _validate_repo(cwd: str | None = None) -> str | None:
     """Check if cwd is inside a git repo. Returns error message or None."""
-    ok, _, _ = _run_git(["rev-parse", "--git-dir"], cwd=cwd)
+    ok, _, _ = await _run_git(["rev-parse", "--git-dir"], cwd=cwd)
     if not ok:
         return "Not a git repository. Navigate to a git repo first."
     return None
+
+
+# ─── Parsers ─────────────────────────────────────────────────────────────
 
 
 def _parse_status(stdout: str) -> dict:
@@ -145,13 +177,145 @@ def _parse_branches(stdout: str) -> dict:
     return {"branches": branches, "current": current}
 
 
-# ─── Main Tool Function ──────────────────────────────────────────────────
+# ─── Operations (dispatch targets) ──────────────────────────────────────
+
+
+async def _op_status(args: dict, cwd: str | None) -> str:
+    """Handle git status."""
+    ok, stdout, stderr = await _run_git(["status", "--porcelain=v2", "--branch"], cwd=cwd)
+    if not ok:
+        return _err(f"git status failed: {stderr}")
+    return _ok(_parse_status(stdout))
+
+
+async def _op_diff(args: dict, cwd: str | None) -> str:
+    """Handle git diff."""
+    cmd = ["diff"]
+    if args.get("ref"):
+        cmd.append(args["ref"])
+    if args.get("path"):
+        cmd.extend(["--", args["path"]])
+    ok, stdout, stderr = await _run_git(cmd, cwd=cwd)
+    if not ok:
+        return _err(f"git diff failed: {stderr}")
+    return _ok(_parse_diff(stdout))
+
+
+async def _op_log(args: dict, cwd: str | None) -> str:
+    """Handle git log."""
+    limit = args.get("limit", _DEFAULT_LOG_LIMIT)
+    ok, stdout, stderr = await _run_git(
+        ["log", f"-{limit}", "--format=%H\t%an\t%ai\t%s"],
+        cwd=cwd,
+    )
+    if not ok:
+        return _err(
+            f"git log failed: {stderr}",
+            suggestion="Ensure there are commits in the repository.",
+        )
+    return _ok(_parse_log(stdout))
+
+
+async def _op_branch(args: dict, cwd: str | None) -> str:
+    """Handle git branch (list, create, delete)."""
+    if args.get("create"):
+        ok, _stdout, stderr = await _run_git(["checkout", "-b", args["create"]], cwd=cwd)
+        if not ok:
+            return _err(f"Failed to create branch: {stderr}")
+        return _ok({"created": args["create"], "current": args["create"]})
+    if args.get("delete"):
+        ok, _stdout, stderr = await _run_git(["branch", "-d", args["delete"]], cwd=cwd)
+        if not ok:
+            return _err(f"Failed to delete branch: {stderr}")
+        return _ok({"deleted": args["delete"]})
+    # List branches
+    ok, stdout, stderr = await _run_git(["branch"], cwd=cwd)
+    if not ok:
+        return _err(f"git branch failed: {stderr}")
+    return _ok(_parse_branches(stdout))
+
+
+async def _op_add(args: dict, cwd: str | None) -> str:
+    """Handle git add."""
+    paths = args.get("paths", ["."])
+    if isinstance(paths, str):
+        paths = [paths]
+    ok, _stdout, stderr = await _run_git(["add", *paths], cwd=cwd)
+    if not ok:
+        return _err(f"git add failed: {stderr}")
+    return _ok({"added": paths})
+
+
+async def _op_commit(args: dict, cwd: str | None) -> str:
+    """Handle git commit."""
+    message = args.get("message", "")
+    if not message:
+        return _err("Commit message is required.")
+    ok, stdout, stderr = await _run_git(["commit", "-m", message], cwd=cwd)
+    if not ok:
+        if "nothing to commit" in stderr or "nothing to commit" in stdout:
+            return _err("Nothing to commit.", suggestion="Stage files with git add first.")
+        return _err(f"git commit failed: {stderr}")
+    # Parse commit hash from output
+    commit_hash = ""
+    for line in stdout.splitlines():
+        if line.strip().startswith("["):
+            parts = line.split()
+            for p in parts:
+                if len(p) >= 7 and p.endswith("]"):
+                    commit_hash = p.rstrip("]")
+                    break
+    return _ok({"hash": commit_hash, "message": message})
+
+
+async def _op_checkout(args: dict, cwd: str | None) -> str:
+    """Handle git checkout."""
+    ref = args.get("ref", "")
+    if not ref:
+        return _err("Ref (branch name or commit) is required.")
+    ok, _stdout, stderr = await _run_git(["checkout", ref], cwd=cwd)
+    if not ok:
+        suggestion = ""
+        if "conflict" in stderr.lower():
+            suggestion = "Resolve merge conflicts first, or use git stash."
+        elif "detached HEAD" in stderr:
+            suggestion = "You're in detached HEAD state. Create a branch with git branch."
+        return _err(f"git checkout failed: {stderr}", suggestion=suggestion)
+    return _ok({"branch": ref})
+
+
+async def _op_stash(args: dict, cwd: str | None) -> str:
+    """Handle git stash (push, pop, list)."""
+    action = args.get("action", "push")
+    if action not in ("push", "pop", "list"):
+        return _err(f"Unknown stash action: {action}. Use push, pop, or list.")
+    ok, stdout, stderr = await _run_git(["stash", action], cwd=cwd)
+    if not ok:
+        return _err(f"git stash {action} failed: {stderr}")
+    return _ok({"result": stdout.strip() or f"stash {action} successful"})
+
+
+# ─── Dispatch Table ──────────────────────────────────────────────────────
+
+_OPERATIONS: dict[str, object] = {
+    "status": _op_status,
+    "diff": _op_diff,
+    "log": _op_log,
+    "branch": _op_branch,
+    "add": _op_add,
+    "commit": _op_commit,
+    "checkout": _op_checkout,
+    "stash": _op_stash,
+}
+
+_SUPPORTED_OPS = ", ".join(sorted(_OPERATIONS.keys()))
+
+
+# ─── Main Tool Function ─────────────────────────────────────────────────
 
 
 async def git(args: dict) -> str:
     """Execute a git operation and return structured result."""
-    import json
-
     operation = args.get("operation", "status")
     cwd = args.get("cwd")
 
@@ -159,156 +323,51 @@ async def git(args: dict) -> str:
     if cwd:
         allowed, reason = is_path_allowed(cwd)
         if not allowed:
-            return json.dumps({"error": reason})
+            return _err(reason)
 
     # Permission check for write operations
     if operation in _WRITE_OPS:
         perm = check_permission("git")
         if not perm.allowed:
-            return json.dumps({"error": f"Permission denied for git {operation}: {perm.reason}"})
+            return _err(f"Permission denied for git {operation}: {perm.reason}")
 
     # Validate git repo
-    repo_err = _validate_repo(cwd)
+    repo_err = await _validate_repo(cwd)
     if repo_err:
-        return json.dumps({"error": repo_err, "suggestion": "Use 'cd' to navigate to a git repository."})
+        return _err(repo_err, suggestion="Use 'cd' to navigate to a git repository.")
+
+    handler = _OPERATIONS.get(operation)
+    if handler is None:
+        return _err(f"Unknown git operation: {operation}. Supported: {_SUPPORTED_OPS}.")
 
     try:
-        if operation == "status":
-            ok, stdout, stderr = _run_git(["status", "--porcelain=v2", "--branch"], cwd=cwd)
-            if not ok:
-                return json.dumps({"error": f"git status failed: {stderr}"})
-            return json.dumps(_parse_status(stdout))
-
-        elif operation == "diff":
-            cmd = ["diff"]
-            if args.get("ref"):
-                cmd.append(args["ref"])
-            if args.get("path"):
-                cmd.extend(["--", args["path"]])
-            ok, stdout, stderr = _run_git(cmd, cwd=cwd)
-            if not ok:
-                return json.dumps({"error": f"git diff failed: {stderr}"})
-            return json.dumps(_parse_diff(stdout))
-
-        elif operation == "log":
-            limit = args.get("limit", 10)
-            ok, stdout, stderr = _run_git(
-                ["log", f"-{limit}", "--format=%H\t%an\t%ai\t%s"],
-                cwd=cwd,
-            )
-            if not ok:
-                return json.dumps(
-                    {
-                        "error": f"git log failed: {stderr}",
-                        "suggestion": "Ensure there are commits in the repository.",
-                    }
-                )
-            return json.dumps(_parse_log(stdout))
-
-        elif operation == "branch":
-            if args.get("create"):
-                ok, stdout, stderr = _run_git(["checkout", "-b", args["create"]], cwd=cwd)
-                if not ok:
-                    return json.dumps({"error": f"Failed to create branch: {stderr}"})
-                return json.dumps({"created": args["create"], "current": args["create"]})
-            elif args.get("delete"):
-                ok, stdout, stderr = _run_git(["branch", "-d", args["delete"]], cwd=cwd)
-                if not ok:
-                    return json.dumps({"error": f"Failed to delete branch: {stderr}"})
-                return json.dumps({"deleted": args["delete"]})
-            else:
-                ok, stdout, stderr = _run_git(["branch"], cwd=cwd)
-                if not ok:
-                    return json.dumps({"error": f"git branch failed: {stderr}"})
-                return json.dumps(_parse_branches(stdout))
-
-        elif operation == "add":
-            paths = args.get("paths", ["."])
-            if isinstance(paths, str):
-                paths = [paths]
-            ok, stdout, stderr = _run_git(["add", *paths], cwd=cwd)
-            if not ok:
-                return json.dumps({"error": f"git add failed: {stderr}"})
-            return json.dumps({"added": paths})
-
-        elif operation == "commit":
-            message = args.get("message", "")
-            if not message:
-                return json.dumps({"error": "Commit message is required."})
-            ok, stdout, stderr = _run_git(["commit", "-m", message], cwd=cwd)
-            if not ok:
-                if "nothing to commit" in stderr or "nothing to commit" in stdout:
-                    return json.dumps({"error": "Nothing to commit.", "suggestion": "Stage files with git add first."})
-                return json.dumps({"error": f"git commit failed: {stderr}"})
-            # Parse commit hash from output
-            commit_hash = ""
-            for line in stdout.splitlines():
-                if line.strip().startswith("["):
-                    parts = line.split()
-                    for p in parts:
-                        if len(p) >= 7 and p.endswith("]"):
-                            commit_hash = p.rstrip("]")
-                            break
-            return json.dumps({"hash": commit_hash, "message": message})
-
-        elif operation == "checkout":
-            ref = args.get("ref", "")
-            if not ref:
-                return json.dumps({"error": "Ref (branch name or commit) is required."})
-            ok, stdout, stderr = _run_git(["checkout", ref], cwd=cwd)
-            if not ok:
-                suggestion = ""
-                if "conflict" in stderr.lower():
-                    suggestion = "Resolve merge conflicts first, or use git stash."
-                elif "detached HEAD" in stderr:
-                    suggestion = "You're in detached HEAD state. Create a branch with git branch."
-                return json.dumps({"error": f"git checkout failed: {stderr}", "suggestion": suggestion})
-            return json.dumps({"branch": ref})
-
-        elif operation == "stash":
-            action = args.get("action", "push")
-            if action == "push":
-                ok, stdout, stderr = _run_git(["stash", "push"], cwd=cwd)
-            elif action == "pop":
-                ok, stdout, stderr = _run_git(["stash", "pop"], cwd=cwd)
-            elif action == "list":
-                ok, stdout, stderr = _run_git(["stash", "list"], cwd=cwd)
-            else:
-                return json.dumps({"error": f"Unknown stash action: {action}. Use push, pop, or list."})
-            if not ok:
-                return json.dumps({"error": f"git stash {action} failed: {stderr}"})
-            return json.dumps({"result": stdout.strip() or f"stash {action} successful"})
-
-        else:
-            supported = "status, diff, log, branch, add, commit, checkout, stash"
-            return json.dumps({"error": f"Unknown git operation: {operation}. Supported: {supported}."})
-
+        return await handler(args, cwd)
     except Exception as e:
         log.error("Git operation '%s' failed: %s", operation, e)
-        return json.dumps({"error": str(e)})
+        return _err(str(e))
 
 
-# ─── Tool Spec ────────────────────────────────────────────────────────────
+# ─── Tool Spec ───────────────────────────────────────────────────────────
 
 GIT_SPEC = {
     "type": "function",
     "function": {
         "name": "git",
-        "description": (
-            "Execute git operations with structured output. "
-            "Supports: status, diff, log, branch, add, commit, checkout, stash."
-        ),
+        "description": (f"Execute git operations with structured output. Supports: {_SUPPORTED_OPS}."),
         "parameters": {
             "type": "object",
             "properties": {
                 "operation": {
                     "type": "string",
-                    "description": "Git operation: status, diff, log, branch, add, commit, checkout, stash",
-                    "enum": ["status", "diff", "log", "branch", "add", "commit", "checkout", "stash"],
+                    "description": f"Git operation: {_SUPPORTED_OPS}",
+                    "enum": sorted(_OPERATIONS.keys()),
                 },
                 "path": {"type": "string", "description": "File path for diff operation"},
                 "ref": {"type": "string", "description": "Git ref (branch, tag, commit) for diff/checkout"},
-                "limit": {"type": "integer", "description": "Number of commits for log (default: 10)"},
+                "limit": {
+                    "type": "integer",
+                    "description": f"Number of commits for log (default: {_DEFAULT_LOG_LIMIT})",
+                },
                 "message": {"type": "string", "description": "Commit message for commit operation"},
                 "paths": {
                     "type": "array",
