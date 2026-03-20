@@ -27,6 +27,21 @@ def build_system_prompt(rag_context: str = "", skills_context: str = "") -> str:
 {skills_context}
 """
 
+    # Project context injection
+    project_block = ""
+    try:
+        from ..project import context_to_prompt, load_context
+
+        ctx = load_context()
+        if ctx:
+            project_block = f"""
+
+Contexto do Projeto:
+{context_to_prompt(ctx)}
+"""
+    except Exception:
+        pass
+
     return f"""Você é DenAI 🐺 — um assistente de IA pessoal, inteligente e direto.
 
 Personalidade:
@@ -80,4 +95,4 @@ Contexto:
 - Usuário: {user}
 - Home: {home}
 - Sistema: {sys.platform}
-{rag_block}{skills_block}"""
+{rag_block}{skills_block}{project_block}"""
