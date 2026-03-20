@@ -7,6 +7,27 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-03-20
+
+### Adicionado
+- **🎨 Share Session (HTML Export)** — exporte conversas como HTML standalone (#14)
+  - `denai/export_html.py` — geração de HTML com tema dark, responsivo
+  - Markdown-to-HTML converter leve (zero dependências externas)
+  - XSS protection via `html.escape` em todo conteúdo de usuário
+  - Tool cards expansíveis com toggle JavaScript inline
+  - Endpoint `GET /api/conversations/{id}/export?format=html`
+  - Content-Disposition com download automático do `.html`
+- **🔌 MCP (Model Context Protocol)** — conecte tools externas via MCP (#14)
+  - `denai/mcp/protocol.py` — tipos McpTool, McpServerConfig, mensagens JSON-RPC 2.0
+  - `denai/mcp/client.py` — McpConnection via stdio subprocess, handshake, tool discovery
+  - `denai/routes/mcp.py` — 5 endpoints (list, connect, disconnect, disconnect-all, connect-all)
+  - `refresh_mcp_tools()` no `registry.py` — sincroniza tools MCP com TOOLS_SPEC/_EXECUTORS
+  - Auto-refresh automático em connect/disconnect
+  - Configuração via `~/.denai/config.yaml` seção `mcp_servers`
+- 70 testes novos (39 export + 31 MCP) — 580 testes total
+- 20 routers (1 novo: mcp)
+- `config.example.yaml` com seção `mcp_servers` documentada
+
 ## [0.10.0] - 2026-03-20
 
 ### Adicionado
@@ -42,8 +63,6 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ### Corrigido
 - Build do PyPI agora usa versão dinâmica do `version.py` via hatchling (#12)
-
-_Nenhuma mudança desde v0.9.0 ainda._
 
 ## [0.9.0] - 2026-03-20
 
@@ -289,7 +308,11 @@ _Nenhuma mudança desde v0.9.0 ainda._
 - Scripts de instalação Windows (BAT/PowerShell)
 - 84 testes unitários
 
-[Unreleased]: https://github.com/rodrigogobbo/denai/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/rodrigogobbo/denai/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/rodrigogobbo/denai/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/rodrigogobbo/denai/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/rodrigogobbo/denai/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/rodrigogobbo/denai/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/rodrigogobbo/denai/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rodrigogobbo/denai/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/rodrigogobbo/denai/compare/v0.5.0...v0.5.1

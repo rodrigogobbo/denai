@@ -23,7 +23,9 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 - 📡 **Share Mode** — Expose your instance with authentication via `--share`
 - ⚡ **Streaming** — Real-time token-by-token responses with tool-specific icons
 - 🎨 **Dark/Light Mode** — Toggle with `Ctrl+T`, persists across sessions
-- 📤 **Export** — Download conversations as JSON or Markdown
+- 📤 **Export** — Download conversations as JSON, Markdown, or standalone HTML
+- 📤 **Share Session** — Export conversations as beautiful standalone HTML files (dark theme, responsive)
+- 🔌 **MCP Support** — Connect external tools via Model Context Protocol (stdio JSON-RPC 2.0)
 - 🔍 **Search** — Find conversations by title or content
 - 🧙 **Setup Wizard** — Guided first-boot experience for beginners
 - 🧩 **Extensible** — Drop a Python file in `denai/tools/` and it's auto-discovered
@@ -46,23 +48,27 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 │                  Browser                    │
 │              localhost:4078                  │
 └────────────────────┬────────────────────────┘
-                     │ HTTP / WebSocket
+                     │ HTTP / SSE
 ┌────────────────────▼────────────────────────┐
 │              DenAI Server                   │
 │  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
 │  │ FastAPI   │ │  Tools   │ │   Memory    │ │
-│  │ (routes)  │ │ (auto-   │ │ (SQLite /   │ │
-│  │           │ │ discover)│ │  JSON)      │ │
+│  │ (20      │ │ (auto-   │ │ (SQLite /   │ │
+│  │ routers) │ │ discover)│ │  JSON)      │ │
 │  └─────┬────┘ └────┬─────┘ └──────┬──────┘ │
 │        │           │              │         │
 │        └───────────┼──────────────┘         │
 │                    │                        │
-└────────────────────┼────────────────────────┘
-                     │ Ollama API (:11434)
-┌────────────────────▼────────────────────────┐
-│               Ollama                        │
-│         LLM Models (local)                  │
-└─────────────────────────────────────────────┘
+└─────────┬──────────┼────────────────────────┘
+          │          │ Ollama API (:11434)
+          │  ┌───────▼───────────────────────┐
+          │  │           Ollama              │
+          │  │     LLM Models (local)        │
+          │  └───────────────────────────────┘
+          │  ┌───────────────────────────────┐
+          └──│       MCP Servers             │
+             │  (stdio, JSON-RPC 2.0)        │
+             └───────────────────────────────┘
 ```
 
 ---
@@ -254,15 +260,113 @@ denai --share
 
 ## 🐳 Docker
 
+Run DenAI + Ollama without installing anything on your machine.
+
+### Quick start
+
 ```bash
-# Iniciar DenAI + Ollama com um comando:
+# Clone the repo
+git clone https://github.com/rodrigogobbo/denai.git
+cd denai
+
+# Start everything
 docker compose up -d
 
-# Baixar um modelo (primeira vez):
+# Pull a model (first time only)
 docker compose exec ollama ollama pull llama3.2:3b
 
-# Acessar: http://localhost:8080
+# Open http://localhost:8080
 ```
+
+### What gets created
+
+| Container | Image | Port | Purpose |
+|-----------|-------|------|---------|
+| `denai-app` | Built from Dockerfile | 8080 | DenAI web UI + API |
+| `denai-ollama` | `ollama/ollama:latest` | 11434 | LLM runtime |
+
+| Volume | Purpose |
+|--------|---------|
+| `ollama_models` | Persists downloaded models between restarts |
+
+### GPU support (NVIDIA)
+
+Edit `docker-compose.yml` and uncomment the `deploy` block under `ollama`:
+
+```yaml
+deploy:
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: all
+          capabilities: [gpu]
+```
+
+Requires [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) on the host.
+
+### Custom configuration
+
+```bash
+# Use a different model
+docker compose exec denai-app env DENAI_MODEL=qwen2.5-coder:7b python -m denai
+
+# Mount your own config
+# Add to docker-compose.yml under denai > volumes:
+#   - ~/.denai/config.yaml:/home/denai/.denai/config.yaml
+```
+
+### Useful commands
+
+```bash
+# View logs
+docker compose logs -f denai
+
+# Stop everything
+docker compose down
+
+# Rebuild after code changes
+docker compose build denai && docker compose up -d denai
+
+# Remove everything (containers, volumes, models)
+docker compose down -v
+```
+
+---
+
+## 🔌 MCP (Model Context Protocol)
+
+Connect external tools to DenAI via the [MCP standard](https://modelcontextprotocol.io/).
+
+### Configuration
+
+Add MCP servers to `~/.denai/config.yaml`:
+
+```yaml
+mcp_servers:
+  filesystem:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/projects"]
+    enabled: true
+  web_search:
+    command: python
+    args: ["-m", "web_search_mcp"]
+    env:
+      API_KEY: "your-key-here"
+    enabled: true
+```
+
+### API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/mcp/servers` | GET | List configured servers and status |
+| `/api/mcp/connect` | POST | Connect to a server by name or inline config |
+| `/api/mcp/disconnect` | POST | Disconnect a server |
+| `/api/mcp/disconnect-all` | POST | Disconnect all servers |
+| `/api/mcp/connect-all` | POST | Connect all enabled servers |
+
+Tools discovered from MCP servers are automatically available to the AI — no additional setup needed.
 
 ---
 
@@ -293,6 +397,12 @@ port: 4078
 share: false
 max_tool_rounds: 25
 max_context: 65536
+
+mcp_servers:
+  filesystem:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/projects"]
+    enabled: true
 ```
 
 A `config.example.yaml` is included in the repo as reference.
@@ -308,6 +418,69 @@ A `config.example.yaml` is included in the repo as reference.
 | `DENAI_API_KEY` | *(auto-generated)* | API key for share mode |
 | `DENAI_MAX_TOOL_ROUNDS` | `25` | Max tool call rounds per message |
 | `DENAI_MAX_CONTEXT` | `65536` | Max context window (tokens) |
+
+---
+
+## 🗑️ Complete Uninstall
+
+Remove DenAI and all its data from your machine.
+
+### Quick (DenAI only)
+
+```bash
+pip uninstall denai -y
+```
+
+### Full cleanup (everything)
+
+```bash
+# 1. Uninstall the Python package
+pip uninstall denai -y
+
+# 2. Remove DenAI data (conversations, memory, config, plugins, skills, logs)
+# Linux / macOS
+rm -rf ~/.denai
+
+# Windows (PowerShell)
+Remove-Item -Recurse -Force "$env:USERPROFILE\.denai"
+
+# Windows (CMD)
+rmdir /s /q "%USERPROFILE%\.denai"
+
+# 3. Remove Ollama models (optional — frees 5-50 GB)
+ollama list                    # see what's installed
+ollama rm llama3.1:8b          # remove one by one
+# Or delete all models at once:
+# Linux / macOS
+rm -rf ~/.ollama/models
+# Windows
+rmdir /s /q "%USERPROFILE%\.ollama\models"
+
+# 4. Uninstall Ollama (optional)
+# Linux
+sudo rm /usr/local/bin/ollama
+# macOS
+brew uninstall ollama   # or delete the app from /Applications
+# Windows — Settings → Apps → Ollama → Uninstall
+
+# 5. Docker cleanup (if used)
+docker compose down -v         # removes containers + volumes (models)
+docker rmi denai-denai         # remove the built image
+```
+
+### What gets deleted
+
+| Item | Path | Content |
+|------|------|---------|
+| DenAI package | pip site-packages | Python code |
+| DenAI data | `~/.denai/` | Conversations, memory, config, logs, plugins, skills, backups |
+| Ollama models | `~/.ollama/models/` | Downloaded AI models (5-50 GB) |
+| Ollama binary | `/usr/local/bin/ollama` | The Ollama runtime |
+| Docker volumes | `ollama_models` | Models downloaded inside Docker |
+
+> ⚠️ **Deleting `~/.denai/` is irreversible.** All your conversations, memories, and configs will be lost. Back up anything important first.
+> 
+> 💡 **Uninstalling DenAI does NOT delete Ollama or its models.** They are separate programs. Remove them separately if you want a clean slate.
 
 ---
 
@@ -345,12 +518,17 @@ denai/
 │   ├── app.py               # FastAPI app factory
 │   ├── config.py            # Settings & env vars
 │   ├── logging_config.py      # Centralized logging (file + console)
+│   ├── export_html.py       # Standalone HTML export
 │   ├── db.py                # SQLite (aiosqlite)
 │   ├── network.py           # Local IP detection
 │   ├── llm/                 # LLM integration
 │   │   ├── ollama.py        # Ollama streaming + tool loop
 │   │   ├── context.py    # Context management + summarization
 │   │   └── prompt.py        # System prompt builder
+│   ├── mcp/                 # MCP client (Model Context Protocol)
+│   │   ├── __init__.py
+│   │   ├── protocol.py      # JSON-RPC 2.0 types & messages
+│   │   └── client.py        # MCP server connection & tool discovery
 │   ├── rag/                 # RAG engine
 │   │   └── __init__.py      # BM25 index, tokenizer, chunker
 │   ├── routes/              # API endpoints
@@ -360,6 +538,7 @@ denai/
 │   │   ├── plugins.py       # Plugin management
 │   │   ├── diagnostics.py # /api/logs, /api/diagnostics
 │   │   ├── plans.py       # Plans CRUD
+│   │   ├── mcp.py           # MCP server management
 │   │   └── rag.py           # RAG endpoints
 │   ├── security/            # Security layers
 │   │   ├── auth.py          # API key
@@ -380,7 +559,7 @@ denai/
 │       ├── grep.py         # grep search
 │       ├── think.py        # Internal reasoning
 │       └── question.py     # Ask user questions
-├── tests/                   # 321 tests
+├── tests/                   # 580 tests
 ├── examples/plugins/        # Example plugins
 ├── pyproject.toml
 ├── README.md
