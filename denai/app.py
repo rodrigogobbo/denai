@@ -20,10 +20,9 @@ from .logging_config import LOG_FILE, setup_logging
 from .network import LOCAL_IP
 from .routes import all_routers
 from .security import API_KEY, PUBLIC_PATHS, rate_limiter, verify_api_key
+from .version import VERSION
 
 logger = setup_logging()
-
-VERSION = "0.6.0"
 
 
 @asynccontextmanager

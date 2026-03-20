@@ -7,7 +7,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
-_Nenhuma mudança desde v0.6.0 ainda._
+_Nenhuma mudança desde v0.7.0 ainda._
+
+## [0.7.0] - 2026-03-20
+
+### Adicionado
+- **Auto-update** — verifica automaticamente se há versão nova no PyPI
+  - `GET /api/update/check` — compara versão local vs PyPI
+  - `POST /api/update/install` — executa `pip install --upgrade denai`
+  - Toast na UI com botão "Atualizar" quando update disponível (5s após startup)
+- **VERSION centralizada** — `denai/version.py` como single source of truth (elimina duplicação entre app.py e pyproject.toml)
+- 16 testes novos (auto-update, version parsing)
+- 344 testes passando no total
 
 ## [0.6.0] - 2026-03-20
 
@@ -187,7 +198,8 @@ _Nenhuma mudança desde v0.6.0 ainda._
 - Scripts de instalação Windows (BAT/PowerShell)
 - 84 testes unitários
 
-[Unreleased]: https://github.com/rodrigogobbo/denai/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/rodrigogobbo/denai/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/rodrigogobbo/denai/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rodrigogobbo/denai/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/rodrigogobbo/denai/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/rodrigogobbo/denai/compare/v0.4.0...v0.5.0
