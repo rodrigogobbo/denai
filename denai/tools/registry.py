@@ -47,6 +47,35 @@ def _discover_plugin_tools():
         pass  # Plugins são opcionais — erros não devem quebrar o boot
 
 
+def refresh_mcp_tools():
+    """Refresh MCP tools in the registry from connected MCP servers.
+
+    Call after connecting/disconnecting MCP servers to sync the
+    TOOLS_SPEC and _EXECUTORS with currently available MCP tools.
+    """
+    # Remove existing MCP tools
+    mcp_specs = [s for s in TOOLS_SPEC if s.get("function", {}).get("name", "").startswith("mcp_")]
+    for spec in mcp_specs:
+        TOOLS_SPEC.remove(spec)
+
+    mcp_keys = [k for k in _EXECUTORS if k.startswith("mcp_")]
+    for key in mcp_keys:
+        del _EXECUTORS[key]
+
+    # Re-inject from connected servers
+    try:
+        from ..mcp.client import get_all_mcp_tools
+
+        specs, executors = get_all_mcp_tools()
+        TOOLS_SPEC.extend(specs)
+        _EXECUTORS.update(executors)
+        log.info("MCP tools refreshed — %d tools from MCP servers", len(specs))
+    except ImportError:
+        pass  # MCP module not available
+    except Exception as e:
+        log.error("Error refreshing MCP tools: %s", e)
+
+
 async def execute_tool(name: str, args: dict) -> str:
     """Dispatcher — executa uma tool pelo nome, respeitando permissões."""
     executor = _EXECUTORS.get(name)

@@ -37,3 +37,20 @@ max_context: 65536
 #   think: allow
 #   memory_save: allow
 #   web_search: allow
+
+# ─── MCP Servers ──────────────────────────────────────────
+# Model Context Protocol servers — external tools for the LLM.
+# Each server runs as a subprocess communicating via stdio (JSON-RPC 2.0).
+# Tools discovered from connected servers are automatically available to the AI.
+#
+# mcp_servers:
+#   filesystem:
+#     command: npx
+#     args: ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/projects"]
+#     enabled: true
+#   web_search:
+#     command: python
+#     args: ["-m", "web_search_mcp"]
+#     env:
+#       API_KEY: "your-key-here"
+#     enabled: true
