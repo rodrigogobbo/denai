@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "spec-driven-steroids": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "spec-driven-steroids@latest",
+        "mcp"
+      ]
+    }
+  }
+}
