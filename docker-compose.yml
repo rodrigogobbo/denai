@@ -1,0 +1,57 @@
+# ============================================================================
+# DenAI + Ollama — Docker Compose
+#
+# Quick start:
+#   docker compose up -d
+#
+# First time? Pull a model after services are running:
+#   docker compose exec ollama ollama pull llama3.2:3b
+#
+# Access DenAI at: http://localhost:8080
+#
+# GPU support (NVIDIA):
+#   Uncomment the "deploy" block under the ollama service.
+#   Requires nvidia-container-toolkit installed on the host.
+# ============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # Ollama — Local LLM runtime
+  # --------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: denai-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+    # Uncomment below for NVIDIA GPU acceleration:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # --------------------------------------------------------------------------
+  # DenAI — Your private AI assistant
+  # --------------------------------------------------------------------------
+  denai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: denai-app
+    ports:
+      - "8080:8080"
+    environment:
+      - DENAI_HOST=0.0.0.0
+      - DENAI_PORT=8080
+      - DENAI_OLLAMA_URL=http://ollama:11434
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama_models:
