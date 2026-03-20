@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 
+import yaml
+
+from .config import DATA_DIR
 from .logging_config import get_logger
 
 log = get_logger("project")
+
+PROJECTS_DIR = DATA_DIR / "projects"
+CONTEXT_STALE_DAYS = 7
 
 # Known project indicators
 _INDICATORS: dict[str, dict[str, str]] = {
@@ -317,3 +325,122 @@ def _walk_shallow(root: Path, max_depth: int = 3, _current: int = 0):
                 yield from _walk_shallow(entry, max_depth, _current + 1)
     except PermissionError:
         pass
+
+
+# ─── Persistent Context ──────────────────────────────────────────────────
+
+
+def _project_hash(project_path: str) -> str:
+    """Generate a short hash from the absolute project path."""
+    abs_path = str(Path(project_path).resolve())
+    return hashlib.sha256(abs_path.encode()).hexdigest()[:12]
+
+
+def save_context(info: ProjectInfo) -> Path:
+    """Persist project analysis result to ~/.denai/projects/<hash>/context.yaml."""
+    phash = _project_hash(info.path)
+    ctx_dir = PROJECTS_DIR / phash
+    ctx_dir.mkdir(parents=True, exist_ok=True)
+    ctx_file = ctx_dir / "context.yaml"
+
+    data = {
+        "project_name": info.name,
+        "project_hash": phash,
+        "analyzed_at": datetime.now(timezone.utc).isoformat(),
+        "project_path": info.path,
+        "languages": info.languages,
+        "ecosystems": info.ecosystems,
+        "frameworks": info.frameworks,
+        "git_remote": info.git_info.get("remote", ""),
+        "git_branch": info.git_info.get("branch", ""),
+        "file_count": info.file_count,
+        "dir_count": info.dir_count,
+        "description": info.description,
+        "key_files": info.key_files,
+        "tree_depth_2": info.tree,
+    }
+
+    ctx_file.write_text(yaml.dump(data, default_flow_style=False, allow_unicode=True), encoding="utf-8")
+    log.info("Project context saved to %s", ctx_file)
+    return ctx_file
+
+
+def load_context(project_path: str | None = None) -> dict | None:
+    """Load persisted project context for the given path. Returns None if not found/corrupt."""
+    path = project_path or str(Path.cwd())
+    phash = _project_hash(path)
+    ctx_file = PROJECTS_DIR / phash / "context.yaml"
+
+    if not ctx_file.is_file():
+        return None
+
+    try:
+        data = yaml.safe_load(ctx_file.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            log.warning("Corrupted context file (not a dict): %s", ctx_file)
+            return None
+        return data
+    except Exception as e:
+        log.warning("Failed to read context file %s: %s", ctx_file, e)
+        return None
+
+
+def is_context_stale(context: dict, max_days: int = CONTEXT_STALE_DAYS) -> bool:
+    """Check if context is older than max_days."""
+    analyzed_at = context.get("analyzed_at", "")
+    if not analyzed_at:
+        return True
+    try:
+        ts = datetime.fromisoformat(analyzed_at)
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - ts
+        return age.days > max_days
+    except (ValueError, TypeError):
+        return True
+
+
+def context_to_prompt(context: dict) -> str:
+    """Format project context as a concise section for the system prompt."""
+    parts = [f"## Projeto: {context.get('project_name', 'Unknown')}"]
+    parts.append(f"**Caminho:** `{context.get('project_path', '')}`")
+
+    langs = context.get("languages", [])
+    if langs:
+        parts.append(f"**Linguagens:** {', '.join(langs)}")
+
+    frameworks = context.get("frameworks", [])
+    if frameworks:
+        parts.append(f"**Frameworks:** {', '.join(frameworks)}")
+
+    git_remote = context.get("git_remote", "")
+    git_branch = context.get("git_branch", "")
+    if git_branch:
+        parts.append(f"**Git branch:** {git_branch}")
+    if git_remote:
+        parts.append(f"**Git remote:** {git_remote}")
+
+    desc = context.get("description", "")
+    if desc:
+        parts.append(f"**Descrição:** {desc}")
+
+    fc = context.get("file_count", 0)
+    dc = context.get("dir_count", 0)
+    parts.append(f"**Estrutura:** {fc} arquivos, {dc} diretórios")
+
+    tree = context.get("tree_depth_2", "")
+    if tree:
+        parts.append(f"\n```\n{tree}\n```")
+
+    if is_context_stale(context):
+        analyzed_at = context.get("analyzed_at", "")
+        try:
+            ts = datetime.fromisoformat(analyzed_at)
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            age_days = (datetime.now(timezone.utc) - ts).days
+            parts.append(f"\n⚠️ Contexto do projeto tem {age_days} dias. Execute `/init` para atualizar.")
+        except (ValueError, TypeError):
+            parts.append("\n⚠️ Contexto do projeto pode estar desatualizado. Execute `/init` para atualizar.")
+
+    return "\n".join(parts)

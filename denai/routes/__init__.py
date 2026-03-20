@@ -1,5 +1,6 @@
 """Pacote de rotas do DenAI."""
 
+from .agent import router as agent_router
 from .chat import router as chat_router
 from .commands import router as commands_router
 from .conversations import router as conversations_router
@@ -23,6 +24,7 @@ from .voice import router as voice_router
 all_routers = [
     ui_router,
     chat_router,
+    agent_router,
     commands_router,
     conversations_router,
     models_router,

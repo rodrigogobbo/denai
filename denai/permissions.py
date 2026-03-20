@@ -36,6 +36,7 @@ _DEFAULTS: dict[str, PermLevel] = {
     "create_document": "ask",
     "create_spreadsheet": "ask",
     "rag_index": "ask",
+    "git": "ask",
     # Interactive — always allowed
     "question": "allow",
 }
