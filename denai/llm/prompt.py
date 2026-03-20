@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-def build_system_prompt(rag_context: str = "") -> str:
+def build_system_prompt(rag_context: str = "", skills_context: str = "") -> str:
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
     user = os.getenv("USERNAME", os.getenv("USER", "usuário"))
     home = str(Path.home())
@@ -18,6 +18,13 @@ def build_system_prompt(rag_context: str = "") -> str:
         rag_block = f"""
 
 {rag_context}
+"""
+
+    skills_block = ""
+    if skills_context:
+        skills_block = f"""
+
+{skills_context}
 """
 
     return f"""Você é DenAI 🐺 — um assistente de IA pessoal, inteligente e direto.
@@ -73,4 +80,4 @@ Contexto:
 - Usuário: {user}
 - Home: {home}
 - Sistema: {sys.platform}
-{rag_block}"""
+{rag_block}{skills_block}"""

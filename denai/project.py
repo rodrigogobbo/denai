@@ -1,0 +1,319 @@
+"""Project analysis — /init scans the working directory and generates context."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from .logging_config import get_logger
+
+log = get_logger("project")
+
+# Known project indicators
+_INDICATORS: dict[str, dict[str, str]] = {
+    "package.json": {"lang": "JavaScript/TypeScript", "ecosystem": "Node.js"},
+    "tsconfig.json": {"lang": "TypeScript", "ecosystem": "Node.js"},
+    "pyproject.toml": {"lang": "Python", "ecosystem": "PyPI"},
+    "setup.py": {"lang": "Python", "ecosystem": "PyPI"},
+    "requirements.txt": {"lang": "Python", "ecosystem": "pip"},
+    "Cargo.toml": {"lang": "Rust", "ecosystem": "Cargo"},
+    "go.mod": {"lang": "Go", "ecosystem": "Go Modules"},
+    "pom.xml": {"lang": "Java", "ecosystem": "Maven"},
+    "build.gradle": {"lang": "Java/Kotlin", "ecosystem": "Gradle"},
+    "build.gradle.kts": {"lang": "Kotlin", "ecosystem": "Gradle"},
+    "Gemfile": {"lang": "Ruby", "ecosystem": "Bundler"},
+    "composer.json": {"lang": "PHP", "ecosystem": "Composer"},
+    "mix.exs": {"lang": "Elixir", "ecosystem": "Mix"},
+    "pubspec.yaml": {"lang": "Dart", "ecosystem": "Pub"},
+    "CMakeLists.txt": {"lang": "C/C++", "ecosystem": "CMake"},
+    "Makefile": {"lang": "C/C++", "ecosystem": "Make"},
+    "*.csproj": {"lang": "C#", "ecosystem": ".NET"},
+    "*.sln": {"lang": "C#", "ecosystem": ".NET"},
+}
+
+_FRAMEWORK_HINTS: dict[str, str] = {
+    "next.config": "Next.js",
+    "nuxt.config": "Nuxt.js",
+    "vite.config": "Vite",
+    "webpack.config": "Webpack",
+    "angular.json": "Angular",
+    "svelte.config": "SvelteKit",
+    "astro.config": "Astro",
+    "django": "Django",
+    "flask": "Flask",
+    "fastapi": "FastAPI",
+    "Dockerfile": "Docker",
+    "docker-compose": "Docker Compose",
+    ".github/workflows": "GitHub Actions CI",
+    ".gitlab-ci.yml": "GitLab CI",
+    "Jenkinsfile": "Jenkins",
+    ".circleci": "CircleCI",
+    "terraform": "Terraform",
+    "helm": "Helm",
+    "k8s": "Kubernetes",
+}
+
+_IGNORED_DIRS = {
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "env",
+    ".tox",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "dist",
+    "build",
+    "target",
+    ".next",
+    ".nuxt",
+    "coverage",
+    ".idea",
+    ".vscode",
+    "vendor",
+    ".terraform",
+    ".eggs",
+    "*.egg-info",
+}
+
+_KEY_FILES = {
+    "README.md",
+    "README.rst",
+    "README.txt",
+    "README",
+    "LICENSE",
+    "LICENSE.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "Dockerfile",
+    "docker-compose.yml",
+    "docker-compose.yaml",
+    ".gitignore",
+    ".env.example",
+    ".editorconfig",
+    "Makefile",
+    "justfile",
+    "Taskfile.yml",
+}
+
+
+@dataclass
+class ProjectInfo:
+    """Result of project analysis."""
+
+    path: str = ""
+    name: str = ""
+    languages: list[str] = field(default_factory=list)
+    ecosystems: list[str] = field(default_factory=list)
+    frameworks: list[str] = field(default_factory=list)
+    key_files: list[str] = field(default_factory=list)
+    tree: str = ""
+    file_count: int = 0
+    dir_count: int = 0
+    description: str = ""
+    git_info: dict[str, str] = field(default_factory=dict)
+
+    def to_context(self) -> str:
+        """Generate a context block for the LLM system prompt."""
+        parts = [f"## Projeto: {self.name}"]
+        parts.append(f"**Caminho:** `{self.path}`")
+
+        if self.languages:
+            parts.append(f"**Linguagens:** {', '.join(self.languages)}")
+        if self.ecosystems:
+            parts.append(f"**Ecossistema:** {', '.join(self.ecosystems)}")
+        if self.frameworks:
+            parts.append(f"**Frameworks/Tools:** {', '.join(self.frameworks)}")
+        if self.git_info:
+            branch = self.git_info.get("branch", "")
+            remote = self.git_info.get("remote", "")
+            if branch:
+                parts.append(f"**Git branch:** {branch}")
+            if remote:
+                parts.append(f"**Git remote:** {remote}")
+        if self.description:
+            parts.append(f"**Descrição:** {self.description}")
+
+        parts.append(f"**Estrutura:** {self.file_count} arquivos, {self.dir_count} diretórios")
+
+        if self.key_files:
+            parts.append("**Arquivos-chave:** " + ", ".join(f"`{f}`" for f in self.key_files[:10]))
+
+        if self.tree:
+            parts.append(f"\n```\n{self.tree}\n```")
+
+        return "\n".join(parts)
+
+
+def analyze_project(path: str | Path | None = None) -> ProjectInfo:
+    """Analyze a project directory and return structured info."""
+    root = Path(path) if path else Path.cwd()
+    if not root.is_dir():
+        return ProjectInfo(path=str(root), name=root.name)
+
+    info = ProjectInfo(
+        path=str(root),
+        name=root.name,
+    )
+
+    # Detect languages and ecosystems
+    langs: set[str] = set()
+    ecos: set[str] = set()
+    frameworks: set[str] = set()
+    key_files: list[str] = []
+
+    for indicator, meta in _INDICATORS.items():
+        if indicator.startswith("*"):
+            # Glob pattern
+            if list(root.glob(indicator)):
+                langs.add(meta["lang"])
+                ecos.add(meta["ecosystem"])
+        elif (root / indicator).exists():
+            langs.add(meta["lang"])
+            ecos.add(meta["ecosystem"])
+
+    # Detect frameworks
+    for hint, framework in _FRAMEWORK_HINTS.items():
+        # Check if any file in root matches the hint
+        for f in root.iterdir():
+            if hint in f.name:
+                frameworks.add(framework)
+                break
+        # Check exact path (for nested hints like .github/workflows)
+        hint_path = root / hint
+        if hint_path.exists() or hint_path.is_dir():
+            frameworks.add(framework)
+
+    # Check nested framework hints (shallow)
+    for child in root.iterdir():
+        if child.is_dir() and child.name not in _IGNORED_DIRS:
+            for hint, framework in _FRAMEWORK_HINTS.items():
+                if "/" not in hint and (child / hint).exists():
+                    frameworks.add(framework)
+
+    # Key files
+    for f in root.iterdir():
+        if f.name in _KEY_FILES:
+            key_files.append(f.name)
+
+    # Try to get description from README
+    for readme_name in ("README.md", "README.rst", "README.txt", "README"):
+        readme_path = root / readme_name
+        if readme_path.is_file():
+            try:
+                text = readme_path.read_text(encoding="utf-8", errors="ignore")[:500]
+                # Get first non-empty, non-heading line
+                for line in text.split("\n"):
+                    stripped = line.strip()
+                    if stripped and not stripped.startswith("#") and not stripped.startswith("="):
+                        info.description = stripped[:200]
+                        break
+            except Exception:
+                pass
+            break
+
+    # Git info
+    git_dir = root / ".git"
+    if git_dir.is_dir():
+        try:
+            head_file = git_dir / "HEAD"
+            if head_file.is_file():
+                head = head_file.read_text(encoding="utf-8").strip()
+                if head.startswith("ref: refs/heads/"):
+                    info.git_info["branch"] = head.replace("ref: refs/heads/", "")
+        except Exception:
+            pass
+
+        try:
+            config_file = git_dir / "config"
+            if config_file.is_file():
+                content = config_file.read_text(encoding="utf-8", errors="ignore")
+                for line in content.split("\n"):
+                    stripped = line.strip()
+                    if stripped.startswith("url = "):
+                        info.git_info["remote"] = stripped[6:]
+                        break
+        except Exception:
+            pass
+
+    # Build tree (2 levels deep)
+    info.tree = _build_tree(root, max_depth=2)
+
+    # Count files and dirs
+    file_count = 0
+    dir_count = 0
+    for entry in _walk_shallow(root, max_depth=3):
+        if entry.is_file():
+            file_count += 1
+        elif entry.is_dir():
+            dir_count += 1
+    info.file_count = file_count
+    info.dir_count = dir_count
+
+    info.languages = sorted(langs)
+    info.ecosystems = sorted(ecos)
+    info.frameworks = sorted(frameworks)
+    info.key_files = sorted(key_files)
+
+    return info
+
+
+def _build_tree(root: Path, max_depth: int = 2, prefix: str = "") -> str:
+    """Build a simple directory tree string."""
+    lines: list[str] = []
+    if not prefix:
+        lines.append(root.name + "/")
+
+    try:
+        entries = sorted(root.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower()))
+    except PermissionError:
+        return "\n".join(lines)
+
+    # Filter ignored dirs and hidden files
+    entries = [
+        e
+        for e in entries
+        if (e.name not in _IGNORED_DIRS and not e.name.startswith("."))
+        or e.name in (".github", ".gitignore", ".env.example")
+    ]
+
+    # Limit entries per level
+    max_entries = 25
+    truncated = len(entries) > max_entries
+    entries = entries[:max_entries]
+
+    for i, entry in enumerate(entries):
+        is_last = i == len(entries) - 1 and not truncated
+        connector = "└── " if is_last else "├── "
+        child_prefix = prefix + ("    " if is_last else "│   ")
+
+        if entry.is_dir():
+            lines.append(f"{prefix}{connector}{entry.name}/")
+            if max_depth > 1:
+                subtree = _build_tree(entry, max_depth - 1, child_prefix)
+                if subtree:
+                    lines.append(subtree)
+        else:
+            lines.append(f"{prefix}{connector}{entry.name}")
+
+    if truncated:
+        lines.append(f"{prefix}└── ... ({len(list(root.iterdir())) - max_entries} more)")
+
+    return "\n".join(lines)
+
+
+def _walk_shallow(root: Path, max_depth: int = 3, _current: int = 0):
+    """Walk directory tree with depth limit."""
+    if _current >= max_depth:
+        return
+    try:
+        for entry in root.iterdir():
+            if entry.name in _IGNORED_DIRS or entry.name.startswith("."):
+                continue
+            yield entry
+            if entry.is_dir():
+                yield from _walk_shallow(entry, max_depth, _current + 1)
+    except PermissionError:
+        pass

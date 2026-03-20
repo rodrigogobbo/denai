@@ -7,6 +7,42 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-03-20
+
+### Adicionado
+- **🔍 /init — Project Analysis** — analisa diretórios e gera contexto pro LLM (#13)
+  - `denai/project.py` — detecta linguagens, frameworks, ecossistemas, git info
+  - `POST /api/project/init` e `GET /api/project/init` — endpoints de análise
+  - Gera tree de diretórios (2 níveis), conta arquivos, identifica key files
+  - Suporta 16+ linguagens (Python, JS/TS, Go, Rust, Java, C#, Ruby, PHP, etc.)
+  - Detecta 15+ frameworks (Next.js, FastAPI, Django, Docker, GitHub Actions, etc.)
+  - Lê README pra extrair descrição, detecta branch e remote do Git
+- **🔐 Permissões Granulares** — controle allow/ask/deny por tool (#13)
+  - `denai/permissions.py` — sistema de permissões com 3 camadas de override
+  - Defaults sensatos: read tools = allow, write tools = ask
+  - Configurável via `~/.denai/config.yaml` seção `permissions`
+  - Override dedicado via `~/.denai/permissions.yaml`
+  - `GET /api/permissions` — lista permissões atuais
+  - `PUT /api/permissions` — altera permissão de uma tool
+  - `POST /api/permissions/reset` — volta pros defaults
+  - `POST /api/permissions/check` — verifica se tool pode executar
+  - Integrado no `registry.py` — tools com "deny" são bloqueadas automaticamente
+- **📚 Skills (SKILL.md)** — instruções especializadas carregáveis (#13)
+  - `denai/skills.py` — discovery, parsing, trigger matching, ativação manual
+  - Skills em `~/.denai/skills/*.md` com frontmatter YAML
+  - Triggers automáticos: palavras-chave na mensagem ativam skills relevantes
+  - `auto_activate: true` pra skills sempre ativas
+  - Injetadas no system prompt do LLM (integrado no `prompt.py` e `ollama.py`)
+  - `GET /api/skills` — lista skills disponíveis
+  - `POST /api/skills/activate` / `deactivate` — controle manual
+  - `POST /api/skills/match` — testa quais skills um texto ativaria
+  - 3 skills de exemplo: code-review, debug, git-workflow
+- 86 testes novos (510 total)
+- 18 routers (3 novos: project, permissions, skills)
+
+### Corrigido
+- Build do PyPI agora usa versão dinâmica do `version.py` via hatchling (#12)
+
 _Nenhuma mudança desde v0.9.0 ainda._
 
 ## [0.9.0] - 2026-03-20

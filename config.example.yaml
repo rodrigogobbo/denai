@@ -21,3 +21,19 @@ max_tool_rounds: 25
 
 # Max context window (tokens)
 max_context: 65536
+
+# ─── Permissions ───────────────────────────────────────────
+# Control which tools need confirmation before executing.
+# Levels: allow (auto-execute), ask (confirm first), deny (blocked)
+# Default: read tools = allow, write tools = ask
+# You can also use ~/.denai/permissions.yaml for overrides.
+#
+# permissions:
+#   file_read: allow
+#   file_write: ask
+#   file_edit: ask
+#   command_exec: ask
+#   grep: allow
+#   think: allow
+#   memory_save: allow
+#   web_search: allow
