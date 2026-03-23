@@ -7,16 +7,35 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from denai.agent import (
+    _GOAL_LABEL_LIMIT,
+    _RESULT_TRUNCATE_LIMIT,
     AgentPlan,
+    AgentSession,
     AgentStep,
     PlanStatus,
     StepStatus,
+    _build_decompose_prompt,
+    _check_preconditions,
+    _get_available_tools,
     _parse_plan_json,
+    _snapshot_if_destructive,
     clear_plan,
     execute_plan,
     get_current_plan,
-    request_interrupt,
 )
+
+# ─── Constants tests ────────────────────────────────────────────────────
+
+
+class TestConstants:
+    """Test module-level constants."""
+
+    def test_result_truncate_limit(self):
+        assert _RESULT_TRUNCATE_LIMIT == 500
+
+    def test_goal_label_limit(self):
+        assert _GOAL_LABEL_LIMIT == 50
+
 
 # ─── Data model tests ────────────────────────────────────────────────────
 
@@ -122,10 +141,63 @@ class TestAgentPlan:
             ),
         ]
         d = plan.to_dict()
-        assert len(d["steps"][0]["result"]) == 500
+        assert len(d["steps"][0]["result"]) == _RESULT_TRUNCATE_LIMIT
+
+    def test_to_dict_sanitizes_error(self):
+        plan = AgentPlan(goal="test")
+        plan.steps = [
+            AgentStep(
+                index=1,
+                description="s1",
+                tool_name="think",
+                error="RuntimeError: sensitive internal path /etc/secret",
+            ),
+        ]
+        d = plan.to_dict()
+        # Should only expose the error type, not the message
+        assert d["steps"][0]["error"] == "RuntimeError"
+        assert "sensitive" not in d["steps"][0]["error"]
 
 
-# ─── Global state tests ─────────────────────────────────────────────────
+# ─── AgentSession tests ──────────────────────────────────────────────────
+
+
+class TestAgentSession:
+    """Test AgentSession state management."""
+
+    def test_initial_state(self):
+        session = AgentSession()
+        assert session.get_plan() is None
+        assert session.interrupt_requested is False
+
+    def test_set_plan(self):
+        session = AgentSession()
+        plan = AgentPlan(goal="test")
+        session.set_plan(plan)
+        assert session.get_plan() is plan
+        assert session.interrupt_requested is False
+
+    def test_set_plan_resets_interrupt(self):
+        session = AgentSession()
+        session.interrupt_requested = True
+        session.set_plan(AgentPlan(goal="test"))
+        assert session.interrupt_requested is False
+
+    def test_request_interrupt(self):
+        session = AgentSession()
+        session.request_interrupt()
+        assert session.interrupt_requested is True
+
+    def test_clear(self):
+        session = AgentSession()
+        session.set_plan(AgentPlan(goal="test"))
+        session.request_interrupt()
+        session.clear()
+        assert session.get_plan() is None
+        assert session.interrupt_requested is False
+
+
+# ─── Global state tests (backward compat) ───────────────────────────────
 
 
 class TestGlobalState:
@@ -138,6 +210,40 @@ class TestGlobalState:
     def test_clear_plan(self):
         clear_plan()
         assert get_current_plan() is None
+
+
+# ─── Tool list tests ────────────────────────────────────────────────────
+
+
+class TestGetAvailableTools:
+    """Test dynamic tool list generation."""
+
+    def test_returns_string(self):
+        tools = _get_available_tools()
+        assert isinstance(tools, str)
+        assert len(tools) > 0
+
+    def test_fallback_on_import_error(self):
+        with patch.dict("sys.modules", {"denai.tools.registry": None}):
+            # Force re-import to trigger ImportError
+            tools = _get_available_tools()
+            assert "file_read" in tools
+
+
+class TestBuildDecomposePrompt:
+    """Test prompt building."""
+
+    def test_includes_goal(self):
+        prompt = _build_decompose_prompt("create a file")
+        assert "create a file" in prompt
+
+    def test_includes_tools(self):
+        prompt = _build_decompose_prompt("test")
+        assert "Available tools:" in prompt
+
+    def test_includes_json_example(self):
+        prompt = _build_decompose_prompt("test")
+        assert "JSON array" in prompt
 
 
 # ─── Plan JSON parsing ──────────────────────────────────────────────────
@@ -186,6 +292,97 @@ class TestParsePlanJson:
         assert result[0]["tool_name"] == "file_read"
 
 
+# ─── Precondition checks ────────────────────────────────────────────────
+
+
+class TestCheckPreconditions:
+    """Test _check_preconditions helper."""
+
+    def test_no_issue_returns_none(self):
+        plan = AgentPlan(goal="test")
+        step = AgentStep(index=1, description="s1", tool_name="think")
+        session = AgentSession()
+
+        with patch("denai.agent.check_permission") as mock_perm:
+            mock_perm.return_value = type("P", (), {"allowed": True, "level": "allow", "reason": ""})()
+            result = _check_preconditions(plan, step, session)
+
+        assert result is None
+
+    def test_interrupt_returns_paused(self):
+        plan = AgentPlan(goal="test")
+        step = AgentStep(index=1, description="s1", tool_name="think")
+        session = AgentSession()
+        session.request_interrupt()
+
+        result = _check_preconditions(plan, step, session)
+        assert result is not None
+        assert result["type"] == "agent_paused"
+        assert plan.status == PlanStatus.PAUSED
+
+    def test_max_calls_returns_aborted(self):
+        plan = AgentPlan(goal="test", max_tool_calls=5)
+        plan.total_tool_calls = 5
+        step = AgentStep(index=1, description="s1", tool_name="think")
+        session = AgentSession()
+
+        result = _check_preconditions(plan, step, session)
+        assert result is not None
+        assert result["type"] == "agent_aborted"
+        assert plan.status == PlanStatus.ABORTED
+
+    def test_deny_returns_error(self):
+        plan = AgentPlan(goal="test")
+        step = AgentStep(index=1, description="s1", tool_name="file_write")
+        session = AgentSession()
+
+        with patch("denai.agent.check_permission") as mock_perm:
+            mock_perm.return_value = type("P", (), {"allowed": False, "level": "deny", "reason": "blocked"})()
+            result = _check_preconditions(plan, step, session)
+
+        assert result is not None
+        assert result["type"] == "agent_step_error"
+        assert step.status == StepStatus.FAILED
+
+    def test_ask_returns_paused(self):
+        plan = AgentPlan(goal="test")
+        step = AgentStep(index=1, description="s1", tool_name="command_exec")
+        session = AgentSession()
+
+        with patch("denai.agent.check_permission") as mock_perm:
+            mock_perm.return_value = type("P", (), {"allowed": False, "level": "ask", "reason": "needs confirm"})()
+            result = _check_preconditions(plan, step, session)
+
+        assert result is not None
+        assert result["type"] == "agent_paused"
+        assert plan.status == PlanStatus.PAUSED
+
+
+# ─── Snapshot tests ──────────────────────────────────────────────────────
+
+
+class TestSnapshotIfDestructive:
+    """Test _snapshot_if_destructive helper."""
+
+    def test_destructive_tool_creates_snapshot(self):
+        step = AgentStep(index=1, description="write", tool_name="file_write", tool_args={"path": "/tmp/x.txt"})
+        with patch("denai.agent.save_snapshot") as mock_snap:
+            _snapshot_if_destructive(step)
+            mock_snap.assert_called_once_with("/tmp/x.txt")
+
+    def test_non_destructive_tool_skips(self):
+        step = AgentStep(index=1, description="read", tool_name="file_read", tool_args={"path": "/tmp/x.txt"})
+        with patch("denai.agent.save_snapshot") as mock_snap:
+            _snapshot_if_destructive(step)
+            mock_snap.assert_not_called()
+
+    def test_destructive_without_path_skips(self):
+        step = AgentStep(index=1, description="exec", tool_name="command_exec", tool_args={"command": "ls"})
+        with patch("denai.agent.save_snapshot") as mock_snap:
+            _snapshot_if_destructive(step)
+            mock_snap.assert_not_called()
+
+
 # ─── Plan execution tests ───────────────────────────────────────────────
 
 
@@ -193,10 +390,10 @@ class TestParsePlanJson:
 class TestExecutePlan:
     """Test execute_plan generator."""
 
-    async def _collect_events(self, plan):
+    async def _collect_events(self, plan, session=None):
         """Collect all events from execute_plan."""
         events = []
-        async for event in execute_plan(plan):
+        async for event in execute_plan(plan, session=session):
             events.append(event)
         return events
 
@@ -214,13 +411,12 @@ class TestExecutePlan:
             AgentStep(index=1, description="think", tool_name="think", tool_args={"thought": "ok"}),
         ]
 
-        with patch("denai.tools.registry.execute_tool", new_callable=AsyncMock) as mock_exec:
+        with patch("denai.agent._execute_step", new_callable=AsyncMock) as mock_exec:
             mock_exec.return_value = "thought processed"
             with patch("denai.agent.check_permission") as mock_perm:
                 mock_perm.return_value = type("P", (), {"allowed": True, "level": "allow", "reason": ""})()
                 events = await self._collect_events(plan)
 
-        # Should have: step_start, step_complete, agent_complete
         types = [e["type"] for e in events]
         assert "agent_step_start" in types
         assert "agent_step_complete" in types
@@ -236,14 +432,14 @@ class TestExecutePlan:
 
         call_count = 0
 
-        async def mock_exec(tool_name, tool_args):
+        async def mock_exec(step):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
                 raise RuntimeError("file not found")
             return "ok"
 
-        with patch("denai.tools.registry.execute_tool", side_effect=mock_exec):
+        with patch("denai.agent._execute_step", side_effect=mock_exec):
             with patch("denai.agent.check_permission") as mock_perm:
                 mock_perm.return_value = type("P", (), {"allowed": True, "level": "allow", "reason": ""})()
                 events = await self._collect_events(plan)
@@ -290,20 +486,20 @@ class TestExecutePlan:
             AgentStep(index=2, description="s2", tool_name="think"),
         ]
 
+        session = AgentSession()
         call_count = 0
 
-        async def mock_exec_and_interrupt(tool_name, tool_args):
+        async def mock_exec(step):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                # After first step completes, request interrupt
-                request_interrupt()
+                session.request_interrupt()
             return "ok"
 
-        with patch("denai.tools.registry.execute_tool", side_effect=mock_exec_and_interrupt):
+        with patch("denai.agent._execute_step", side_effect=mock_exec):
             with patch("denai.agent.check_permission") as mock_perm:
                 mock_perm.return_value = type("P", (), {"allowed": True, "level": "allow", "reason": ""})()
-                events = await self._collect_events(plan)
+                events = await self._collect_events(plan, session=session)
 
         types = [e["type"] for e in events]
         assert "agent_paused" in types
@@ -316,14 +512,13 @@ class TestExecutePlan:
             AgentStep(index=2, description="s2", tool_name="think"),
         ]
 
-        with patch("denai.tools.registry.execute_tool", new_callable=AsyncMock) as mock_exec:
+        with patch("denai.agent._execute_step", new_callable=AsyncMock) as mock_exec:
             mock_exec.return_value = "ok"
             with patch("denai.agent.check_permission") as mock_perm:
                 mock_perm.return_value = type("P", (), {"allowed": True, "level": "allow", "reason": ""})()
                 events = await self._collect_events(plan)
 
         types = [e["type"] for e in events]
-        # First step executes, second triggers abort
         assert "agent_step_complete" in types
         assert "agent_aborted" in types
 
@@ -338,10 +533,19 @@ class TestExecutePlan:
             ),
         ]
 
-        with patch("denai.tools.registry.execute_tool", new_callable=AsyncMock) as mock_exec:
+        with patch("denai.agent._execute_step", new_callable=AsyncMock) as mock_exec:
             mock_exec.return_value = "ok"
             with patch("denai.agent.check_permission") as mock_perm:
                 mock_perm.return_value = type("P", (), {"allowed": True, "level": "allow", "reason": ""})()
                 with patch("denai.agent.save_snapshot") as mock_snap:
                     await self._collect_events(plan)
                     mock_snap.assert_called_once_with("/tmp/test.txt")
+
+    async def test_uses_custom_session(self):
+        """Test that execute_plan works with a custom session."""
+        plan = AgentPlan(goal="test")
+        session = AgentSession()
+
+        events = await self._collect_events(plan, session=session)
+        assert events[0]["type"] == "agent_complete"
+        assert session.get_plan() is plan
