@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -155,34 +156,31 @@ class ProjectInfo:
         return "\n".join(parts)
 
 
-def analyze_project(path: str | Path | None = None) -> ProjectInfo:
-    """Analyze a project directory and return structured info."""
-    root = Path(path) if path else Path.cwd()
-    if not root.is_dir():
-        return ProjectInfo(path=str(root), name=root.name)
+# ─── Extracted analysis helpers ──────────────────────────────────────────
 
-    info = ProjectInfo(
-        path=str(root),
-        name=root.name,
-    )
 
-    # Detect languages and ecosystems
+def _detect_languages(root: Path) -> tuple[set[str], set[str]]:
+    """Detect languages and ecosystems from indicator files.
+
+    Returns (languages, ecosystems) sets.
+    """
     langs: set[str] = set()
     ecos: set[str] = set()
-    frameworks: set[str] = set()
-    key_files: list[str] = []
-
     for indicator, meta in _INDICATORS.items():
         if indicator.startswith("*"):
-            # Glob pattern
             if list(root.glob(indicator)):
                 langs.add(meta["lang"])
                 ecos.add(meta["ecosystem"])
         elif (root / indicator).exists():
             langs.add(meta["lang"])
             ecos.add(meta["ecosystem"])
+    return langs, ecos
 
-    # Detect frameworks
+
+def _detect_frameworks(root: Path) -> set[str]:
+    """Detect frameworks/tools from hint files (root + one level deep)."""
+    frameworks: set[str] = set()
+
     for hint, framework in _FRAMEWORK_HINTS.items():
         # Check if any file in root matches the hint
         for f in root.iterdir():
@@ -194,78 +192,110 @@ def analyze_project(path: str | Path | None = None) -> ProjectInfo:
         if hint_path.exists() or hint_path.is_dir():
             frameworks.add(framework)
 
-    # Check nested framework hints (shallow)
+    # Check nested framework hints (shallow — one level deep)
     for child in root.iterdir():
         if child.is_dir() and child.name not in _IGNORED_DIRS:
             for hint, framework in _FRAMEWORK_HINTS.items():
                 if "/" not in hint and (child / hint).exists():
                     frameworks.add(framework)
 
-    # Key files
-    for f in root.iterdir():
-        if f.name in _KEY_FILES:
-            key_files.append(f.name)
+    return frameworks
 
-    # Try to get description from README
+
+def _detect_key_files(root: Path) -> list[str]:
+    """Find key project files (README, LICENSE, Dockerfile, etc.)."""
+    return sorted(f.name for f in root.iterdir() if f.name in _KEY_FILES)
+
+
+def _read_description(root: Path) -> str:
+    """Extract a one-line description from the project README."""
     for readme_name in ("README.md", "README.rst", "README.txt", "README"):
         readme_path = root / readme_name
         if readme_path.is_file():
             try:
                 text = readme_path.read_text(encoding="utf-8", errors="ignore")[:500]
-                # Get first non-empty, non-heading line
                 for line in text.split("\n"):
                     stripped = line.strip()
                     if stripped and not stripped.startswith("#") and not stripped.startswith("="):
-                        info.description = stripped[:200]
-                        break
+                        return stripped[:200]
             except Exception:
                 pass
             break
+    return ""
 
-    # Git info
+
+def _read_git_info(root: Path) -> dict[str, str]:
+    """Read git branch and remote from .git directory (no subprocess)."""
     git_dir = root / ".git"
-    if git_dir.is_dir():
-        try:
-            head_file = git_dir / "HEAD"
-            if head_file.is_file():
-                head = head_file.read_text(encoding="utf-8").strip()
-                if head.startswith("ref: refs/heads/"):
-                    info.git_info["branch"] = head.replace("ref: refs/heads/", "")
-        except Exception:
-            pass
+    info: dict[str, str] = {}
+    if not git_dir.is_dir():
+        return info
 
-        try:
-            config_file = git_dir / "config"
-            if config_file.is_file():
-                content = config_file.read_text(encoding="utf-8", errors="ignore")
-                for line in content.split("\n"):
-                    stripped = line.strip()
-                    if stripped.startswith("url = "):
-                        info.git_info["remote"] = stripped[6:]
-                        break
-        except Exception:
-            pass
+    try:
+        head_file = git_dir / "HEAD"
+        if head_file.is_file():
+            head = head_file.read_text(encoding="utf-8").strip()
+            if head.startswith("ref: refs/heads/"):
+                info["branch"] = head.replace("ref: refs/heads/", "")
+    except Exception:
+        pass
 
-    # Build tree (2 levels deep)
-    info.tree = _build_tree(root, max_depth=2)
+    try:
+        config_file = git_dir / "config"
+        if config_file.is_file():
+            content = config_file.read_text(encoding="utf-8", errors="ignore")
+            for line in content.split("\n"):
+                stripped = line.strip()
+                if stripped.startswith("url = "):
+                    info["remote"] = stripped[6:]
+                    break
+    except Exception:
+        pass
 
-    # Count files and dirs
+    return info
+
+
+def _count_entries(root: Path, max_depth: int = 3) -> tuple[int, int]:
+    """Count files and directories (respecting depth limit and ignoring noise).
+
+    Returns (file_count, dir_count).
+    """
     file_count = 0
     dir_count = 0
-    for entry in _walk_shallow(root, max_depth=3):
+    for entry in _walk_shallow(root, max_depth=max_depth):
         if entry.is_file():
             file_count += 1
         elif entry.is_dir():
             dir_count += 1
-    info.file_count = file_count
-    info.dir_count = dir_count
+    return file_count, dir_count
 
-    info.languages = sorted(langs)
-    info.ecosystems = sorted(ecos)
-    info.frameworks = sorted(frameworks)
-    info.key_files = sorted(key_files)
 
-    return info
+# ─── Main analysis function ─────────────────────────────────────────────
+
+
+def analyze_project(path: str | Path | None = None) -> ProjectInfo:
+    """Analyze a project directory and return structured info."""
+    root = Path(path) if path else Path.cwd()
+    if not root.is_dir():
+        return ProjectInfo(path=str(root), name=root.name)
+
+    langs, ecos = _detect_languages(root)
+    frameworks = _detect_frameworks(root)
+    file_count, dir_count = _count_entries(root)
+
+    return ProjectInfo(
+        path=str(root),
+        name=root.name,
+        languages=sorted(langs),
+        ecosystems=sorted(ecos),
+        frameworks=sorted(frameworks),
+        key_files=_detect_key_files(root),
+        tree=_build_tree(root, max_depth=2),
+        file_count=file_count,
+        dir_count=dir_count,
+        description=_read_description(root),
+        git_info=_read_git_info(root),
+    )
 
 
 def _build_tree(root: Path, max_depth: int = 2, prefix: str = "") -> str:
@@ -336,23 +366,23 @@ def _project_hash(project_path: str) -> str:
     Uses normpath instead of resolve to avoid following symlinks
     into sensitive directories (CodeQL py/path-injection).
     """
-    import os  # noqa: PLC0415
-
-    # Normalize without resolving symlinks to avoid path traversal
     abs_path = os.path.normpath(os.path.abspath(project_path))  # noqa: PTH100
     return hashlib.sha256(abs_path.encode()).hexdigest()[:12]
 
 
+def _context_file_for(project_path: str) -> Path:
+    """Return the context.yaml path for a given project path."""
+    return PROJECTS_DIR / _project_hash(project_path) / "context.yaml"
+
+
 def save_context(info: ProjectInfo) -> Path:
     """Persist project analysis result to ~/.denai/projects/<hash>/context.yaml."""
-    phash = _project_hash(info.path)
-    ctx_dir = PROJECTS_DIR / phash
-    ctx_dir.mkdir(parents=True, exist_ok=True)
-    ctx_file = ctx_dir / "context.yaml"
+    ctx_file = _context_file_for(info.path)
+    ctx_file.parent.mkdir(parents=True, exist_ok=True)
 
     data = {
         "project_name": info.name,
-        "project_hash": phash,
+        "project_hash": _project_hash(info.path),
         "analyzed_at": datetime.now(timezone.utc).isoformat(),
         "project_path": info.path,
         "languages": info.languages,
@@ -375,8 +405,7 @@ def save_context(info: ProjectInfo) -> Path:
 def load_context(project_path: str | None = None) -> dict | None:
     """Load persisted project context for the given path. Returns None if not found/corrupt."""
     path = project_path or str(Path.cwd())
-    phash = _project_hash(path)
-    ctx_file = PROJECTS_DIR / phash / "context.yaml"
+    ctx_file = _context_file_for(path)
 
     if not ctx_file.is_file():
         return None

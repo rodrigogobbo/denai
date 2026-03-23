@@ -9,7 +9,17 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from denai.app import app
-from denai.project import ProjectInfo, _build_tree, analyze_project
+from denai.project import (
+    ProjectInfo,
+    _build_tree,
+    _count_entries,
+    _detect_frameworks,
+    _detect_key_files,
+    _detect_languages,
+    _read_description,
+    _read_git_info,
+    analyze_project,
+)
 from denai.security.auth import API_KEY
 
 # ─── Unit tests ───
@@ -257,3 +267,163 @@ class TestProjectAPI:
             assert data["ok"] is True
             # Should analyze cwd (which is /tmp/denai itself)
             assert data["project"]["name"]
+
+
+# ─── Extracted helpers ───
+
+
+class TestDetectLanguages:
+    """Test the _detect_languages helper."""
+
+    def test_python_detected(self, tmp_path: Path):
+        (tmp_path / "pyproject.toml").write_text("[project]")
+        langs, ecos = _detect_languages(tmp_path)
+        assert "Python" in langs
+        assert "PyPI" in ecos
+
+    def test_multiple_languages(self, tmp_path: Path):
+        (tmp_path / "go.mod").write_text("module test")
+        (tmp_path / "package.json").write_text("{}")
+        langs, ecos = _detect_languages(tmp_path)
+        assert "Go" in langs
+        assert "JavaScript/TypeScript" in langs
+
+    def test_glob_patterns(self, tmp_path: Path):
+        (tmp_path / "app.csproj").write_text("<Project/>")
+        langs, _ = _detect_languages(tmp_path)
+        assert "C#" in langs
+
+    def test_empty_dir(self, tmp_path: Path):
+        langs, ecos = _detect_languages(tmp_path)
+        assert langs == set()
+        assert ecos == set()
+
+
+class TestDetectFrameworks:
+    """Test the _detect_frameworks helper."""
+
+    def test_dockerfile(self, tmp_path: Path):
+        (tmp_path / "Dockerfile").write_text("FROM python:3")
+        frameworks = _detect_frameworks(tmp_path)
+        assert "Docker" in frameworks
+
+    def test_nested_hint(self, tmp_path: Path):
+        workflows = tmp_path / ".github" / "workflows"
+        workflows.mkdir(parents=True)
+        (workflows / "ci.yml").write_text("on: push")
+        frameworks = _detect_frameworks(tmp_path)
+        assert "GitHub Actions CI" in frameworks
+
+    def test_child_dir_hint(self, tmp_path: Path):
+        sub = tmp_path / "backend"
+        sub.mkdir()
+        (sub / "Dockerfile").write_text("FROM node:18")
+        frameworks = _detect_frameworks(tmp_path)
+        assert "Docker" in frameworks
+
+    def test_empty_dir(self, tmp_path: Path):
+        frameworks = _detect_frameworks(tmp_path)
+        assert frameworks == set()
+
+
+class TestDetectKeyFiles:
+    """Test the _detect_key_files helper."""
+
+    def test_finds_readme_and_license(self, tmp_path: Path):
+        (tmp_path / "README.md").write_text("# Hi")
+        (tmp_path / "LICENSE").write_text("MIT")
+        (tmp_path / "random.txt").write_text("noise")
+        key = _detect_key_files(tmp_path)
+        assert "README.md" in key
+        assert "LICENSE" in key
+        assert "random.txt" not in key
+
+    def test_returns_sorted(self, tmp_path: Path):
+        (tmp_path / "Makefile").write_text("")
+        (tmp_path / "Dockerfile").write_text("")
+        (tmp_path / ".gitignore").write_text("")
+        key = _detect_key_files(tmp_path)
+        assert key == sorted(key)
+
+    def test_empty_dir(self, tmp_path: Path):
+        assert _detect_key_files(tmp_path) == []
+
+
+class TestReadDescription:
+    """Test the _read_description helper."""
+
+    def test_reads_first_content_line(self, tmp_path: Path):
+        (tmp_path / "README.md").write_text("# Title\nThis is the description.\n")
+        desc = _read_description(tmp_path)
+        assert desc == "This is the description."
+
+    def test_skips_headings(self, tmp_path: Path):
+        (tmp_path / "README.md").write_text("# H1\n## H2\nActual text here.\n")
+        desc = _read_description(tmp_path)
+        assert desc == "Actual text here."
+
+    def test_truncates_long_lines(self, tmp_path: Path):
+        long_line = "A" * 300
+        (tmp_path / "README.md").write_text(f"# Title\n{long_line}\n")
+        desc = _read_description(tmp_path)
+        assert len(desc) == 200
+
+    def test_no_readme(self, tmp_path: Path):
+        assert _read_description(tmp_path) == ""
+
+    def test_rst_readme(self, tmp_path: Path):
+        # RST headings use underlines, so "Title" is just plain text to our parser
+        (tmp_path / "README.rst").write_text("=====\nRST description.\n")
+        desc = _read_description(tmp_path)
+        assert desc == "RST description."
+
+
+class TestReadGitInfo:
+    """Test the _read_git_info helper."""
+
+    def test_branch_and_remote(self, tmp_path: Path):
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        (git_dir / "HEAD").write_text("ref: refs/heads/feature\n")
+        (git_dir / "config").write_text('[remote "origin"]\n\turl = git@github.com:user/repo\n')
+        info = _read_git_info(tmp_path)
+        assert info["branch"] == "feature"
+        assert "github.com" in info["remote"]
+
+    def test_no_git_dir(self, tmp_path: Path):
+        assert _read_git_info(tmp_path) == {}
+
+    def test_detached_head(self, tmp_path: Path):
+        git_dir = tmp_path / ".git"
+        git_dir.mkdir()
+        (git_dir / "HEAD").write_text("abc123def456\n")
+        info = _read_git_info(tmp_path)
+        assert "branch" not in info
+
+
+class TestCountEntries:
+    """Test the _count_entries helper."""
+
+    def test_files_and_dirs(self, tmp_path: Path):
+        (tmp_path / "a.txt").write_text("a")
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        (sub / "b.txt").write_text("b")
+        fc, dc = _count_entries(tmp_path)
+        assert fc == 2
+        assert dc == 1
+
+    def test_ignores_hidden_and_noise(self, tmp_path: Path):
+        (tmp_path / "real.py").write_text("")
+        (tmp_path / ".hidden").write_text("")
+        nm = tmp_path / "node_modules"
+        nm.mkdir()
+        (nm / "pkg.js").write_text("")
+        fc, dc = _count_entries(tmp_path)
+        assert fc == 1
+        assert dc == 0
+
+    def test_empty_dir(self, tmp_path: Path):
+        fc, dc = _count_entries(tmp_path)
+        assert fc == 0
+        assert dc == 0
