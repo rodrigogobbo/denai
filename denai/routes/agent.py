@@ -6,6 +6,7 @@ import json
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field
 
 from ..agent import (
     PlanStatus,
@@ -29,15 +30,22 @@ _SSE_HEADERS = {
 }
 
 
+# ─── Request Models ──────────────────────────────────────────────────────
+
+
+class AgentGoalRequest(BaseModel):
+    """Request body for agent start/approve endpoints."""
+
+    goal: str = Field(..., min_length=1, description="The goal to decompose into a plan")
+    model: str = Field(default=DEFAULT_MODEL, description="LLM model to use")
+
+
+# ─── Routes ──────────────────────────────────────────────────────────────
+
+
 @router.post("/api/agent/start")
-async def agent_start(request_body: dict):
+async def agent_start(body: AgentGoalRequest):
     """Decompose a goal into an execution plan."""
-    goal = request_body.get("goal", "").strip()
-    model = request_body.get("model", DEFAULT_MODEL)
-
-    if not goal:
-        return JSONResponse({"error": "Goal is required"}, status_code=400)
-
     current = get_current_plan()
     if current and current.status in (PlanStatus.EXECUTING, PlanStatus.APPROVED):
         return JSONResponse(
@@ -46,7 +54,7 @@ async def agent_start(request_body: dict):
         )
 
     try:
-        plan = await decompose_goal(goal, model)
+        plan = await decompose_goal(body.goal.strip(), body.model)
         return {"ok": True, "plan": plan.to_dict()}
     except Exception:
         log.exception("Failed to decompose goal")
@@ -57,23 +65,28 @@ async def agent_start(request_body: dict):
 
 
 @router.post("/api/agent/approve")
-async def agent_approve(request_body: dict):
-    """Approve and execute a plan. Streams progress via SSE."""
-    goal = request_body.get("goal", "").strip()
-    model = request_body.get("model", DEFAULT_MODEL)
+async def agent_approve(body: AgentGoalRequest):
+    """Approve and execute a plan. Streams progress via SSE.
 
-    if not goal:
-        return JSONResponse({"error": "Goal is required"}, status_code=400)
+    Reuses the current plan from /start if the goal matches,
+    otherwise decomposes a new plan.
+    """
+    current = get_current_plan()
 
-    try:
-        plan = await decompose_goal(goal, model)
-        plan.status = PlanStatus.APPROVED
-    except Exception:
-        log.exception("Failed to decompose goal for approval")
-        return JSONResponse(
-            {"error": "Failed to decompose goal. Check logs for details."},
-            status_code=500,
-        )
+    if current and current.goal == body.goal.strip() and current.status == PlanStatus.DRAFT:
+        # Reuse existing plan from /start instead of re-decomposing
+        plan = current
+    else:
+        try:
+            plan = await decompose_goal(body.goal.strip(), body.model)
+        except Exception:
+            log.exception("Failed to decompose goal for approval")
+            return JSONResponse(
+                {"error": "Failed to decompose goal. Check logs for details."},
+                status_code=500,
+            )
+
+    plan.status = PlanStatus.APPROVED
 
     async def generate():
         try:
