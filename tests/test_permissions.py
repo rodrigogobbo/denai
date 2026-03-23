@@ -12,6 +12,7 @@ from denai.app import create_app
 from denai.permissions import (
     _DEFAULTS,
     PermissionResult,
+    _load_yaml_perms,
     check_permission,
     get_all_permissions,
     reset_permissions,
@@ -35,6 +36,56 @@ class TestDefaults:
     def test_all_defaults_valid(self):
         for tool, level in _DEFAULTS.items():
             assert level in ("allow", "ask", "deny"), f"{tool} has invalid level: {level}"
+
+
+class TestLoadYamlPerms:
+    """Test the _load_yaml_perms helper."""
+
+    def test_load_with_section_key(self, tmp_path: Path):
+        f = tmp_path / "perms.yaml"
+        f.write_text("permissions:\n  grep: deny\n  file_read: allow\n")
+        result = _load_yaml_perms(f, section_key="permissions")
+        assert result == {"grep": "deny", "file_read": "allow"}
+
+    def test_load_root_level(self, tmp_path: Path):
+        f = tmp_path / "perms.yaml"
+        f.write_text("grep: deny\nfile_write: allow\n")
+        result = _load_yaml_perms(f)
+        assert result == {"grep": "deny", "file_write": "allow"}
+
+    def test_load_filters_invalid_levels(self, tmp_path: Path):
+        f = tmp_path / "perms.yaml"
+        f.write_text("grep: deny\nfile_read: banana\n")
+        result = _load_yaml_perms(f)
+        assert result == {"grep": "deny"}
+
+    def test_load_nonexistent_file(self, tmp_path: Path):
+        result = _load_yaml_perms(tmp_path / "nope.yaml")
+        assert result == {}
+
+    def test_load_invalid_yaml(self, tmp_path: Path):
+        f = tmp_path / "bad.yaml"
+        f.write_text(": : : invalid {{{\n")
+        result = _load_yaml_perms(f)
+        assert result == {}
+
+    def test_load_non_dict_yaml(self, tmp_path: Path):
+        f = tmp_path / "list.yaml"
+        f.write_text("- item1\n- item2\n")
+        result = _load_yaml_perms(f)
+        assert result == {}
+
+    def test_load_section_key_non_dict(self, tmp_path: Path):
+        f = tmp_path / "perms.yaml"
+        f.write_text("permissions: not_a_dict\n")
+        result = _load_yaml_perms(f, section_key="permissions")
+        assert result == {}
+
+    def test_fallback_to_root_when_section_missing(self, tmp_path: Path):
+        f = tmp_path / "perms.yaml"
+        f.write_text("grep: deny\nfile_read: allow\n")
+        result = _load_yaml_perms(f, section_key="permissions")
+        assert result == {"grep": "deny", "file_read": "allow"}
 
 
 class TestCheckPermission:

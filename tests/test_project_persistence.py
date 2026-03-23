@@ -12,6 +12,7 @@ from httpx import ASGITransport, AsyncClient
 from denai.app import app
 from denai.project import (
     ProjectInfo,
+    _context_file_for,
     _project_hash,
     context_to_prompt,
     is_context_stale,
@@ -47,6 +48,18 @@ class TestProjectHash:
 
 class TestSaveContext:
     """Test saving project context."""
+
+    def test_context_file_for_consistency(self):
+        """_context_file_for returns consistent paths for the same project."""
+        f1 = _context_file_for("/tmp/project")
+        f2 = _context_file_for("/tmp/project")
+        assert f1 == f2
+        assert f1.name == "context.yaml"
+
+    def test_context_file_for_different_projects(self):
+        f1 = _context_file_for("/tmp/a")
+        f2 = _context_file_for("/tmp/b")
+        assert f1 != f2
 
     def test_save_creates_file(self, tmp_path):
         with patch("denai.project.PROJECTS_DIR", tmp_path / "projects"):
