@@ -10,6 +10,7 @@ from .mcp import router as mcp_router
 from .memories import router as memories_router
 from .models import router as models_router
 from .permissions import router as permissions_router
+from .personas import router as personas_router
 from .plans import router as plans_router
 from .plans_spec import router as plans_spec_router
 from .plugins import router as plugins_router
@@ -36,6 +37,7 @@ all_routers = [
     plans_router,
     plans_spec_router,
     todos_router,
+    personas_router,
     plugins_router,
     project_router,
     marketplace_router,
