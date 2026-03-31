@@ -10,11 +10,13 @@ PLAN_MODE_TOOLS = frozenset(
         "grep",
         "think",
         "memory_search",
+        "memory_list",
         "rag_search",
         "rag_stats",
         "web_search",
         "web_fetch",
         "question",
+        "todoread",
     }
 )
 
