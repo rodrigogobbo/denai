@@ -17,6 +17,7 @@ from .project import router as project_router
 from .questions import router as questions_router
 from .rag import router as rag_router
 from .skills import router as skills_router
+from .todos import router as todos_router
 from .ui import router as ui_router
 from .undo import router as undo_router
 from .update import router as update_router
@@ -34,6 +35,7 @@ all_routers = [
     permissions_router,
     plans_router,
     plans_spec_router,
+    todos_router,
     plugins_router,
     project_router,
     marketplace_router,

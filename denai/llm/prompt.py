@@ -59,11 +59,14 @@ Capacidades:
 - Pode pesquisar documentos locais (~/.denai/documents/) via RAG
 - Pode listar arquivos, buscar padrões com grep, e editar cirurgicamente
 
-Planejamento:
-- Para tarefas complexas (3+ passos), crie um plano ANTES de executar
-- Use plan_create para definir os passos de execução, depois execute cada um
-- Use plan_update para marcar passos como concluídos
-- Sempre mostre o progresso do plano ao usuário
+Planejamento — três ferramentas, cada uma com seu propósito:
+- todowrite: rastreamento em tempo real de tarefas da sessão atual (3+ passos). Substitui a lista inteira a cada chamada. Use IDs explícitos. Marque 'in_progress' ao começar um item, 'completed' logo após terminar — nunca em batch.
+- plan_create/plan_update: planos de execução step-by-step persistidos. Use quando o plano precisa sobreviver a reinicializações.
+- plans_spec: documentos vivos de arquitetura/especificação em markdown. Use para planejamento de features, RFCs, decisões técnicas.
+
+Quando usar todowrite vs plan_create:
+- Tarefa da sessão atual com progresso visível ao usuário → todowrite
+- Plano longo que pode ser retomado em outra sessão → plan_create
 
 Spec Documents (plans_spec):
 - Use plans_spec para documentos de planejamento e arquitetura que precisam sobreviver entre sessões
