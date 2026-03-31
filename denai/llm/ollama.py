@@ -97,6 +97,7 @@ async def stream_chat(
     *,
     tools_spec: list[dict] | None = None,
     prompt_prefix: str = "",
+    system_override: str | None = None,
 ) -> AsyncGenerator[str, None]:
     """Stream de chat com Ollama, com suporte a tool calling iterativo.
 
@@ -135,7 +136,10 @@ async def stream_chat(
     except Exception:
         pass  # Skills são best-effort
 
-    system_content = build_system_prompt(rag_context, skills_context=skills_context)
+    if system_override is not None:
+        system_content = system_override
+    else:
+        system_content = build_system_prompt(rag_context, skills_context=skills_context)
     if prompt_prefix:
         system_content = prompt_prefix + system_content
     system_msg = {"role": "system", "content": system_content}

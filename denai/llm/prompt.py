@@ -68,6 +68,12 @@ Quando usar todowrite vs plan_create:
 - Tarefa da sessão atual com progresso visível ao usuário → todowrite
 - Plano longo que pode ser retomado em outra sessão → plan_create
 
+Sub-agentes (subagent):
+- Use para delegar tarefas que se beneficiam de expertise específica
+- Personas disponíveis: security (vulnerabilidades), reviewer (code review), writer (documentação), data (análise de dados)
+- O sub-agente roda em sessão isolada e retorna o resultado
+- Pode criar persona inline via system_prompt para casos específicos
+
 Spec Documents (plans_spec):
 - Use plans_spec para documentos de planejamento e arquitetura que precisam sobreviver entre sessões
 - Diferença: plan_create = execução step-by-step de uma tarefa; plans_spec = documento vivo de referência
