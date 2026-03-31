@@ -1,6 +1,6 @@
 """CRUD de memórias."""
 
-from typing import Optional
+from __future__ import annotations
 
 from fastapi import APIRouter, Query
 
@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.get("/api/memories")
 async def list_memories(
-    type: Optional[str] = Query(None, description="Filtrar por tipo"),
+    type: str | None = Query(None, description="Filtrar por tipo"),
     limit: int = Query(50, ge=1, le=200),
 ):
     async with get_db() as db:

@@ -2,21 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
 
 from ..tools.plans_spec import (
-    PLANS_DIR,
     VALID_STATUSES,
     _create,
     _delete,
-    _format_plan_summary,
-    _get,
     _get_db,
-    _list,
     _plan_path,
     _update,
 )
@@ -32,15 +28,15 @@ class PlanSpecCreate(BaseModel):
 
 
 class PlanSpecUpdate(BaseModel):
-    title: Optional[str] = None
-    content: Optional[str] = None
-    status: Optional[str] = None
-    tags: Optional[str] = None
+    title: str | None = None
+    content: str | None = None
+    status: str | None = None
+    tags: str | None = None
 
 
 @router.get("")
 async def list_plan_specs(
-    status: Optional[str] = Query(None, description="Filtrar por status"),
+    status: str | None = Query(None, description="Filtrar por status"),
 ) -> dict[str, Any]:
     """Lista todos os spec documents (metadados)."""
     conn = _get_db()

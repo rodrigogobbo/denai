@@ -8,8 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from denai.tools.memory import memory_list, memory_save, memory_search
-
+from denai.tools.memory import memory_list
 
 # ─── Helpers ───────────────────────────────────────────────────────────────
 
