@@ -189,9 +189,82 @@ async def memory_search(args: dict) -> str:
         return f"❌ Erro ao buscar: {e}"
 
 
+MEMORY_LIST_SPEC = {
+    "type": "function",
+    "function": {
+        "name": "memory_list",
+        "description": (
+            "Lista as memórias persistentes mais recentes, sem necessidade de query. "
+            "Use para revisar o que foi salvo, checar contexto de sessões anteriores, "
+            "ou explorar memórias sem saber exatamente o que buscar."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["fact", "decision", "preference", "observation"],
+                    "description": "Filtrar por tipo (opcional)",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Número máximo de resultados (padrão: 20, máx: 50)",
+                },
+            },
+            "required": [],
+        },
+    },
+}
+
+
+async def memory_list(args: dict) -> str:
+    """Lista as memórias mais recentes."""
+    mem_type = args.get("type")
+    limit = min(int(args.get("limit", 20)), 50)
+
+    try:
+        conn = _get_db()
+
+        if mem_type:
+            rows = conn.execute(
+                "SELECT * FROM memories WHERE type = ? ORDER BY created_at DESC LIMIT ?",
+                (mem_type, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM memories ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+
+        total = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+        conn.close()
+
+        if not rows:
+            return "📭 Nenhuma memória salva ainda."
+
+        type_icon = {
+            "fact": "📌",
+            "decision": "⚖️",
+            "preference": "💜",
+            "observation": "👁️",
+        }
+
+        parts = [f"🧠 {len(rows)} de {total} memória(s):\n"]
+        for row in rows:
+            date = row["created_at"][:10]
+            icon = type_icon.get(row["type"], "📝")
+            tags_str = f" [{row['tags']}]" if row["tags"] else ""
+            parts.append(f"{icon} ({row['type']}) {date}{tags_str}\n  {row['content']}\n")
+
+        return "\n".join(parts)
+    except Exception as e:
+        return f"❌ Erro ao listar: {e}"
+
+
 # ─── Registration ──────────────────────────────────────────────────────────
 
 TOOLS = [
     (MEMORY_SAVE_SPEC, "memory_save"),
     (MEMORY_SEARCH_SPEC, "memory_search"),
+    (MEMORY_LIST_SPEC, "memory_list"),
 ]
