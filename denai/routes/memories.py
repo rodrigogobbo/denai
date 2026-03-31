@@ -23,8 +23,7 @@ async def list_memories(
             )
         else:
             rows = await db.execute_fetchall(
-                "SELECT id, type, content, tags, created_at FROM memories "
-                "ORDER BY created_at DESC LIMIT ?",
+                "SELECT id, type, content, tags, created_at FROM memories ORDER BY created_at DESC LIMIT ?",
                 (limit,),
             )
         total_row = await db.execute_fetchall("SELECT COUNT(*) as n FROM memories")

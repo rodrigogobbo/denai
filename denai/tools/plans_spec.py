@@ -275,9 +275,7 @@ async def _get(args: dict) -> str:
 
 async def _list(args: dict) -> str:
     conn = _get_db()
-    rows = conn.execute(
-        "SELECT * FROM plan_specs ORDER BY updated_at DESC"
-    ).fetchall()
+    rows = conn.execute("SELECT * FROM plan_specs ORDER BY updated_at DESC").fetchall()
     conn.close()
 
     if not rows:

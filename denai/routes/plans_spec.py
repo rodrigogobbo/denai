@@ -46,9 +46,7 @@ async def list_plan_specs(
             (status,),
         ).fetchall()
     else:
-        rows = conn.execute(
-            "SELECT * FROM plan_specs ORDER BY updated_at DESC"
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM plan_specs ORDER BY updated_at DESC").fetchall()
     conn.close()
 
     return {
