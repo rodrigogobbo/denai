@@ -54,3 +54,42 @@ max_context: 65536
 #     env:
 #       API_KEY: "your-key-here"
 #     enabled: true
+
+# ─── Providers (LLMs alternativos) ────────────────────────────────
+# Além do Ollama local (padrão), você pode conectar outros providers.
+# Providers adicionados pela UI são salvos em ~/.denai/providers.yaml.
+# Use esta seção para pré-configurar providers via arquivo (CI/CD, dotfiles).
+#
+# Tipos suportados:
+#   - ollama     → Ollama local ou remoto
+#   - openai     → OpenAI, Anthropic, Gemini, OpenRouter, Groq, LM Studio, LocalAI
+#   - gpt4all    → GPT4All local
+#
+# providers:
+#   - name: OpenAI
+#     kind: openai
+#     base_url: https://api.openai.com
+#     api_key: sk-...          # Nunca commite com API key real!
+#     models:
+#       - gpt-4o
+#       - gpt-4o-mini
+#
+#   - name: Anthropic
+#     kind: openai             # Anthropic suporta endpoint OpenAI-compat
+#     base_url: https://api.anthropic.com/v1
+#     api_key: sk-ant-...
+#     models:
+#       - claude-3-5-sonnet-20241022
+#       - claude-3-5-haiku-20241022
+#
+#   - name: LM Studio
+#     kind: openai
+#     base_url: http://localhost:1234
+#     # api_key não necessário para providers locais
+#
+#   - name: Groq
+#     kind: openai
+#     base_url: https://api.groq.com/openai/v1
+#     api_key: gsk_...
+#     models:
+#       - llama-3.1-70b-versatile

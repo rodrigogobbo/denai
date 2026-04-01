@@ -193,7 +193,6 @@ async def test_add_provider(client):
 
 @pytest.mark.asyncio
 async def test_add_provider_missing_fields(client):
+    # Pydantic valida campos obrigatórios — retorna 422 para body inválido
     resp = await client.post("/api/providers", json={"kind": "openai"})
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "error" in data
+    assert resp.status_code == 422

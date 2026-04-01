@@ -29,6 +29,10 @@ logger = setup_logging()
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     await init_db()
+    # Load persisted providers from ~/.denai/providers.yaml
+    from .llm.providers import load_providers_from_store
+
+    load_providers_from_store()
     logger.info("DenAI v%s iniciado — model=%s, port=%s", VERSION, DEFAULT_MODEL, PORT)
     _print_banner()
     yield
