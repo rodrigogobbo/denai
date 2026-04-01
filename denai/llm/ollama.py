@@ -15,6 +15,21 @@ from ..tools import TOOLS_SPEC, execute_tool
 from .context import estimate_messages_tokens, llm_summarize, pick_context_size, summarize_old_messages
 from .prompt import build_system_prompt
 
+_SUGGESTION_PREFIX = "__SUGGESTION__:"
+
+
+def _maybe_suggestion_event(result: str) -> str | None:
+    """Se result é uma sugestão, retorna o evento SSE; caso contrário None."""
+    if result.startswith(_SUGGESTION_PREFIX):
+        payload = result[len(_SUGGESTION_PREFIX) :]
+        try:
+            data = json.loads(payload)
+            return json.dumps({"suggestion": data})
+        except json.JSONDecodeError:
+            pass
+    return None
+
+
 log = get_logger("llm")
 
 # ─── Config ────────────────────────────────────────────────────────────────
@@ -320,7 +335,11 @@ async def stream_chat(
                         else:
                             tool_failures[tool_name] = 0
 
-                        yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': result[:2000]}})}\n\n"
+                        suggestion_event = _maybe_suggestion_event(result)
+                        if suggestion_event:
+                            yield f"data: {suggestion_event}\n\n"
+                        else:
+                            yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': result[:2000]}})}\n\n"
                         full_messages.append({"role": "tool", "content": result})
 
                 else:
@@ -353,7 +372,11 @@ async def stream_chat(
                         else:
                             tool_failures[tool_name] = 0
 
-                        yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': result[:2000]}})}\n\n"
+                        suggestion_event = _maybe_suggestion_event(result)
+                        if suggestion_event:
+                            yield f"data: {suggestion_event}\n\n"
+                        else:
+                            yield f"data: {json.dumps({'tool_result': {'name': tool_name, 'result': result[:2000]}})}\n\n"
                         full_messages.append({"role": "tool", "content": result})
 
             # Emitir progresso do round pra UI saber que ainda tá trabalhando

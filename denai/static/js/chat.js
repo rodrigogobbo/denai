@@ -258,6 +258,33 @@ async function sendMessage() {
             scrollToBottom(true);
           }
 
+          // Handle suggestions (suggest_skill / suggest_plugin)
+          if (event.suggestion) {
+            const s = event.suggestion;
+            const icon = s.type === 'skill' ? '🧠' : '🔌';
+            const label = s.type === 'skill' ? 'Skill' : 'Plugin';
+            const installLabel = s.type === 'skill' ? 'Instalar Skill' : 'Instalar Plugin';
+            bubbleEl.insertAdjacentHTML('beforeend', `
+              <div class="suggestion-card" id="scard-${escapeAttr(s.id)}">
+                <div class="suggestion-header">
+                  <span class="suggestion-icon">${icon}</span>
+                  <span class="suggestion-label">${label}: <b>${escapeHtml(s.id)}</b></span>
+                </div>
+                <div class="suggestion-reason">${escapeHtml(s.reason)}</div>
+                <div class="suggestion-actions">
+                  <button class="suggestion-install-btn"
+                    onclick="installSuggestion('${escapeAttr(s.type)}', '${escapeAttr(s.id)}', this)">
+                    ${installLabel}
+                  </button>
+                  <button class="suggestion-dismiss-btn"
+                    onclick="dismissSuggestion('${escapeAttr(s.id)}')">
+                    Dispensar
+                  </button>
+                </div>
+              </div>`);
+            scrollToBottom();
+          }
+
           // Handle tool results
           if (event.tool_result) {
             const tr = event.tool_result;
@@ -412,4 +439,35 @@ window.retryLastMessage = function() {
   // Re-send
   DOM.messageInput.value = window.lastUserMessage;
   sendMessage();
+};
+
+// ─── Suggestion cards ───
+window.installSuggestion = async function(type, id, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Instalando...';
+  try {
+    const endpoint = type === 'skill' ? '/api/skills/install' : '/api/marketplace/install';
+    const body = type === 'skill' ? { name: id } : { plugin_id: id };
+    await apiPost(endpoint, body);
+    const card = document.getElementById(`scard-${id}`);
+    if (card) {
+      card.classList.add('suggestion-installed');
+      card.querySelector('.suggestion-actions').innerHTML =
+        '<span class="suggestion-done">✅ Instalado com sucesso</span>';
+    }
+    showToast(`${type === 'skill' ? 'Skill' : 'Plugin'} "${id}" instalado!`, 'success');
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = type === 'skill' ? 'Instalar Skill' : 'Instalar Plugin';
+    showToast(`Erro ao instalar: ${e.message}`, 'error');
+  }
+};
+
+window.dismissSuggestion = function(id) {
+  const card = document.getElementById(`scard-${id}`);
+  if (card) {
+    card.style.opacity = '0';
+    card.style.transition = 'opacity 0.2s';
+    setTimeout(() => card.remove(), 200);
+  }
 };
