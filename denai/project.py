@@ -275,7 +275,9 @@ def _count_entries(root: Path, max_depth: int = 3) -> tuple[int, int]:
 
 def analyze_project(path: str | Path | None = None) -> ProjectInfo:
     """Analyze a project directory and return structured info."""
-    root = Path(path) if path else Path.cwd()
+    # Resolve and normalize path to prevent path traversal (taint sanitization)
+    root = Path(path).expanduser().resolve() if path is not None else Path.cwd().resolve()
+
     if not root.is_dir():
         return ProjectInfo(path=str(root), name=root.name)
 
