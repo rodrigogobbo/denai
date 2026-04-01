@@ -287,6 +287,53 @@
 <script src="/static/js/helpers.js"></script>
 <script src="/static/js/api.js"></script>
 <script src="/static/js/models.js"></script>
+<!-- Provider Manager Modal -->
+<div class="modal-overlay" id="providerModalOverlay" style="display:none;" onclick="closeProviderModal(event)">
+  <div class="modal-box" id="providerModal">
+    <div class="modal-header">
+      <h2 class="modal-title">Gerenciar Providers</h2>
+      <button class="modal-close" onclick="closeProviderModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <!-- Active providers list -->
+      <div id="providerListSection">
+        <div class="providers-section-label">Providers ativos</div>
+        <div id="providerModalList"><!-- rendered by JS --></div>
+        <button class="btn-add-provider" onclick="showAddProviderForm()">+ Adicionar provider</button>
+      </div>
+      <!-- Add/Edit form (hidden by default) -->
+      <div id="providerFormSection" style="display:none;">
+        <div class="providers-section-label" id="providerFormTitle">Novo provider</div>
+        <div class="provider-form">
+          <label class="pf-label">Template</label>
+          <select id="pfTemplate" onchange="applyTemplate()">
+            <option value="">— Personalizado —</option>
+          </select>
+          <label class="pf-label">Nome</label>
+          <input type="text" id="pfName" class="pf-input" placeholder="Ex: OpenAI, Meu LM Studio...">
+          <label class="pf-label">URL base</label>
+          <input type="text" id="pfUrl" class="pf-input" placeholder="https://api.openai.com">
+          <label class="pf-label">API Key <span class="pf-optional">(opcional para providers locais)</span></label>
+          <div class="pf-key-row">
+            <input type="password" id="pfKey" class="pf-input" placeholder="sk-...">
+            <button class="pf-key-toggle" onclick="toggleKeyVisibility()" title="Mostrar/ocultar">👁</button>
+          </div>
+          <label class="pf-label">Modelos <span class="pf-optional">(um por linha, deixe vazio para detectar automaticamente)</span></label>
+          <textarea id="pfModels" class="pf-textarea" rows="4" placeholder="gpt-4o&#10;gpt-4o-mini&#10;gpt-4-turbo"></textarea>
+          <div class="pf-actions">
+            <button class="pf-btn-test" onclick="testProviderConnection()" id="btnTestConn">Testar conexão</button>
+            <div class="pf-test-result" id="pfTestResult"></div>
+          </div>
+          <div class="pf-footer">
+            <button class="pf-btn-cancel" onclick="cancelProviderForm()">Cancelar</button>
+            <button class="pf-btn-save" onclick="saveProvider()" id="btnSaveProvider">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/static/js/conversations.js"></script>
 <script src="/static/js/commands.js"></script>
 <script src="/static/js/modes.js"></script>

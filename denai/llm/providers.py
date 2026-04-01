@@ -295,17 +295,7 @@ def _convert_tools_to_openai(tools: list[dict]) -> list[dict]:
 
 
 def load_providers_from_config(config: dict) -> None:
-    """Load providers from config.yaml 'providers' section.
-
-    Example config:
-        providers:
-          - name: LM Studio
-            kind: openai
-            base_url: http://localhost:1234
-          - name: GPT4All
-            kind: gpt4all
-            base_url: ""
-    """
+    """Load providers from config.yaml 'providers' section."""
     for p in config.get("providers", []):
         try:
             provider = Provider(
@@ -319,3 +309,25 @@ def load_providers_from_config(config: dict) -> None:
             register_provider(provider)
         except (KeyError, TypeError) as e:
             log.warning("Provider inválido no config: %s — %s", p, e)
+
+
+def load_providers_from_store() -> None:
+    """Load persisted providers from ~/.denai/providers.yaml."""
+    try:
+        from ..providers_store import load_providers
+
+        for p in load_providers():
+            try:
+                provider = Provider(
+                    name=p["name"],
+                    kind=p.get("kind", "openai"),
+                    base_url=p.get("base_url", ""),
+                    api_key=p.get("api_key", ""),
+                    models=p.get("models", []),
+                    default_model=p.get("default_model", ""),
+                )
+                register_provider(provider)
+            except (KeyError, TypeError) as e:
+                log.warning("Provider inválido no store: %s — %s", p, e)
+    except Exception as e:
+        log.warning("Erro ao carregar providers do store: %s", e)

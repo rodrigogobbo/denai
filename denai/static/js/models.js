@@ -1,16 +1,11 @@
 /* ═══════════════════════════════════════════════════════════
-   DENAI — MODELS: health check, ollama status, load & pull
-   Multi-provider support (Ollama, OpenAI-compat, GPT4All)
+   DENAI — MODELS & PROVIDERS
+   Multi-provider: Ollama, OpenAI-compat, Anthropic, Gemini...
    ═══════════════════════════════════════════════════════════ */
 
 // ─── Health check + Ollama status ───
 async function checkHealth() {
-  try {
-    await apiGet('/api/health');
-    return true;
-  } catch (e) {
-    return false;
-  }
+  try { await apiGet('/api/health'); return true; } catch (e) { return false; }
 }
 window.checkHealth = checkHealth;
 
@@ -35,9 +30,13 @@ async function checkOllamaStatus() {
 window.checkOllamaStatus = checkOllamaStatus;
 
 
-// ─── Providers ───
+// ─── Provider state ───
 window._providers = [];
+window._providerTemplates = [];
+window._editingProvider = null; // name being edited
 
+
+// ─── Load providers ───
 async function loadProviders() {
   try {
     const data = await apiGet('/api/providers');
@@ -49,10 +48,34 @@ async function loadProviders() {
 }
 window.loadProviders = loadProviders;
 
+async function loadProviderTemplates() {
+  try {
+    const data = await apiGet('/api/providers/templates');
+    window._providerTemplates = data.templates || [];
+    _populateTemplateSelect();
+  } catch (e) {
+    window._providerTemplates = [];
+  }
+}
+
+function _populateTemplateSelect() {
+  const sel = document.getElementById('pfTemplate');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Personalizado —</option>';
+  window._providerTemplates.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.label;
+    opt.title = t.description;
+    sel.appendChild(opt);
+  });
+}
+
+
+// ─── Sidebar badges ───
 function _renderProvidersBadges() {
   const container = document.getElementById('providersList');
   if (!container) return;
-
   container.innerHTML = '';
 
   window._providers.forEach(p => {
@@ -64,52 +87,240 @@ function _renderProvidersBadges() {
     container.appendChild(badge);
   });
 
-  // Add "+" button
-  const addBtn = document.createElement('button');
-  addBtn.className = 'provider-add-btn';
-  addBtn.textContent = '+';
-  addBtn.title = 'Adicionar provider OpenAI-compatible';
-  addBtn.addEventListener('click', showAddProviderDialog);
-  container.appendChild(addBtn);
+  const manageBtn = document.createElement('button');
+  manageBtn.className = 'provider-add-btn';
+  manageBtn.textContent = '⚙';
+  manageBtn.title = 'Gerenciar providers';
+  manageBtn.addEventListener('click', openProviderModal);
+  container.appendChild(manageBtn);
 }
 
-function showAddProviderDialog() {
-  const name = prompt('Nome do provider (ex: LM Studio):');
-  if (!name) return;
 
-  const url = prompt('URL base (ex: http://localhost:1234):');
-  if (!url) return;
-
-  const apiKey = prompt('API Key (deixe vazio se não precisa):') || '';
-
-  addProvider(name, url, apiKey);
+// ─── Modal open/close ───
+function openProviderModal() {
+  loadProviderTemplates();
+  _renderModalProviderList();
+  showProviderList();
+  document.getElementById('providerModalOverlay').style.display = 'flex';
 }
-window.showAddProviderDialog = showAddProviderDialog;
+window.openProviderModal = openProviderModal;
 
-async function addProvider(name, baseUrl, apiKey) {
+function closeProviderModal(e) {
+  if (e && e.target !== document.getElementById('providerModalOverlay')) return;
+  document.getElementById('providerModalOverlay').style.display = 'none';
+  window._editingProvider = null;
+}
+window.closeProviderModal = closeProviderModal;
+
+function showProviderList() {
+  document.getElementById('providerListSection').style.display = 'block';
+  document.getElementById('providerFormSection').style.display = 'none';
+  _renderModalProviderList();
+}
+
+function showAddProviderForm(editName) {
+  window._editingProvider = editName || null;
+  document.getElementById('providerListSection').style.display = 'none';
+  document.getElementById('providerFormSection').style.display = 'block';
+  document.getElementById('providerFormTitle').textContent = editName ? `Editar: ${editName}` : 'Novo provider';
+  document.getElementById('pfTemplate').value = '';
+  document.getElementById('pfTestResult').textContent = '';
+
+  if (editName) {
+    const p = window._providers.find(x => x.name === editName);
+    if (p) {
+      document.getElementById('pfName').value = p.name;
+      document.getElementById('pfUrl').value = p.base_url;
+      document.getElementById('pfKey').value = ''; // nunca preenche a key
+      document.getElementById('pfModels').value = (p.models || []).join('\n');
+    }
+  } else {
+    document.getElementById('pfName').value = '';
+    document.getElementById('pfUrl').value = '';
+    document.getElementById('pfKey').value = '';
+    document.getElementById('pfModels').value = '';
+  }
+}
+window.showAddProviderForm = showAddProviderForm;
+
+function cancelProviderForm() {
+  showProviderList();
+  window._editingProvider = null;
+}
+window.cancelProviderForm = cancelProviderForm;
+
+
+// ─── Modal provider list ───
+function _renderModalProviderList() {
+  const list = document.getElementById('providerModalList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!window._providers.length) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Nenhum provider além do Ollama.</p>';
+    return;
+  }
+
+  window._providers.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'provider-modal-row';
+    const kindLabel = { ollama: '🦙 Ollama', openai: '🤖 OpenAI-compat', gpt4all: '💾 GPT4All' }[p.kind] || p.kind;
+    row.innerHTML = `
+      <div class="pmr-info">
+        <span class="pmr-name">${escapeHtml(p.name)}</span>
+        <span class="pmr-meta">${kindLabel} · ${escapeHtml(p.base_url || 'local')}</span>
+        ${p.has_key ? '<span class="pmr-key-badge">🔑 key</span>' : ''}
+      </div>
+      <div class="pmr-actions">
+        ${!p.is_default ? `
+          <button class="pmr-btn-edit" onclick="showAddProviderForm('${escapeAttr(p.name)}')">Editar</button>
+          <button class="pmr-btn-remove" onclick="removeProviderUI('${escapeAttr(p.name)}')">Remover</button>
+        ` : '<span style="font-size:11px;color:var(--text-muted)">padrão</span>'}
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+
+// ─── Template apply ───
+function applyTemplate() {
+  const sel = document.getElementById('pfTemplate');
+  const tid = sel.value;
+  if (!tid) return;
+  const tpl = window._providerTemplates.find(t => t.id === tid);
+  if (!tpl) return;
+  document.getElementById('pfName').value = tpl.label;
+  document.getElementById('pfUrl').value = tpl.base_url;
+  document.getElementById('pfModels').value = (tpl.default_models || []).join('\n');
+  document.getElementById('pfKey').value = '';
+  document.getElementById('pfTestResult').textContent = '';
+}
+window.applyTemplate = applyTemplate;
+
+
+// ─── Key visibility toggle ───
+function toggleKeyVisibility() {
+  const inp = document.getElementById('pfKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+window.toggleKeyVisibility = toggleKeyVisibility;
+
+
+// ─── Test connection ───
+async function testProviderConnection() {
+  const url = document.getElementById('pfUrl').value.trim();
+  const key = document.getElementById('pfKey').value.trim();
+  const kind = _inferKind(url);
+  const resultEl = document.getElementById('pfTestResult');
+  const btn = document.getElementById('btnTestConn');
+
+  if (!url) { resultEl.textContent = '⚠️ Informe a URL primeiro.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Testando...';
+  resultEl.textContent = '';
+  resultEl.className = 'pf-test-result';
+
+  try {
+    const data = await apiPost('/api/providers/test', { kind, base_url: url, api_key: key });
+    if (data.ok) {
+      const modelsInfo = data.models_found > 0
+        ? ` · ${data.models_found} modelo${data.models_found > 1 ? 's' : ''} encontrado${data.models_found > 1 ? 's' : ''}`
+        : '';
+      resultEl.textContent = `✅ Conectado (${data.latency_ms}ms)${modelsInfo}`;
+      resultEl.className = 'pf-test-result success';
+
+      // Auto-fill models if found and field is empty
+      const modelsField = document.getElementById('pfModels');
+      if (data.models && data.models.length > 0 && !modelsField.value.trim()) {
+        modelsField.value = data.models.join('\n');
+      }
+    } else {
+      resultEl.textContent = `❌ ${data.error || 'Falha na conexão'}`;
+      resultEl.className = 'pf-test-result error';
+    }
+  } catch (e) {
+    resultEl.textContent = `❌ Erro: ${e.message}`;
+    resultEl.className = 'pf-test-result error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Testar conexão';
+  }
+}
+window.testProviderConnection = testProviderConnection;
+
+function _inferKind(url) {
+  if (!url) return 'openai';
+  if (url.includes('localhost:11434') || url.includes('/api/tags')) return 'ollama';
+  return 'openai';
+}
+
+
+// ─── Save provider ───
+async function saveProvider() {
+  const name = document.getElementById('pfName').value.trim();
+  const url = document.getElementById('pfUrl').value.trim();
+  const key = document.getElementById('pfKey').value.trim();
+  const modelsRaw = document.getElementById('pfModels').value.trim();
+  const models = modelsRaw ? modelsRaw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+  const kind = _inferKind(url);
+
+  if (!name) { showToast('Nome do provider é obrigatório.', 'error'); return; }
+  if (!url)  { showToast('URL base é obrigatória.', 'error'); return; }
+
+  const btn = document.getElementById('btnSaveProvider');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
   try {
     const data = await apiPost('/api/providers', {
-      name: name,
-      kind: 'openai',
-      base_url: baseUrl,
-      api_key: apiKey || '',
+      name, kind, base_url: url, api_key: key, models,
+      default_model: models[0] || '',
     });
-
     if (data.ok) {
-      showToast(`Provider "${name}" adicionado!`, 'success');
+      showToast(`Provider "${name}" salvo!`, 'success');
       await loadProviders();
       await loadModels();
+      showProviderList();
+      window._editingProvider = null;
     } else {
       showToast(`Erro: ${data.error}`, 'error');
     }
   } catch (e) {
-    showToast(`Erro ao adicionar provider: ${e.message}`, 'error');
+    showToast(`Erro ao salvar: ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar';
   }
 }
-window.addProvider = addProvider;
+window.saveProvider = saveProvider;
 
 
-// ─── Models (multi-provider) ───
+// ─── Remove provider ───
+async function removeProviderUI(name) {
+  if (!confirm(`Remover o provider "${name}"?`)) return;
+  try {
+    const resp = await fetch(API_BASE + `/api/providers/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      showToast(`Provider "${name}" removido.`, 'success');
+      await loadProviders();
+      await loadModels();
+      _renderModalProviderList();
+    } else {
+      showToast(`Erro: ${data.error}`, 'error');
+    }
+  } catch (e) {
+    showToast(`Erro: ${e.message}`, 'error');
+  }
+}
+window.removeProviderUI = removeProviderUI;
+
+
+// ─── Models list ───
 async function loadModels() {
   try {
     const data = await apiGet('/api/models');
@@ -121,28 +332,23 @@ async function loadModels() {
       return;
     }
 
-    // Group by provider
     const byProvider = {};
     models.forEach(m => {
-      const provider = m.provider || 'Ollama';
-      if (!byProvider[provider]) byProvider[provider] = [];
-      byProvider[provider].push(m);
+      const prov = m.provider || 'Ollama';
+      if (!byProvider[prov]) byProvider[prov] = [];
+      byProvider[prov].push(m);
     });
 
     const providerNames = Object.keys(byProvider);
-
     if (providerNames.length === 1) {
-      // Single provider — flat list (no optgroups)
       models.forEach(m => {
         const name = typeof m === 'string' ? m : (m.name || m.model || '');
         if (!name) return;
         const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
+        opt.value = name; opt.textContent = name;
         DOM.modelSelect.appendChild(opt);
       });
     } else {
-      // Multiple providers — use optgroups
       providerNames.forEach(provName => {
         const group = document.createElement('optgroup');
         group.label = provName;
@@ -150,8 +356,7 @@ async function loadModels() {
           const name = typeof m === 'string' ? m : (m.name || m.model || '');
           if (!name) return;
           const opt = document.createElement('option');
-          opt.value = name;
-          opt.textContent = name;
+          opt.value = name; opt.textContent = name;
           opt.dataset.provider = provName;
           group.appendChild(opt);
         });
@@ -162,7 +367,6 @@ async function loadModels() {
     if (!window.currentModel && models.length > 0) {
       window.currentModel = typeof models[0] === 'string' ? models[0] : (models[0].name || models[0].model || '');
     }
-
     DOM.modelSelect.value = window.currentModel;
     updateModelLabel();
   } catch (e) {
@@ -197,35 +401,27 @@ DOM.btnPull.addEventListener('click', async () => {
       headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ model }),
     });
-
     if (!res.ok) throw new Error(`Erro: ${res.status}`);
 
-    // Try to read streaming progress
     if (res.body) {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let lastStatus = '';
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         const text = decoder.decode(value, { stream: true });
-        const lines = text.split('\n').filter(l => l.trim());
-        for (const line of lines) {
+        text.split('\n').filter(l => l.trim()).forEach(line => {
           try {
             const parsed = JSON.parse(line);
             lastStatus = parsed.status || lastStatus;
             if (parsed.total && parsed.completed) {
-              const pct = Math.round((parsed.completed / parsed.total) * 100);
-              DOM.pullStatus.textContent = `${lastStatus} ${pct}%`;
+              DOM.pullStatus.textContent = `${lastStatus} ${Math.round((parsed.completed / parsed.total) * 100)}%`;
             } else {
               DOM.pullStatus.textContent = lastStatus;
             }
-          } catch (e) {
-            // Not JSON, just show as text
-            DOM.pullStatus.textContent = line;
-          }
-        }
+          } catch (_) { DOM.pullStatus.textContent = line; }
+        });
       }
     }
 
@@ -234,16 +430,13 @@ DOM.btnPull.addEventListener('click', async () => {
     DOM.pullModelInput.value = '';
     await loadModels();
   } catch (e) {
-    DOM.pullStatus.textContent = `✗ Erro ao baixar: ${e.message}`;
+    DOM.pullStatus.textContent = `✗ Erro: ${e.message}`;
     DOM.pullStatus.className = 'pull-status error';
   } finally {
     DOM.btnPull.disabled = false;
   }
 });
 
-DOM.pullModelInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    DOM.btnPull.click();
-  }
+DOM.pullModelInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); DOM.btnPull.click(); }
 });
