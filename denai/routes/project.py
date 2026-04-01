@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from ..project import ProjectInfo, analyze_project, load_context, save_context
+from ..security.sandbox import is_path_allowed
 
 router = APIRouter()
 
@@ -27,6 +30,17 @@ def _project_to_dict(info: ProjectInfo) -> dict:
     }
 
 
+def _validate_path(path: str | None) -> tuple[str | None, JSONResponse | None]:
+    """Validate user-supplied path against sandbox. Returns (safe_path, error_response)."""
+    if not path:
+        return None, None
+    resolved = str(Path(path).expanduser().resolve())
+    allowed, reason = is_path_allowed(resolved)
+    if not allowed:
+        return None, JSONResponse({"error": f"Caminho não permitido: {reason}"}, status_code=403)
+    return resolved, None
+
+
 def _analyze_and_persist(path: str | None) -> dict:
     """Shared logic for POST/GET init — analyze, save, return response."""
     info = analyze_project(path)
@@ -41,20 +55,29 @@ def _analyze_and_persist(path: str | None) -> dict:
 @router.post("/api/project/init")
 async def init_project(body: dict | None = None):
     """Analyze a project directory, persist context, and return results."""
-    path = body.get("path") if body else None
-    return _analyze_and_persist(path)
+    raw_path = body.get("path") if body else None
+    safe_path, err = _validate_path(raw_path)
+    if err:
+        return err
+    return _analyze_and_persist(safe_path)
 
 
 @router.get("/api/project/init")
 async def init_project_get(path: str | None = None):
     """GET variant for convenience."""
-    return _analyze_and_persist(path)
+    safe_path, err = _validate_path(path)
+    if err:
+        return err
+    return _analyze_and_persist(safe_path)
 
 
 @router.get("/api/project/context")
 async def get_project_context(path: str | None = None):
     """Return persisted project context, or 404 if not found."""
-    ctx = load_context(path)
+    safe_path, err = _validate_path(path)
+    if err:
+        return err
+    ctx = load_context(safe_path)
     if ctx is None:
         return JSONResponse(
             {"error": "No project context found. Run /init first."},

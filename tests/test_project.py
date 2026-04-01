@@ -229,30 +229,32 @@ class TestProjectAPI:
     async def test_post_init(self, tmp_path: Path):
         (tmp_path / "pyproject.toml").write_text("[project]")
         (tmp_path / "README.md").write_text("# Test")
-        async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://test",
-            headers={"X-API-Key": API_KEY},
-        ) as client:
-            resp = await client.post("/api/project/init", json={"path": str(tmp_path)})
-            assert resp.status_code == 200
-            data = resp.json()
-            assert data["ok"] is True
-            assert data["project"]["name"] == tmp_path.name
-            assert "Python" in data["project"]["languages"]
-            assert data["context"]
+        with patch("denai.routes.project.is_path_allowed", return_value=(True, "")):
+            async with AsyncClient(
+                transport=ASGITransport(app=app),
+                base_url="http://test",
+                headers={"X-API-Key": API_KEY},
+            ) as client:
+                resp = await client.post("/api/project/init", json={"path": str(tmp_path)})
+                assert resp.status_code == 200
+                data = resp.json()
+                assert data["ok"] is True
+                assert data["project"]["name"] == tmp_path.name
+                assert "Python" in data["project"]["languages"]
+                assert data["context"]
 
     async def test_get_init(self, tmp_path: Path):
         (tmp_path / "package.json").write_text("{}")
-        async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://test",
-            headers={"X-API-Key": API_KEY},
-        ) as client:
-            resp = await client.get(f"/api/project/init?path={tmp_path}")
-            assert resp.status_code == 200
-            data = resp.json()
-            assert "JavaScript/TypeScript" in data["project"]["languages"]
+        with patch("denai.routes.project.is_path_allowed", return_value=(True, "")):
+            async with AsyncClient(
+                transport=ASGITransport(app=app),
+                base_url="http://test",
+                headers={"X-API-Key": API_KEY},
+            ) as client:
+                resp = await client.get(f"/api/project/init?path={tmp_path}")
+                assert resp.status_code == 200
+                data = resp.json()
+                assert "JavaScript/TypeScript" in data["project"]["languages"]
 
     async def test_init_no_path(self):
         """Without path, uses cwd."""
@@ -388,7 +390,7 @@ class TestReadGitInfo:
         (git_dir / "config").write_text('[remote "origin"]\n\turl = git@github.com:user/repo\n')
         info = _read_git_info(tmp_path)
         assert info["branch"] == "feature"
-        assert "github.com" in info["remote"]
+        assert info["remote"].startswith("git@github.com")
 
     def test_no_git_dir(self, tmp_path: Path):
         assert _read_git_info(tmp_path) == {}

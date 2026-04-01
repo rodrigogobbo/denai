@@ -7,7 +7,89 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
-## [0.11.0] - 2026-03-20
+## [0.16.0] - 2026-04-01
+
+### Adicionado
+- **💡 Sugestões Proativas de Skills e Plugins** — o LLM pode sugerir recursos relevantes via card interativo (#34)
+  - `denai/tools/suggestions.py` — tools `suggest_skill` e `suggest_plugin`
+  - Mecanismo de prefixo mágico `__SUGGESTION__:` interceptado pelo `stream_chat`
+  - `_maybe_suggestion_event()` em `ollama.py` converte o resultado em evento SSE `suggestion`
+  - Frontend: card azul com botão 1-click install e botão dispensar em `chat.js` e `chat.css`
+  - `installSuggestion()` chama `/api/skills/install` ou `/api/marketplace/install`
+  - System prompt instrui o LLM a sugerir proativamente (máx 1-2 por resposta)
+- 18 novos testes — 842 total
+
+### Corrigido
+- **🔒 Path Injection (CodeQL)** — validação de sandbox movida para `routes/project.py` (#35)
+  - `_validate_path()` resolve e verifica path contra sandbox antes de qualquer operação
+  - `POST /api/project/init`, `GET /api/project/init` e `GET /api/project/context` retornam 403 para paths fora do home
+  - Testes de API atualizados com mock de `is_path_allowed`
+  - Fix de falso positivo CodeQL em `tests/test_project.py` (URL substring check)
+
+## [0.15.0] - 2026-04-01
+
+### Adicionado
+- **🤖 Sub-agentes com Persona** — delegue tarefas para agentes especializados (#33)
+  - `denai/personas.py` — carregamento de personas bundled + custom (`~/.denai/personas/*.md`)
+  - Formato `.md` com frontmatter YAML (name, description); custom sobrescreve bundled
+  - 4 personas bundled: `security` (AppSec/OWASP), `reviewer` (code review), `writer` (documentação), `data` (análise de dados)
+  - `denai/tools/subagent.py` — tool `subagent` com mini-loop LLM isolado
+  - Sem recursão: `subagent` excluído das tools do sub-agente
+  - Timeout 120s, max 20 tool calls por sub-agente
+  - Persona via nome pré-definido ou `system_prompt` inline
+  - `denai/llm/ollama.py` — novo parâmetro `system_override` em `stream_chat`
+  - `GET /api/personas` — lista personas disponíveis (bundled + custom)
+- 29 novos testes — 824 total
+
+## [0.14.0] - 2026-04-01
+
+### Adicionado
+- **✅ todowrite — Todo List com Substituição Total** — rastreamento de tarefas em tempo real (#32)
+  - `denai/tools/todowrite.py` — tools `todowrite` e `todoread`
+  - `todowrite` substitui a lista inteira a cada chamada (elimina dessincronias)
+  - IDs explícitos (strings), prioridade `low/medium/high`, status `pending/in_progress/completed`
+  - Ícones por status (⬜🔄✅) e prioridade (🔵🟡🔴)
+  - `todoread` disponível em modo `plan` (read-only)
+  - `GET/PUT/DELETE /api/todos`
+  - System prompt diferencia `todowrite` vs `plan_create` vs `plans_spec`
+- 24 novos testes — 795 total
+
+## [0.13.0] - 2026-03-31
+
+### Adicionado
+- **🧠 memory_list** — lista memórias recentes sem precisar de query (#31)
+  - Parâmetros opcionais: `type` (filtro) e `limit` (padrão 20, máx 50)
+  - `GET /api/memories` agora aceita `?type=` e `?limit=`, retorna campo `total`
+- **📋 plans_spec — Spec Documents** — documentos vivos de planejamento em markdown (#31)
+  - Lifecycle: `draft → active → done → archived`
+  - Armazenamento: `~/.denai/plans/<slug>.md` (conteúdo) + SQLite (metadados)
+  - IDs gerados como slugs do título; soft delete move para `.trash/`
+  - Operações: `create`, `update`, `get`, `list`, `delete`
+  - `GET/POST /api/plans-spec`, `GET/PATCH/DELETE /api/plans-spec/{id}`
+  - Diferente de `plan_create`: spec é documento de referência, não execução step-by-step
+- 39 novos testes — 771 total
+
+## [0.12.0] - 2026-03-20
+
+### Adicionado
+- **🤖 Agentic Workflows** — agent loop autônomo com checkpoints (#21)
+  - `denai/agent.py` — `AgentPlan`, `AgentStep`, `AgentSession`, decomposição e execução
+  - `decompose_goal()` — LLM gera JSON plan a partir do goal
+  - `execute_plan()` — gerador assíncrono com eventos SSE por step
+  - Interrupt/pause, permission gates, max 50 tool calls, undo snapshots para tools destrutivas
+  - `POST /api/agent/start`, `/approve` (SSE stream), `/abort`, `GET /api/agent/status`
+- **🔧 Git Tool** — operações git via tool calling (#21)
+  - `denai/tools/git_ops.py` — 8 operações: status, diff, log, branch, add, commit, checkout, stash
+  - Output estruturado JSON, sandbox via `is_path_allowed`, permissão `ask` por padrão
+- **💾 Persistent Project Context** — contexto de projeto sobrevive a reinicializações (#21)
+  - `save_context()` / `load_context()` em `project.py` via SHA-256 hash do path
+  - Armazenado em `~/.denai/projects/<hash>/context.yaml`
+  - `is_context_stale()` (>7 dias emite warning), `context_to_prompt()` para formatação
+  - Auto-injetado no `build_system_prompt()`
+  - `GET /api/project/context`
+- 95 novos testes — 675 total
+
+
 
 ### Adicionado
 - **🎨 Share Session (HTML Export)** — exporte conversas como HTML standalone (#14)
