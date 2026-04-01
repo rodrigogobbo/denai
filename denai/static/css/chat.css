@@ -562,3 +562,55 @@
 .question-card .q-answer {
   margin-top: 8px; font-size: 13px; color: var(--accent); font-weight: 500;
 }
+
+/* ─── Suggestion cards ─────────────────────────────────────── */
+.suggestion-card {
+  margin: 10px 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(99,179,237,0.35);
+  border-left: 3px solid #63b3ed;
+  border-radius: var(--radius-sm);
+  background: rgba(99,179,237,0.06);
+  animation: messageSlideIn 0.3s ease;
+}
+.suggestion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.suggestion-icon { font-size: 16px; }
+.suggestion-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.suggestion-reason {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.suggestion-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.suggestion-install-btn {
+  padding: 6px 14px;
+  background: #63b3ed;
+  color: #0a0e1a;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.suggestion-install-btn:hover { background: #90cdf4; }
+.suggestion-install-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.suggestion-dismiss-btn {
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.suggestion-dismiss-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
+.suggestion-installed { opacity: 0.7; }
+.suggestion-done { font-size: 13px; color: var(--success, #48bb78); font-weight: 500; }

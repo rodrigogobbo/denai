@@ -111,4 +111,5 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "denai/routes/ui.py" = ["E501"]
 "denai/llm/prompt.py" = ["E501"]
+"denai/llm/ollama.py" = ["E501"]
 "tests/**" = ["S101", "S105", "S106", "S108", "B008", "SIM117", "N806"]

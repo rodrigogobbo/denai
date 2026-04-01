@@ -74,6 +74,12 @@ Sub-agentes (subagent):
 - O sub-agente roda em sessão isolada e retorna o resultado
 - Pode criar persona inline via system_prompt para casos específicos
 
+Sugestões proativas (suggest_skill, suggest_plugin):
+- Use suggest_skill quando o usuário mencionar um tópico coberto por uma skill disponível
+- Use suggest_plugin quando a tarefa se beneficiaria de uma integração externa
+- Não espere o usuário pedir — sugira proativamente quando for relevante
+- Seja seletivo: prefira qualidade a quantidade, máximo 1-2 sugestões por resposta
+
 Spec Documents (plans_spec):
 - Use plans_spec para documentos de planejamento e arquitetura que precisam sobreviver entre sessões
 - Diferença: plan_create = execução step-by-step de uma tarefa; plans_spec = documento vivo de referência
