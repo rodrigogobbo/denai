@@ -17,14 +17,13 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 
 - 🔒 **100% Private** — Everything runs locally. No data leaves your machine. Ever.
 - 🧠 **Persistent Memory** — Remembers context across conversations (SQLite)
-- 🛠️ **Built-in Tools** — File I/O, grep, web search, shell commands, planning, and more (18 tools)
+- 🛠️ **Built-in Tools** — File I/O, grep, web search, shell commands, planning, and more (26 tools)
 - 🌐 **Web UI** — Clean chat interface served automatically at `localhost:4078`
 - 🔄 **Model Switching** — Swap between Ollama models on the fly
 - 📡 **Share Mode** — Expose your instance with authentication via `--share`
 - ⚡ **Streaming** — Real-time token-by-token responses with tool-specific icons
 - 🎨 **Dark/Light Mode** — Toggle with `Ctrl+T`, persists across sessions
 - 📤 **Export** — Download conversations as JSON, Markdown, or standalone HTML
-- 📤 **Share Session** — Export conversations as beautiful standalone HTML files (dark theme, responsive)
 - 🔌 **MCP Support** — Connect external tools via Model Context Protocol (stdio JSON-RPC 2.0)
 - 🔍 **Search** — Find conversations by title or content
 - 🧙 **Setup Wizard** — Guided first-boot experience for beginners
@@ -38,6 +37,11 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 - 📝 **Word & Excel** — Create .docx and .xlsx documents with rich formatting
 - 📋 **Logging** — Persistent logs in ~/.denai/logs/ with rotation (5 MB, 3 backups)
 - 🔍 **Diagnostics API** — /api/logs and /api/diagnostics for troubleshooting
+- 🤖 **Agentic Workflows** — Autonomous multi-step execution with checkpoints and undo
+- ✅ **Todo List** — Real-time task tracking with `todowrite` (IDs, priority, status)
+- 📋 **Spec Documents** — Persistent markdown specs with lifecycle (draft→active→done)
+- 🤝 **Sub-agents** — Delegate to specialized agents with custom personas (security, reviewer, writer, data)
+- 💡 **Proactive Suggestions** — LLM suggests relevant skills and plugins with 1-click install
 
 ---
 
@@ -121,15 +125,23 @@ DenAI comes with **18 built-in tools** that the AI can use automatically:
 | `web_search` | Search DuckDuckGo or fetch content from any URL | ✅ |
 | `memory_save` | Save persistent memory (fact/decision/preference/observation) | ❌ |
 | `memory_search` | Search saved memories by keywords and type | ❌ |
+| `memory_list` | List recent memories without a query (limit, type filter) | ❌ |
 | `rag_search` | Search indexed local documents (BM25) | ❌ |
 | `rag_index` | Reindex `~/.denai/documents/` | ❌ |
 | `rag_stats` | Show RAG index statistics | ❌ |
 | `question` | Ask the user a question and wait for the answer | ❌ |
 | `plan_create` | Create a multi-step execution plan (persisted in SQLite) | ❌ |
 | `plan_update` | Mark plan steps as done / in progress | ❌ |
+| `todowrite` | Replace the entire todo list (IDs, priority, real-time tracking) | ❌ |
+| `todoread` | Read the current todo list | ❌ |
+| `plans_spec` | Manage persistent markdown spec documents (draft/active/done/archived) | ❌ |
+| `subagent` | Delegate a goal to a specialized agent with custom persona | ❌ |
+| `suggest_skill` | Proactively suggest a relevant skill to the user | ❌ |
+| `suggest_plugin` | Proactively suggest a relevant plugin to the user | ❌ |
 | `think` | Internal reasoning scratchpad (no side-effects) | ❌ |
 | `create_document` | Create Word .docx files (headings, paragraphs, bullets, tables) | ❌ |
 | `create_spreadsheet` | Create Excel .xlsx files (multiple sheets, auto-width) | ❌ |
+| `git` | Git operations: status, diff, log, branch, add, commit, checkout, stash | ❌ |
 
 Tools are auto-discovered from `denai/tools/`. Drop a new `.py` file and it just works.
 
@@ -536,8 +548,11 @@ denai/
 │   │   ├── conversations.py # CRUD conversations
 │   │   ├── models.py        # Ollama models
 │   │   ├── plugins.py       # Plugin management
-│   │   ├── diagnostics.py # /api/logs, /api/diagnostics
-│   │   ├── plans.py       # Plans CRUD
+│   │   ├── diagnostics.py   # /api/logs, /api/diagnostics
+│   │   ├── plans.py         # Plans CRUD
+│   │   ├── plans_spec.py    # Spec documents CRUD
+│   │   ├── personas.py      # List personas
+│   │   ├── todos.py         # Todo list endpoints
 │   │   ├── mcp.py           # MCP server management
 │   │   └── rag.py           # RAG endpoints
 │   ├── security/            # Security layers
@@ -545,21 +560,27 @@ denai/
 │   │   ├── sandbox.py       # Path validation
 │   │   ├── command_filter.py# Command blocklist
 │   │   └── rate_limit.py    # Per-IP rate limiting
+│   ├── personas_bundled/    # Built-in personas (security, reviewer, writer, data)
 │   ├── plugins/             # Plugin autodiscovery
 │   ├── static/              # Web UI (SPA)
 │   └── tools/               # Auto-discovered tools
 │       ├── registry.py      # Tool dispatcher
 │       ├── file_ops.py      # file_read, file_write, list_files
 │       ├── command_exec.py  # command_exec
-│       ├── memory.py        # memory_save, memory_search
+│       ├── memory.py        # memory_save, memory_search, memory_list
 │       ├── web_fetch.py     # web_search
 │       ├── rag_search.py    # rag_search, rag_index, rag_stats
-│       ├── documents.py    # create_document, create_spreadsheet
-│       ├── planning.py     # plan_create, plan_update
-│       ├── grep.py         # grep search
-│       ├── think.py        # Internal reasoning
-│       └── question.py     # Ask user questions
-├── tests/                   # 580 tests
+│       ├── documents.py     # create_document, create_spreadsheet
+│       ├── planning.py      # plan_create, plan_update
+│       ├── plans_spec.py    # plans_spec (spec documents)
+│       ├── todowrite.py     # todowrite, todoread
+│       ├── subagent.py      # subagent (delegação com persona)
+│       ├── suggestions.py   # suggest_skill, suggest_plugin
+│       ├── git_ops.py       # git operations
+│       ├── grep.py          # grep search
+│       ├── think.py         # Internal reasoning
+│       └── question.py      # Ask user questions
+├── tests/                   # 842 tests
 ├── examples/plugins/        # Example plugins
 ├── pyproject.toml
 ├── README.md

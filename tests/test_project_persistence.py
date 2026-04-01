@@ -277,47 +277,50 @@ class TestProjectContextAPI:
 
     async def test_context_after_init(self, tmp_path):
         (tmp_path / "pyproject.toml").write_text("[project]")
-        async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://test",
-            headers={"X-API-Key": API_KEY},
-        ) as client:
-            # Init first
-            resp = await client.post("/api/project/init", json={"path": str(tmp_path)})
-            assert resp.status_code == 200
+        with patch("denai.routes.project.is_path_allowed", return_value=(True, "")):
+            async with AsyncClient(
+                transport=ASGITransport(app=app),
+                base_url="http://test",
+                headers={"X-API-Key": API_KEY},
+            ) as client:
+                # Init first
+                resp = await client.post("/api/project/init", json={"path": str(tmp_path)})
+                assert resp.status_code == 200
 
-            # Then get context
-            resp = await client.get(f"/api/project/context?path={tmp_path}")
-            assert resp.status_code == 200
-            data = resp.json()
-            assert data["ok"] is True
-            assert data["context"]["project_name"] == tmp_path.name
+                # Then get context
+                resp = await client.get(f"/api/project/context?path={tmp_path}")
+                assert resp.status_code == 200
+                data = resp.json()
+                assert data["ok"] is True
+                assert data["context"]["project_name"] == tmp_path.name
 
     async def test_context_not_found(self, tmp_path):
-        async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://test",
-            headers={"X-API-Key": API_KEY},
-        ) as client:
-            resp = await client.get(f"/api/project/context?path={tmp_path / 'nonexistent'}")
-            assert resp.status_code == 404
-            data = resp.json()
-            assert "error" in data
+        with patch("denai.routes.project.is_path_allowed", return_value=(True, "")):
+            async with AsyncClient(
+                transport=ASGITransport(app=app),
+                base_url="http://test",
+                headers={"X-API-Key": API_KEY},
+            ) as client:
+                resp = await client.get(f"/api/project/context?path={tmp_path / 'nonexistent'}")
+                assert resp.status_code == 404
+                data = resp.json()
+                assert "error" in data
 
     async def test_init_saves_context(self, tmp_path):
         (tmp_path / "go.mod").write_text("module test")
-        async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://test",
-            headers={"X-API-Key": API_KEY},
-        ) as client:
-            resp = await client.post("/api/project/init", json={"path": str(tmp_path)})
-            assert resp.status_code == 200
+        with patch("denai.routes.project.is_path_allowed", return_value=(True, "")):
+            async with AsyncClient(
+                transport=ASGITransport(app=app),
+                base_url="http://test",
+                headers={"X-API-Key": API_KEY},
+            ) as client:
+                resp = await client.post("/api/project/init", json={"path": str(tmp_path)})
+                assert resp.status_code == 200
 
-            # Verify context was persisted
-            ctx = load_context(str(tmp_path))
-            assert ctx is not None
-            assert "Go" in ctx["languages"]
+                # Verify context was persisted
+                ctx = load_context(str(tmp_path))
+                assert ctx is not None
+                assert "Go" in ctx["languages"]
 
 
 # ─── Permissions — git default ───────────────────────────────────────────
