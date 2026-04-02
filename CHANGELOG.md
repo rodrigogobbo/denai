@@ -7,7 +7,49 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
-## [0.17.1] - 2026-04-02
+## [0.19.0] - 2026-04-02
+
+### Adicionado
+- **💬 Feedback in-app** — reportar bugs e sugerir melhorias diretamente do DenAI (#48)
+  - `denai/routes/feedback.py` — `POST /api/feedback`, `GET /api/feedback/config`, `GET /api/feedback/list`
+  - Abre GitHub Issue via API REST se `feedback.github_token` configurado no `config.yaml`
+  - Fallback: salva em `~/.denai/feedback/<timestamp>.json` com instruções de configuração
+  - Coleta contexto automático: versão, OS, Python, status Ollama, logs recentes (opt-in)
+  - Dois tipos: bug (labels `bug+user-feedback`) e melhoria (labels `enhancement+user-feedback`)
+  - Frontend: botão 💬 no header, atalho `Ctrl+Shift+F`, modal com abas Bug/Melhoria
+  - Checkbox para incluir/excluir contexto (default: true para bugs, false para melhorias)
+  - Feedback de sucesso com link direto para a issue criada no GitHub
+  - `config.example.yaml` documentado com passo a passo para obter o token
+- 16 novos testes — 887 total
+
+## [0.18.0] - 2026-04-02
+
+### Adicionado
+- **🔄 Update com streaming SSE e reinicialização automática** (#45)
+  - `POST /api/update/install` vira streaming SSE — cada linha do `pip install` aparece em tempo real
+  - Eventos: `{"type": "progress", "line": "..."}`, `{"type": "success", "version": "x.y.z"}`, `{"type": "error"}`
+  - `_get_installed_version()` lê versão real via `pip show` após instalação
+  - `POST /api/update/restart` — novo endpoint
+    - `subprocess.Popen([sys.executable, "-m", "denai"] + argv[1:])` inicia nova instância
+    - `asyncio.sleep(1)` + `sys.exit(0)` encerra a atual
+    - Flag `_restart_scheduled` previne restart duplo
+    - Retorna `reconnect_delay_ms` para o frontend saber quando tentar
+  - Frontend: modal de update substitui toast simples
+    - Mostra `v{atual} → v{nova}` com log de progresso em tempo real
+    - Botão **"Reiniciar agora"** aparece após instalação bem-sucedida
+    - Botão **"Reiniciar depois"** para diferir o restart
+    - `_waitForReconnect()` faz polling de `/api/health` e recarrega ao reconectar
+  - Check periódico a cada 6h (além do check no startup)
+- **🚀 Auto-release pipeline** (#46, #47)
+  - Job `Auto Release` no `ci.yml` — roda após test + lint passarem no push para `main`
+  - Lê `VERSION` de `denai/version.py` (single source of truth)
+  - Verifica se tag `v{VERSION}` já existe — idempotente, skip silencioso se já publicada
+  - Extrai notas de release do `CHANGELOG.md` automaticamente
+  - Cria tag + GitHub Release + build + publica no PyPI via trusted publishing OIDC
+  - Apenas em push para `main` — nunca em PRs
+- 4 novos testes de streaming SSE — 871 total
+
+
 
 ### Corrigido
 - **🔒 SSRF (CodeQL `py/partial-ssrf`)** — `POST /api/providers/test` agora valida a URL contra blocklist antes de fazer qualquer requisição HTTP

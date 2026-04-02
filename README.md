@@ -42,6 +42,9 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 - 📋 **Spec Documents** — Persistent markdown specs with lifecycle (draft→active→done)
 - 🤝 **Sub-agents** — Delegate to specialized agents with custom personas (security, reviewer, writer, data)
 - 💡 **Proactive Suggestions** — LLM suggests relevant skills and plugins with 1-click install
+- 🔁 **Auto Update** — Streaming install progress + one-click restart from the UI
+- 💬 **In-app Feedback** — Report bugs and suggest improvements without leaving DenAI
+- 🚀 **Auto Release** — Every version bump triggers tests → GitHub Release → PyPI automatically
 
 ---
 
@@ -112,7 +115,7 @@ Open your browser at **http://localhost:4078** — that's it! 🎉
 
 ## 🛠️ Available Tools
 
-DenAI comes with **18 built-in tools** that the AI can use automatically:
+DenAI comes with **26 built-in tools** that the AI can use automatically:
 
 | Tool | Description | Internet? |
 |------|-------------|:-:|
@@ -580,7 +583,7 @@ denai/
 │       ├── grep.py          # grep search
 │       ├── think.py         # Internal reasoning
 │       └── question.py      # Ask user questions
-├── tests/                   # 842 tests
+├── tests/                   # 887 tests
 ├── examples/plugins/        # Example plugins
 ├── pyproject.toml
 ├── README.md

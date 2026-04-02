@@ -1,6 +1,6 @@
 # 🐺 DenAI — Guia Completo para Iniciantes
 
-> **Versão:** 4.0  
+> **Versão:** 5.0  
 > **Última atualização:** Abril 2026  
 > **Público-alvo:** Pessoas que nunca usaram terminal, programação ou IA local  
 > **Sistema:** Windows 10 / Windows 11
@@ -62,6 +62,8 @@ O DenAI é um programa que roda uma **inteligência artificial** (IA) diretament
 - ✅ **Usar outros modelos de IA** — OpenAI (GPT-4o), Anthropic (Claude), Google (Gemini), Groq e outros
 - ✅ **Delegar tarefas especializadas** — Sub-agentes com expertise em segurança, review de código, documentação e dados
 - ✅ **Rastrear tarefas em tempo real** — Lista de todos com prioridade e status
+- ✅ **Reportar bugs e sugerir melhorias** — Direto da interface, sem precisar de conta GitHub
+- ✅ **Atualizar com 1 clique** — Instala nova versão com progresso em tempo real e reinicia automaticamente
 
 > 🔒 **Sobre privacidade:** Tudo que você digita fica **apenas no seu computador**. Nenhuma empresa recebe seus dados. Nenhum servidor externo é contatado. É como escrever num caderno que só você tem a chave.
 
@@ -735,6 +737,38 @@ A configuração é **salva automaticamente** e persiste quando você reiniciar 
 ### Após adicionar, o modelo aparece no seletor
 
 Depois de salvar um provider, os modelos dele aparecem no **seletor de modelo** na barra lateral, agrupados por provider.
+
+---
+
+## 💬 Reportar problemas e sugerir melhorias
+
+O DenAI tem um sistema de feedback integrado. Se encontrar um bug ou tiver uma ideia, você pode reportar **diretamente da interface**, sem precisar criar conta no GitHub.
+
+### Como usar
+
+1. Clique no botão **💬** no canto superior direito (ou pressione `Ctrl+Shift+F`)
+2. Escolha o tipo:
+   - **🐛 Reportar Bug** — para problemas, erros ou comportamentos inesperados
+   - **💡 Sugerir Melhoria** — para novas funcionalidades ou melhorias
+3. Preencha o título e descrição
+4. Para bugs: deixe marcado "Incluir contexto" — isso adiciona automaticamente a versão do DenAI, seu sistema operacional e os logs recentes, ajudando a diagnosticar o problema
+5. Clique **Enviar**
+
+> 💡 **Sem conta GitHub necessária!** O feedback é enviado automaticamente pelo DenAI.
+
+### Para desenvolvedores: configurar envio direto ao GitHub
+
+Por padrão, o feedback é salvo localmente em `~/.denai/feedback/`. Para enviar como GitHub Issues:
+
+1. Crie um token em: https://github.com/settings/tokens/new
+   - Nome: `DenAI feedback`
+   - Escopo: marque apenas **`public_repo`**
+2. Adicione no `~/.denai/config.yaml`:
+
+```yaml
+feedback:
+  github_token: "ghp_seu_token_aqui"
+```
 
 ---
 
