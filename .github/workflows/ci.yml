@@ -67,8 +67,7 @@ jobs:
       - run: ruff check denai/ tests/
       - run: ruff format --check denai/ tests/
 
-  # Auto-release: cria tag + GitHub Release se versão nova
-  # O publish.yml cuida da publicação no PyPI ao detectar a nova release
+  # Auto-release: cria tag + GitHub Release + publica no PyPI
   # Roda apenas no push para main (não em PRs) e só após todos os testes passarem
   release:
     name: Auto Release
@@ -76,8 +75,13 @@ jobs:
     runs-on: ubuntu-latest
     # Apenas em push para main — nunca em PRs
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # environment 'pypi' é necessário para trusted publishing OIDC
+    environment:
+      name: pypi
+      url: https://pypi.org/p/denai
     permissions:
       contents: write   # para criar tags e releases
+      id-token: write   # para trusted publishing no PyPI (OIDC)
 
     steps:
       - uses: actions/checkout@v6
@@ -110,7 +114,6 @@ jobs:
 
       - name: Extrair notas de release do CHANGELOG
         if: steps.check_tag.outputs.exists == 'false'
-        id: changelog
         run: |
           python3 - <<'PYEOF' > /tmp/release_notes.md
           import re
@@ -127,7 +130,6 @@ jobs:
           except Exception:
               print(f"Release v{version}")
           PYEOF
-          echo "Notas de release extraídas."
 
       - name: Criar tag
         if: steps.check_tag.outputs.exists == 'false'
@@ -146,5 +148,13 @@ jobs:
           body_path: /tmp/release_notes.md
           draft: false
           prerelease: false
-        # A criação desta release dispara automaticamente o publish.yml
-        # (on: release: types: [published]) que publica no PyPI via trusted publishing
+
+      - name: Build do pacote
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Publicar no PyPI
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: pypa/gh-action-pypi-publish@release/v1
