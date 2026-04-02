@@ -229,7 +229,7 @@ class TestProjectAPI:
     async def test_post_init(self, tmp_path: Path):
         (tmp_path / "pyproject.toml").write_text("[project]")
         (tmp_path / "README.md").write_text("# Test")
-        with patch("denai.routes.project.is_path_allowed", return_value=(True, "")):
+        with patch("denai.routes.project._validate_path", return_value=(str(tmp_path), None)):
             async with AsyncClient(
                 transport=ASGITransport(app=app),
                 base_url="http://test",
@@ -245,7 +245,7 @@ class TestProjectAPI:
 
     async def test_get_init(self, tmp_path: Path):
         (tmp_path / "package.json").write_text("{}")
-        with patch("denai.routes.project.is_path_allowed", return_value=(True, "")):
+        with patch("denai.routes.project._validate_path", return_value=(str(tmp_path), None)):
             async with AsyncClient(
                 transport=ASGITransport(app=app),
                 base_url="http://test",

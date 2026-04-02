@@ -277,7 +277,7 @@ class TestProjectContextAPI:
 
     async def test_context_after_init(self, tmp_path):
         (tmp_path / "pyproject.toml").write_text("[project]")
-        with patch("denai.routes.project.is_path_allowed", return_value=(True, "")):
+        with patch("denai.routes.project._validate_path", return_value=(str(tmp_path), None)):
             async with AsyncClient(
                 transport=ASGITransport(app=app),
                 base_url="http://test",
@@ -295,7 +295,7 @@ class TestProjectContextAPI:
                 assert data["context"]["project_name"] == tmp_path.name
 
     async def test_context_not_found(self, tmp_path):
-        with patch("denai.routes.project.is_path_allowed", return_value=(True, "")):
+        with patch("denai.routes.project._validate_path", return_value=(str(tmp_path / "nonexistent"), None)):
             async with AsyncClient(
                 transport=ASGITransport(app=app),
                 base_url="http://test",
@@ -308,7 +308,7 @@ class TestProjectContextAPI:
 
     async def test_init_saves_context(self, tmp_path):
         (tmp_path / "go.mod").write_text("module test")
-        with patch("denai.routes.project.is_path_allowed", return_value=(True, "")):
+        with patch("denai.routes.project._validate_path", return_value=(str(tmp_path), None)):
             async with AsyncClient(
                 transport=ASGITransport(app=app),
                 base_url="http://test",

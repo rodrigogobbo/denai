@@ -144,8 +144,8 @@ async def test_provider(body: TestProviderBody):
     # allow_localhost=True para suportar LM Studio / LocalAI em desenvolvimento
     try:
         base_url = validate_provider_url(body.base_url, allow_localhost=True)
-    except ProviderURLError as exc:
-        return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+    except ProviderURLError:
+        return JSONResponse({"ok": False, "error": "URL inválida ou bloqueada por segurança."}, status_code=400)
 
     start = time.monotonic()
 
