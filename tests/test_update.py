@@ -60,7 +60,6 @@ class TestParseVersion:
         assert _parse_version("1.2.3.4") == (1, 2, 3)
 
     def test_with_non_numeric(self):
-        # e.g. "1.2.3rc1" — "3rc1" is not purely numeric, gets filtered
         assert _parse_version("1.2.3") == (1, 2, 3)
 
     def test_comparison_greater(self):
@@ -84,7 +83,6 @@ class TestParseVersion:
 
 @pytest.mark.asyncio
 async def test_check_update_returns_current_version(client):
-    """Endpoint always returns current_version, even on error."""
     with patch("denai.routes.update.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_response = MagicMock()
@@ -107,7 +105,6 @@ async def test_check_update_returns_current_version(client):
 
 @pytest.mark.asyncio
 async def test_check_update_available(client):
-    """When PyPI has a newer version, update_available is True."""
     with patch("denai.routes.update.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_response = MagicMock()
@@ -127,7 +124,6 @@ async def test_check_update_available(client):
 
 @pytest.mark.asyncio
 async def test_check_update_not_available(client):
-    """When PyPI has the same version, update_available is False."""
     with patch("denai.routes.update.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_response = MagicMock()
@@ -146,7 +142,6 @@ async def test_check_update_not_available(client):
 
 @pytest.mark.asyncio
 async def test_check_update_pypi_error(client):
-    """When PyPI returns non-200, graceful fallback with error."""
     with patch("denai.routes.update.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_response = MagicMock()
@@ -165,7 +160,6 @@ async def test_check_update_pypi_error(client):
 
 @pytest.mark.asyncio
 async def test_check_update_network_error(client):
-    """When network fails, graceful error response."""
     with patch("denai.routes.update.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
         mock_client.get.side_effect = httpx.ConnectError("no internet")
@@ -180,46 +174,139 @@ async def test_check_update_network_error(client):
     assert "error" in data
 
 
-# ── POST /api/update/install ──
+# ── POST /api/update/install (SSE streaming) ──
+
+
+def _make_mock_proc(lines: list[bytes], returncode: int = 0):
+    """Helper: cria mock de subprocess para o streaming SSE."""
+    line_iter = iter(lines + [b""])
+
+    mock_proc = AsyncMock()
+    mock_proc.returncode = returncode
+    mock_proc.stdout = AsyncMock()
+    mock_proc.stdout.readline = AsyncMock(side_effect=lambda: next(line_iter))
+    mock_proc.wait = AsyncMock(return_value=returncode)
+    return mock_proc
+
+
+async def _collect_sse(resp) -> list[dict]:
+    """Coleta e parseia todos os eventos SSE de uma resposta."""
+    import json
+
+    events = []
+    content = resp.content.decode()
+    for line in content.splitlines():
+        if line.startswith("data: "):
+            try:
+                events.append(json.loads(line[6:]))
+            except json.JSONDecodeError:
+                pass
+    return events
 
 
 @pytest.mark.asyncio
-async def test_install_update_success(client):
-    """Successful pip upgrade returns success message."""
-    mock_proc = AsyncMock()
-    mock_proc.communicate.return_value = (b"Successfully installed denai-1.0.0", b"")
-    mock_proc.returncode = 0
+async def test_install_streams_progress_lines(client):
+    """Linhas do pip aparecem como eventos 'progress'."""
+    mock_proc = _make_mock_proc(
+        [
+            b"Collecting denai\n",
+            b"Downloading denai-1.0.0.tar.gz\n",
+            b"Successfully installed denai-1.0.0\n",
+        ]
+    )
 
-    with patch("asyncio.create_subprocess_exec", return_value=mock_proc) as mock_exec:
+    # Mock _get_installed_version diretamente
+    with (
+        patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+        patch("denai.routes.update._get_installed_version", return_value="1.0.0"),
+    ):
         resp = await client.post("/api/update/install")
 
     assert resp.status_code == 200
-    data = resp.json()
-    assert data["success"] is True
-    assert "Atualizado" in data["message"]
-    assert "Successfully installed" in data["output"]
+    events = await _collect_sse(resp)
 
-    # Verify pip was called correctly
-    mock_exec.assert_called_once()
-    call_args = mock_exec.call_args[0]
-    assert "-m" in call_args
-    assert "pip" in call_args
-    assert "install" in call_args
-    assert "--upgrade" in call_args
-    assert "denai" in call_args
+    progress_events = [e for e in events if e.get("type") == "progress"]
+    assert len(progress_events) >= 1
+
+    success_events = [e for e in events if e.get("type") == "success"]
+    assert len(success_events) == 1
+    assert "1.0.0" in success_events[0].get("version", "")
 
 
 @pytest.mark.asyncio
-async def test_install_update_failure(client):
-    """Failed pip upgrade returns error message."""
-    mock_proc = AsyncMock()
-    mock_proc.communicate.return_value = (b"", b"ERROR: No matching distribution")
-    mock_proc.returncode = 1
+async def test_install_streams_error_on_failure(client):
+    """Código de saída != 0 gera evento 'error'."""
+    mock_proc = _make_mock_proc([b"ERROR: Could not find a version\n"], returncode=1)
 
     with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
         resp = await client.post("/api/update/install")
 
+    events = await _collect_sse(resp)
+    error_events = [e for e in events if e.get("type") == "error"]
+    assert len(error_events) >= 1
+
+
+@pytest.mark.asyncio
+async def test_install_response_is_streaming(client):
+    """Resposta deve ser text/event-stream."""
+    mock_proc = _make_mock_proc([b"Installing\n"])
+
+    with (
+        patch("asyncio.create_subprocess_exec", return_value=mock_proc),
+        patch("denai.routes.update._get_installed_version", return_value="0.18.0"),
+    ):
+        resp = await client.post("/api/update/install")
+
+    assert "text/event-stream" in resp.headers.get("content-type", "")
+
+
+# ── POST /api/update/restart ──
+
+
+@pytest.mark.asyncio
+async def test_restart_returns_ok(client):
+    """Endpoint de restart retorna ok=True."""
+    import denai.routes.update as update_mod
+
+    update_mod._restart_scheduled = False  # reset flag
+
+    with patch("asyncio.create_task"):  # não executar o restart real
+        resp = await client.post("/api/update/restart")
+
+    assert resp.status_code == 200
     data = resp.json()
-    assert data["success"] is False
-    assert "Erro" in data["message"]
-    assert "No matching distribution" in data["output"]
+    assert data["ok"] is True
+    assert "reconnect_delay_ms" in data
+
+    update_mod._restart_scheduled = False  # limpar após teste
+
+
+@pytest.mark.asyncio
+async def test_restart_not_duplicate(client):
+    """Segunda chamada enquanto restart pendente retorna erro."""
+    import denai.routes.update as update_mod
+
+    update_mod._restart_scheduled = True
+
+    resp = await client.post("/api/update/restart")
+    data = resp.json()
+    assert data["ok"] is False
+
+    update_mod._restart_scheduled = False
+
+
+@pytest.mark.asyncio
+async def test_get_installed_version():
+    """_get_installed_version parseia saída do pip show."""
+    from denai.routes.update import _get_installed_version
+
+    mock_proc = AsyncMock()
+    mock_proc.communicate.return_value = (
+        b"Name: denai\nVersion: 0.18.0\nSummary: Your private AI\n",
+        b"",
+    )
+
+    with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+        version = await _get_installed_version()
+
+    assert version == "0.18.0"
