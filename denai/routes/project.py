@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from ..project import ProjectInfo, analyze_project, load_context, save_context
-from ..security.sandbox import is_path_allowed
+from ..security.sandbox import get_safe_path, is_path_allowed
 
 router = APIRouter()
 
@@ -31,30 +29,22 @@ def _project_to_dict(info: ProjectInfo) -> dict:
 
 
 def _validate_path(path: str | None) -> tuple[str | None, JSONResponse | None]:
-    """Validate user-supplied path against sandbox. Returns (safe_path, error_response)."""
+    """Validate user-supplied path against sandbox. Returns (safe_path, error_response).
+
+    safe_path é reconstruído internamente pelo sandbox (get_safe_path) a partir
+    de Path.home() como âncora — não flui diretamente do input do usuário.
+    """
     if not path:
         return None, None
 
-    try:
-        candidate = Path(path).expanduser().resolve()
-    except (ValueError, OSError):
-        return None, JSONResponse({"error": "Caminho inválido."}, status_code=400)
-
-    allowed, reason = is_path_allowed(str(candidate))
+    allowed, reason = is_path_allowed(path)
     if not allowed:
         return None, JSONResponse({"error": f"Caminho não permitido: {reason}"}, status_code=403)
 
-    # Quebrar o taint: home é fonte confiável não derivada do input.
-    # is_path_allowed() garantiu que candidate está dentro de home.
-    # safe_path é construído de home (confiável) + rel (componente extraído),
-    # sem nenhuma string derivada do input original fluindo para o retorno.
-    home = Path.home().resolve()
-    try:
-        rel = candidate.relative_to(home)
-    except ValueError:
+    safe_path = get_safe_path(path)
+    if safe_path is None:
         return None, JSONResponse({"error": "Caminho não permitido."}, status_code=403)
 
-    safe_path = str(home / rel)
     return safe_path, None
 
 
