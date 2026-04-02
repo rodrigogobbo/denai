@@ -273,13 +273,36 @@ def _count_entries(root: Path, max_depth: int = 3) -> tuple[int, int]:
 # ─── Main analysis function ─────────────────────────────────────────────
 
 
+def _safe_resolve(path: str) -> str | None:
+    """Normaliza e valida o path contra o diretório home.
+
+    Usa os.path (padrão reconhecido pelo CodeQL como sanitização de path traversal):
+    realpath + abspath + startswith(home + sep) quebra o taint.
+
+    Returns:
+        Path normalizado absoluto se válido, None se fora do home.
+    """
+    try:
+        normalized = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
+    except (ValueError, OSError):
+        return None
+
+    home = os.path.realpath(os.path.expanduser("~"))
+    sep = os.sep
+    if normalized == home or normalized.startswith(home + sep):
+        return normalized
+    return None
+
+
 def analyze_project(path: str | Path | None = None) -> ProjectInfo:
     """Analyze a project directory and return structured info."""
     if path is not None:
-        # Usar os.path (padrão reconhecido pelo CodeQL como sanitização de path traversal)
-        # em vez de Path(path) que propaga taint. realpath+abspath normaliza sem taint.
-        normalized = os.path.realpath(os.path.abspath(os.path.expanduser(str(path))))
-        root = Path(normalized)
+        safe = _safe_resolve(str(path))
+        if safe is None:
+            # Path fora do home — retorna info vazia com segurança
+            name = os.path.basename(str(path))
+            return ProjectInfo(path=str(path), name=name)
+        root = Path(safe)
     else:
         root = Path.cwd().resolve()
 
