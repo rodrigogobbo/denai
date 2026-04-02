@@ -401,40 +401,158 @@ async function init() {
 }
 
 // ─── Auto-Update Check ───
+let _pendingUpdateVersion = null;
+let _lastCheckedVersion = null;
+
 async function checkForUpdates() {
   try {
     const data = await apiGet('/api/update/check');
-    if (data.update_available) {
+    if (data.update_available && data.latest_version !== _lastCheckedVersion) {
+      _pendingUpdateVersion = data.latest_version;
+      _lastCheckedVersion = data.latest_version;
+
+      // Toast não-intrusivo com botão para abrir modal
+      const existingToast = document.querySelector('.toast.update-toast');
+      if (existingToast) existingToast.remove();
+
       const toast = document.createElement('div');
-      toast.className = 'toast info';
+      toast.className = 'toast info update-toast';
       toast.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:8px;';
-      toast.innerHTML = `🆕 DenAI <b>${data.latest_version}</b> disponível!
-        <button onclick="installUpdate(this)" style="background:var(--accent);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;">Atualizar</button>`;
+      toast.innerHTML = `🆕 DenAI <b>${data.latest_version}</b> disponível
+        <button onclick="openUpdateModal('${escapeAttr(data.current_version)}','${escapeAttr(data.latest_version)}')"
+          style="background:var(--accent);color:#0a0e1a;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:600;">
+          Ver e instalar
+        </button>`;
       DOM.toastContainer.appendChild(toast);
-      // Don't auto-dismiss — user needs to act
     }
   } catch (e) {
-    // Silent fail — update check is non-critical
     console.debug('Update check failed:', e);
   }
 }
 window.checkForUpdates = checkForUpdates;
 
-window.installUpdate = async function(btn) {
-  btn.disabled = true;
-  btn.textContent = 'Atualizando…';
+// ─── Update Modal ───
+window.openUpdateModal = function(currentVersion, newVersion) {
+  document.getElementById('updateCurrentVersion').textContent = `v${currentVersion}`;
+  document.getElementById('updateNewVersion').textContent = `v${newVersion}`;
+  document.getElementById('updateLog').style.display = 'none';
+  document.getElementById('updateLogInner').textContent = '';
+  document.getElementById('updateStatus').textContent = '';
+  document.getElementById('updateStatus').className = 'update-status';
+  document.getElementById('updateActions').innerHTML = `
+    <button class="pf-btn-cancel" onclick="closeUpdateModal()">Cancelar</button>
+    <button class="pf-btn-save" id="btnInstallUpdate" onclick="startInstallUpdate()">Instalar atualização</button>`;
+  document.getElementById('updateModalOverlay').style.display = 'flex';
+  // Remove o toast ao abrir o modal
+  const toast = document.querySelector('.toast.update-toast');
+  if (toast) toast.remove();
+};
+
+window.closeUpdateModal = function() {
+  document.getElementById('updateModalOverlay').style.display = 'none';
+};
+
+window.startInstallUpdate = async function() {
+  const btn = document.getElementById('btnInstallUpdate');
+  if (btn) { btn.disabled = true; btn.textContent = 'Instalando…'; }
+
+  const logEl = document.getElementById('updateLogInner');
+  const logContainer = document.getElementById('updateLog');
+  const statusEl = document.getElementById('updateStatus');
+
+  logContainer.style.display = 'block';
+  logEl.textContent = '';
+  statusEl.textContent = 'Instalando…';
+  statusEl.className = 'update-status';
+
   try {
-    const result = await apiPost('/api/update/install', {});
-    showToast(result.message, result.success ? 'success' : 'error');
-    // Remove the update toast
-    const toast = btn.closest('.toast');
-    if (toast) toast.remove();
+    const resp = await fetch(API_BASE + '/api/update/install', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data: ')) continue;
+        try {
+          const event = JSON.parse(trimmed.slice(6));
+
+          if (event.type === 'progress') {
+            logEl.textContent += event.line + '\n';
+            logContainer.scrollTop = logContainer.scrollHeight;
+
+          } else if (event.type === 'success') {
+            statusEl.textContent = `✅ ${event.message}`;
+            statusEl.className = 'update-status success';
+            // Substituir botões por Reiniciar agora / Reiniciar depois
+            document.getElementById('updateActions').innerHTML = `
+              <button class="pf-btn-cancel" onclick="closeUpdateModal()">Reiniciar depois</button>
+              <button class="btn-restart-now" onclick="restartServer()">🔄 Reiniciar agora</button>`;
+
+          } else if (event.type === 'error') {
+            statusEl.textContent = `❌ ${event.message}`;
+            statusEl.className = 'update-status error';
+            if (btn) { btn.disabled = false; btn.textContent = 'Tentar novamente'; }
+          }
+        } catch (_) {}
+      }
+    }
   } catch (e) {
-    showToast('Erro ao atualizar: ' + e.message, 'error');
-    btn.disabled = false;
-    btn.textContent = 'Atualizar';
+    statusEl.textContent = `❌ Erro: ${e.message}`;
+    statusEl.className = 'update-status error';
+    if (btn) { btn.disabled = false; btn.textContent = 'Tentar novamente'; }
   }
 };
+
+window.restartServer = async function() {
+  const btn = document.querySelector('.btn-restart-now');
+  if (btn) { btn.disabled = true; btn.textContent = 'Reiniciando…'; }
+
+  const statusEl = document.getElementById('updateStatus');
+  statusEl.textContent = 'Reiniciando servidor…';
+  statusEl.className = 'update-status';
+
+  try {
+    await apiPost('/api/update/restart', {});
+    statusEl.textContent = '🔄 Reconectando em instantes…';
+
+    // Aguardar e tentar reconectar
+    setTimeout(() => _waitForReconnect(0), 3000);
+  } catch (e) {
+    statusEl.textContent = '⚠️ Reinicie manualmente: pare e inicie o DenAI novamente.';
+    statusEl.className = 'update-status error';
+  }
+};
+
+function _waitForReconnect(attempts) {
+  const maxAttempts = 20;
+  const statusEl = document.getElementById('updateStatus');
+  if (attempts >= maxAttempts) {
+    if (statusEl) statusEl.textContent = '⚠️ Servidor não respondeu. Reinicie manualmente.';
+    return;
+  }
+  fetch(API_BASE + '/api/health')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(() => {
+      // Reconectou — recarregar a página
+      window.location.reload();
+    })
+    .catch(() => {
+      if (statusEl) statusEl.textContent = `🔄 Reconectando… (${attempts + 1}/${maxAttempts})`;
+      setTimeout(() => _waitForReconnect(attempts + 1), 1500);
+    });
+}
 
 
 // Start the app
@@ -442,3 +560,6 @@ init();
 
 // Check for updates 5s after startup (non-blocking)
 setTimeout(checkForUpdates, 5000);
+
+// Check periodically every 6h
+setInterval(checkForUpdates, 6 * 60 * 60 * 1000);

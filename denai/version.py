@@ -1,3 +1,3 @@
 """Versão centralizada do DenAI — single source of truth."""
 
-VERSION = "0.17.0"
+VERSION = "0.18.0"

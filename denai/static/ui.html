@@ -337,6 +337,35 @@
 <script src="/static/js/conversations.js"></script>
 <script src="/static/js/commands.js"></script>
 <script src="/static/js/modes.js"></script>
+<!-- Update Modal -->
+<div class="modal-overlay" id="updateModalOverlay" style="display:none;">
+  <div class="modal-box" id="updateModal" style="max-width:480px;">
+    <div class="modal-header">
+      <h2 class="modal-title">🆕 Atualizar DenAI</h2>
+      <button class="modal-close" onclick="closeUpdateModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <!-- Info de versão -->
+      <div class="update-version-row" id="updateVersionRow">
+        <span class="update-version-badge" id="updateCurrentVersion">v?</span>
+        <span class="update-arrow">→</span>
+        <span class="update-version-badge new" id="updateNewVersion">v?</span>
+      </div>
+      <!-- Log de progresso -->
+      <div class="update-log" id="updateLog" style="display:none;">
+        <div class="update-log-inner" id="updateLogInner"></div>
+      </div>
+      <!-- Status -->
+      <div class="update-status" id="updateStatus"></div>
+      <!-- Actions -->
+      <div class="update-actions" id="updateActions">
+        <button class="pf-btn-cancel" onclick="closeUpdateModal()">Cancelar</button>
+        <button class="pf-btn-save" id="btnInstallUpdate" onclick="startInstallUpdate()">Instalar atualização</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/static/js/chat.js"></script>
 <script src="/static/js/voice.js"></script>
 <script src="/static/js/marketplace.js"></script>

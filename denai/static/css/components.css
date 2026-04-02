@@ -597,3 +597,38 @@
 }
 .pf-btn-save:hover { opacity: 0.9; }
 .pf-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ─── Update Modal ───────────────────────────────────────── */
+.update-version-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; padding: 16px 0 12px;
+}
+.update-version-badge {
+  font-size: 15px; font-weight: 600; color: var(--text-muted);
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 12px;
+}
+.update-version-badge.new { color: var(--accent); border-color: var(--accent); }
+.update-arrow { font-size: 18px; color: var(--text-muted); }
+.update-log {
+  background: #0d1117; border: 1px solid var(--border);
+  border-radius: 6px; margin: 12px 0; max-height: 200px; overflow-y: auto;
+}
+.update-log-inner {
+  padding: 10px 12px; font-family: monospace; font-size: 12px;
+  color: #e6edf3; line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+}
+.update-status {
+  font-size: 13px; text-align: center; min-height: 20px;
+  color: var(--text-muted); margin-bottom: 8px;
+}
+.update-status.success { color: #48bb78; font-weight: 500; }
+.update-status.error   { color: #f87171; font-weight: 500; }
+.update-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.btn-restart-now {
+  padding: 8px 20px; background: #48bb78;
+  border: none; border-radius: 6px;
+  color: #0a0e1a; font-size: 13px; font-weight: 600; cursor: pointer;
+  animation: pulse-glow 2s infinite;
+}
+.btn-restart-now:hover { opacity: 0.9; }
