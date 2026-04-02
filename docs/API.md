@@ -1,6 +1,6 @@
 # DenAI — Referência da API REST
 
-> **Versão:** 0.17.0  
+> **Versão:** 0.19.0  
 > **Base URL:** `http://localhost:4078`  
 > **Autenticação:** header `X-API-Key: <sua-key>` em todas as rotas (exceto `/` e `/static`)
 
@@ -36,7 +36,8 @@ export KEY=$(cat ~/.denai/api.key)
 16. [Undo / Redo](#undo--redo)
 17. [Voice](#voice)
 18. [Update](#update)
-19. [Diagnósticos](#diagnósticos)
+19. [Feedback]
+20. [Diagnósticos](#diagnósticos)
 20. [Health](#health)
 
 ---
@@ -744,9 +745,101 @@ curl -X POST http://localhost:4078/api/voice/transcribe \
 
 Verifica se há versão mais recente no PyPI.
 
+```bash
+curl http://localhost:4078/api/update/check -H "X-API-Key: $KEY"
+# {"current_version": "0.19.0", "latest_version": "0.19.0", "update_available": false}
+```
+
+---
+
 ### `POST /api/update/install`
 
-Instala a versão mais recente (streaming de progresso).
+Instala a versão mais recente via `pip install --upgrade denai`. **Retorna SSE streaming** com progresso em tempo real.
+
+```bash
+curl -X POST http://localhost:4078/api/update/install -H "X-API-Key: $KEY" --no-buffer
+```
+
+**Eventos SSE:**
+```
+data: {"type": "progress", "line": "Collecting denai..."}
+data: {"type": "progress", "line": "Successfully installed denai-0.19.0"}
+data: {"type": "success", "version": "0.19.0", "message": "DenAI 0.19.0 instalado com sucesso!"}
+```
+
+---
+
+### `POST /api/update/restart`
+
+Reinicia o servidor DenAI. Inicia nova instância e encerra a atual após 1s.
+
+```bash
+curl -X POST http://localhost:4078/api/update/restart -H "X-API-Key: $KEY"
+# {"ok": true, "message": "Reinicialização iniciada...", "reconnect_delay_ms": 3000}
+```
+
+Após chamar, faça polling de `GET /api/health` para detectar quando o servidor voltou.
+
+---
+
+## Feedback
+
+### `GET /api/feedback/config`
+
+Retorna configuração de feedback disponível.
+
+```bash
+curl http://localhost:4078/api/feedback/config -H "X-API-Key: $KEY"
+# {"enabled": true, "method": "github", "repo": "rodrigogobbo/denai", "has_token": true}
+# ou
+# {"enabled": true, "method": "local", "has_token": false}
+```
+
+---
+
+### `POST /api/feedback`
+
+Envia feedback como GitHub Issue (se token configurado) ou salva localmente.
+
+```bash
+curl -X POST http://localhost:4078/api/feedback \
+  -H "X-API-Key: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "bug",
+    "title": "Crash ao iniciar com Python 3.12",
+    "description": "O DenAI fecha imediatamente ao tentar iniciar. Passos: 1) pip install denai 2) python -m denai",
+    "include_context": true
+  }'
+```
+
+**Campos:**
+| Campo | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| `type` | string | ✅ | `bug` ou `improvement` |
+| `title` | string | ✅ | Mínimo 3 caracteres |
+| `description` | string | ✅ | Mínimo 10 caracteres |
+| `include_context` | boolean | ❌ | Incluir versão, OS, Python, logs (padrão: true) |
+
+**Resposta (GitHub):**
+```json
+{"method": "github", "issue_number": 42, "issue_url": "https://github.com/.../issues/42", "message": "Issue #42 aberta!"}
+```
+
+**Resposta (local):**
+```json
+{"method": "local", "file": "/home/user/.denai/feedback/20260402_220000_bug.json", "message": "Feedback salvo localmente..."}
+```
+
+---
+
+### `GET /api/feedback/list`
+
+Lista feedbacks salvos localmente (fallback quando sem token).
+
+```bash
+curl http://localhost:4078/api/feedback/list -H "X-API-Key: $KEY"
+```
 
 ---
 

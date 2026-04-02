@@ -1,6 +1,6 @@
 # DenAI — Referência de Tools
 
-> **Versão:** 0.17.0
+> **Versão:** 0.19.0
 
 Tools são funções que o LLM pode chamar durante uma conversa. São auto-descobertas em `denai/tools/` — basta criar um `.py` com a lista `TOOLS`.
 
