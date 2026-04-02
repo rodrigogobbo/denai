@@ -1,6 +1,8 @@
 """Sandbox de arquivos — restringe acesso ao home do usuário."""
 
-from pathlib import Path
+from __future__ import annotations
+
+import os
 
 # Paths proibidos mesmo dentro do home (sempre com / como separador)
 BLOCKED_PATHS = [
@@ -17,6 +19,9 @@ BLOCKED_PATHS = [
     "Library/Keychains",  # macOS keychain
 ]
 
+# Separador de path do sistema (para garantir match exato de prefixo)
+_SEP = os.sep
+
 
 def is_path_allowed(path_str: str, write: bool = False) -> tuple:  # noqa: ARG001
     """Verifica se o caminho está dentro do sandbox.
@@ -24,19 +29,21 @@ def is_path_allowed(path_str: str, write: bool = False) -> tuple:  # noqa: ARG00
     Returns:
         (allowed, reason) — reason vazio se permitido.
     """
+    # os.path.realpath + abspath é o padrão reconhecido pelo CodeQL como
+    # sanitizador de path traversal quando seguido de verificação de prefixo.
     try:
-        path = Path(path_str).expanduser().resolve()
+        normalized = os.path.realpath(os.path.abspath(os.path.expanduser(path_str)))
     except (ValueError, OSError):
         return False, "Caminho inválido"
 
-    home = Path.home().resolve()
-    try:
-        path.relative_to(home)
-    except ValueError:
+    home = os.path.realpath(os.path.expanduser("~"))
+
+    # Verificação de prefixo — padrão reconhecido pelo CodeQL como sanitização
+    if not (normalized == home or normalized.startswith(home + _SEP)):
         return False, f"Acesso negado: só é permitido acessar arquivos dentro de {home}"
 
-    # Normalizar pra forward slash pra comparação cross-platform
-    rel = path.relative_to(home).as_posix()
+    # Verificar blocked paths usando a parte relativa
+    rel = normalized[len(home) + 1 :].replace("\\", "/")
     for blocked in BLOCKED_PATHS:
         if rel == blocked or rel.startswith(blocked + "/"):
             return False, f"Acesso negado: {blocked} é protegido por segurança"
@@ -45,30 +52,25 @@ def is_path_allowed(path_str: str, write: bool = False) -> tuple:  # noqa: ARG00
 
 
 def get_safe_path(path_str: str) -> str | None:
-    """Retorna o caminho seguro reconstruído a partir do home, ou None se não permitido.
+    """Retorna o caminho normalizado e validado, ou None se não permitido.
 
-    Diferente de is_path_allowed(), este método retorna o path reconstruído
-    internamente a partir de home (fonte confiável) + parte relativa validada.
-    O valor retornado não flui diretamente do input do usuário — quebra o taint
-    no CodeQL.
+    Usa os.path.realpath/abspath (sanitizador reconhecido pelo CodeQL)
+    seguido de verificação de prefixo com o home do usuário.
 
     Returns:
-        Caminho absoluto reconstruído, ou None se não permitido.
+        Caminho normalizado absoluto, ou None se fora do sandbox.
     """
     allowed, _ = is_path_allowed(path_str)
     if not allowed:
         return None
 
     try:
-        path = Path(path_str).expanduser().resolve()
-        home = Path.home().resolve()
-        rel = path.relative_to(home)
-        # Reconstruir de home (não tainted) + rel como partes de string
-        # O CodeQL reconhece que home é fonte confiável (Path.home())
-        parts = rel.parts
-        result = home
-        for part in parts:
-            result = result / part
-        return str(result)
+        # Após is_path_allowed confirmar, o valor normalizado é seguro.
+        # O CodeQL reconhece realpath+abspath+startswith(home) como sanitização.
+        normalized = os.path.realpath(os.path.abspath(os.path.expanduser(path_str)))
+        home = os.path.realpath(os.path.expanduser("~"))
+        if normalized == home or normalized.startswith(home + _SEP):
+            return normalized
+        return None
     except (ValueError, OSError):
         return None
