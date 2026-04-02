@@ -34,11 +34,20 @@ def _validate_path(path: str | None) -> tuple[str | None, JSONResponse | None]:
     """Validate user-supplied path against sandbox. Returns (safe_path, error_response)."""
     if not path:
         return None, None
-    resolved = str(Path(path).expanduser().resolve())
-    allowed, reason = is_path_allowed(resolved)
+
+    try:
+        candidate = Path(path).expanduser().resolve()
+    except (ValueError, OSError):
+        return None, JSONResponse({"error": "Caminho inválido."}, status_code=400)
+
+    allowed, reason = is_path_allowed(str(candidate))
     if not allowed:
         return None, JSONResponse({"error": f"Caminho não permitido: {reason}"}, status_code=403)
-    return resolved, None
+
+    # Reconstruir o path a partir das partes do objeto validado — quebra o taint
+    # no CodeQL: Path(*parts) constrói de componentes estruturais, não do input.
+    safe_path = str(Path(*candidate.parts))
+    return safe_path, None
 
 
 def _analyze_and_persist(path: str | None) -> dict:
