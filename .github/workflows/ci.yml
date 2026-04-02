@@ -67,7 +67,8 @@ jobs:
       - run: ruff check denai/ tests/
       - run: ruff format --check denai/ tests/
 
-  # Auto-release: cria tag + GitHub Release + publica PyPI se versão nova
+  # Auto-release: cria tag + GitHub Release se versão nova
+  # O publish.yml cuida da publicação no PyPI ao detectar a nova release
   # Roda apenas no push para main (não em PRs) e só após todos os testes passarem
   release:
     name: Auto Release
@@ -77,7 +78,6 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write   # para criar tags e releases
-      id-token: write   # para trusted publishing no PyPI
 
     steps:
       - uses: actions/checkout@v6
@@ -105,34 +105,28 @@ jobs:
             echo "Tag ${{ steps.version.outputs.tag }} já existe — sem release"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Tag ${{ steps.version.outputs.tag }} não existe — publicando"
+            echo "Tag ${{ steps.version.outputs.tag }} não existe — criando release"
           fi
 
       - name: Extrair notas de release do CHANGELOG
         if: steps.check_tag.outputs.exists == 'false'
         id: changelog
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          # Extrai bloco da versão no CHANGELOG.md
-          NOTES=$(python3 - <<'PYEOF'
-          import re, sys
+          python3 - <<'PYEOF' > /tmp/release_notes.md
+          import re
           version = "${{ steps.version.outputs.version }}"
           try:
               with open("CHANGELOG.md", "r", encoding="utf-8") as f:
                   content = f.read()
-              # Encontrar bloco [X.Y.Z]
               pattern = rf"## \[{re.escape(version)}\].*?(?=\n## \[|\Z)"
               match = re.search(pattern, content, re.DOTALL)
               if match:
                   print(match.group(0).strip())
               else:
                   print(f"Release v{version}")
-          except Exception as e:
+          except Exception:
               print(f"Release v{version}")
           PYEOF
-          )
-          # Salvar em arquivo para evitar problemas com caracteres especiais
-          echo "$NOTES" > /tmp/release_notes.md
           echo "Notas de release extraídas."
 
       - name: Criar tag
@@ -152,16 +146,5 @@ jobs:
           body_path: /tmp/release_notes.md
           draft: false
           prerelease: false
-
-      - name: Instalar ferramentas de build
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          python -m pip install --upgrade pip build
-
-      - name: Build do pacote
-        if: steps.check_tag.outputs.exists == 'false'
-        run: python -m build
-
-      - name: Publicar no PyPI
-        if: steps.check_tag.outputs.exists == 'false'
-        uses: pypa/gh-action-pypi-publish@release/v1
+        # A criação desta release dispara automaticamente o publish.yml
+        # (on: release: types: [published]) que publica no PyPI via trusted publishing
