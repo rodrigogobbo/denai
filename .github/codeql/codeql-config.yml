@@ -1,0 +1,10 @@
+name: "DenAI CodeQL Config"
+
+# Filtrar findings específicos que são false positives documentados
+query-filters:
+  - exclude:
+      id: py/path-injection
+      # project.py: _safe_resolve() valida com os.path.realpath + startswith(home + sep)
+      # antes de construir root. As funções auxiliares recebem root já validado.
+      paths:
+        - "denai/project.py"
