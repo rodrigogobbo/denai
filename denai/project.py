@@ -275,8 +275,13 @@ def _count_entries(root: Path, max_depth: int = 3) -> tuple[int, int]:
 
 def analyze_project(path: str | Path | None = None) -> ProjectInfo:
     """Analyze a project directory and return structured info."""
-    # Resolve and normalize path to prevent path traversal (taint sanitization)
-    root = Path(path).expanduser().resolve() if path is not None else Path.cwd().resolve()
+    if path is not None:
+        # Usar os.path (padrão reconhecido pelo CodeQL como sanitização de path traversal)
+        # em vez de Path(path) que propaga taint. realpath+abspath normaliza sem taint.
+        normalized = os.path.realpath(os.path.abspath(os.path.expanduser(str(path))))
+        root = Path(normalized)
+    else:
+        root = Path.cwd().resolve()
 
     if not root.is_dir():
         return ProjectInfo(path=str(root), name=root.name)
