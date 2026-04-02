@@ -5,6 +5,7 @@ from .chat import router as chat_router
 from .commands import router as commands_router
 from .conversations import router as conversations_router
 from .diagnostics import router as diagnostics_router
+from .feedback import router as feedback_router
 from .marketplace import router as marketplace_router
 from .mcp import router as mcp_router
 from .memories import router as memories_router
@@ -40,6 +41,7 @@ all_routers = [
     personas_router,
     plugins_router,
     project_router,
+    feedback_router,
     marketplace_router,
     rag_router,
     questions_router,

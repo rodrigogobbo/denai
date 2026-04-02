@@ -97,6 +97,12 @@
       </button>
       <span class="main-header-title" id="headerTitle">Nova Conversa</span>
       <div class="header-actions">
+        <!-- Feedback -->
+        <button class="header-btn" id="btnFeedback" onclick="openFeedbackModal()" title="Sugerir melhoria ou reportar bug (Ctrl+Shift+F)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </button>
         <!-- Export -->
         <div style="position:relative;">
           <button class="header-btn" id="btnExport" title="Exportar conversa">
@@ -366,9 +372,53 @@
   </div>
 </div>
 
+<!-- Feedback Modal -->
+<div class="modal-overlay" id="feedbackModalOverlay" style="display:none;" onclick="closeFeedbackModal(event)">
+  <div class="modal-box" id="feedbackModal" style="max-width:520px;">
+    <div class="modal-header">
+      <h2 class="modal-title">💬 Feedback</h2>
+      <button class="modal-close" onclick="closeFeedbackModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <!-- Abas -->
+      <div class="feedback-tabs">
+        <button class="feedback-tab active" id="tabBug" onclick="setFeedbackType('bug')">🐛 Reportar Bug</button>
+        <button class="feedback-tab" id="tabImprovement" onclick="setFeedbackType('improvement')">💡 Sugerir Melhoria</button>
+      </div>
+      <!-- Formulário -->
+      <div class="feedback-form" id="feedbackForm">
+        <label class="pf-label">Título <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="fbTitle" class="pf-input" placeholder="Resumo curto do problema ou ideia..." maxlength="120">
+        <label class="pf-label">Descrição <span style="color:var(--danger)">*</span></label>
+        <textarea id="fbDescription" class="pf-textarea" rows="5"
+          placeholder="Descreva com detalhes. Para bugs: passos para reproduzir, comportamento esperado vs observado. Para melhorias: contexto e motivação..."></textarea>
+        <label class="feedback-context-label" id="fbContextLabel">
+          <input type="checkbox" id="fbIncludeContext" checked>
+          <span>Incluir contexto (versão do DenAI, OS, Python, logs recentes)</span>
+        </label>
+        <div class="feedback-status" id="feedbackStatus"></div>
+        <div class="pf-footer">
+          <button class="pf-btn-cancel" onclick="closeFeedbackModal()">Cancelar</button>
+          <button class="pf-btn-save" id="btnSubmitFeedback" onclick="submitFeedback()">Enviar →</button>
+        </div>
+      </div>
+      <!-- Sucesso -->
+      <div class="feedback-success" id="feedbackSuccess" style="display:none;">
+        <div class="feedback-success-icon">✅</div>
+        <div class="feedback-success-msg" id="feedbackSuccessMsg"></div>
+        <a class="feedback-issue-link" id="feedbackIssueLink" href="#" target="_blank" rel="noopener" style="display:none;">
+          Ver issue no GitHub →
+        </a>
+        <button class="pf-btn-save" onclick="resetFeedbackForm()" style="margin-top:12px;">Enviar outro</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/static/js/chat.js"></script>
 <script src="/static/js/voice.js"></script>
 <script src="/static/js/marketplace.js"></script>
+<script src="/static/js/feedback.js"></script>
 <script src="/static/js/ui.js"></script>
 </body>
 </html>

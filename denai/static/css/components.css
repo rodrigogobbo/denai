@@ -632,3 +632,42 @@
   animation: pulse-glow 2s infinite;
 }
 .btn-restart-now:hover { opacity: 0.9; }
+
+/* ─── Feedback Modal ─────────────────────────────────────── */
+.feedback-tabs {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.feedback-tab {
+  flex: 1; padding: 8px 12px; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: 500;
+  background: var(--bg-card); border: 1px solid var(--border);
+  color: var(--text-muted); transition: all 0.15s;
+}
+.feedback-tab:hover { border-color: var(--accent); color: var(--text-primary); }
+.feedback-tab.active {
+  background: rgba(99,179,237,0.12);
+  border-color: var(--accent); color: var(--accent);
+}
+.feedback-form { display: flex; flex-direction: column; gap: 10px; }
+.feedback-context-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-muted); cursor: pointer;
+  user-select: none;
+}
+.feedback-context-label input { cursor: pointer; accent-color: var(--accent); }
+.feedback-status {
+  font-size: 13px; min-height: 18px;
+}
+.feedback-status.error { color: #f87171; }
+.feedback-success {
+  text-align: center; padding: 20px 0;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.feedback-success-icon { font-size: 40px; }
+.feedback-success-msg { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+.feedback-issue-link {
+  color: var(--accent); font-size: 13px; text-decoration: none;
+  padding: 6px 12px; border: 1px solid var(--accent);
+  border-radius: 6px; transition: background 0.15s;
+}
+.feedback-issue-link:hover { background: rgba(99,179,237,0.1); }
