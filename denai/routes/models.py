@@ -25,6 +25,7 @@ from ..providers_store import (
     mask_api_key,
     remove_provider,
 )
+from ..security.url_validator import ProviderURLError, validate_provider_url
 
 log = get_logger("routes.models")
 
@@ -139,7 +140,13 @@ class TestProviderBody(BaseModel):
 @router.post("/api/providers/test")
 async def test_provider(body: TestProviderBody):
     """Testa conexão com um provider antes de salvar."""
-    base_url = body.base_url.rstrip("/")
+    # Validação anti-SSRF: parse + blocklist + reconstrução quebra o taint
+    # allow_localhost=True para suportar LM Studio / LocalAI em desenvolvimento
+    try:
+        base_url = validate_provider_url(body.base_url, allow_localhost=True)
+    except ProviderURLError as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+
     start = time.monotonic()
 
     headers: dict[str, str] = {"Content-Type": "application/json"}
@@ -172,7 +179,7 @@ async def test_provider(body: TestProviderBody):
             "ok": True,
             "latency_ms": latency_ms,
             "models_found": len(models),
-            "models": models[:10],  # retorna até 10 para preview
+            "models": models[:10],
         }
 
     except httpx.ConnectError:

@@ -1,7 +1,7 @@
 # 🐺 DenAI — Guia Completo para Iniciantes
 
-> **Versão:** 3.0  
-> **Última atualização:** Março 2026  
+> **Versão:** 4.0  
+> **Última atualização:** Abril 2026  
 > **Público-alvo:** Pessoas que nunca usaram terminal, programação ou IA local  
 > **Sistema:** Windows 10 / Windows 11
 
@@ -59,6 +59,9 @@ O DenAI é um programa que roda uma **inteligência artificial** (IA) diretament
 - ✅ **Planejar tarefas** — A IA cria planos com passos e acompanha o progresso
 - ✅ **Exportar conversas** — Salvar como HTML bonito, compartilhável, ou JSON/Markdown
 - ✅ **Conectar ferramentas externas** — Via protocolo MCP (Model Context Protocol)
+- ✅ **Usar outros modelos de IA** — OpenAI (GPT-4o), Anthropic (Claude), Google (Gemini), Groq e outros
+- ✅ **Delegar tarefas especializadas** — Sub-agentes com expertise em segurança, review de código, documentação e dados
+- ✅ **Rastrear tarefas em tempo real** — Lista de todos com prioridade e status
 
 > 🔒 **Sobre privacidade:** Tudo que você digita fica **apenas no seu computador**. Nenhuma empresa recebe seus dados. Nenhum servidor externo é contatado. É como escrever num caderno que só você tem a chave.
 
@@ -693,6 +696,45 @@ curl http://localhost:4078/api/conversations/SEU-ID/export?format=json -o conver
 # Markdown
 curl http://localhost:4078/api/conversations/SEU-ID/export?format=markdown -o conversa.md
 ```
+
+---
+
+## 🤖 Usando outros modelos de IA (OpenAI, Claude, Gemini...)
+
+Por padrão, o DenAI usa modelos do **Ollama** que rodam no seu computador. Mas você também pode conectar modelos de nuvem como GPT-4o, Claude ou Gemini — útil quando precisar de modelos mais poderosos para tarefas complexas.
+
+### Como adicionar um provider
+
+1. Na barra lateral, clique no botão **⚙** ao lado dos providers
+2. Clique em **+ Adicionar provider**
+3. Escolha um **template** no menu suspenso (OpenAI, Anthropic, Gemini, etc.)
+4. Os campos de nome e URL já são preenchidos automaticamente
+5. Cole sua **API key** no campo correspondente
+6. Clique em **Testar conexão** — o DenAI verifica se a key é válida e lista os modelos disponíveis
+7. Clique em **Salvar**
+
+A configuração é **salva automaticamente** e persiste quando você reiniciar o DenAI.
+
+### Providers disponíveis
+
+| Provider | Modelos populares | Precisa de key? |
+|---|---|---|
+| **OpenAI** | GPT-4o, GPT-4o mini | ✅ Sim |
+| **Anthropic (Claude)** | Claude 3.5 Sonnet, Haiku | ✅ Sim |
+| **Google Gemini** | Gemini 2.0 Flash, Pro | ✅ Sim |
+| **OpenRouter** | 100+ modelos em uma API | ✅ Sim |
+| **Groq** | Llama 3.1 (ultrarrápido) | ✅ Sim |
+| **LM Studio** | Qualquer modelo local | ❌ Não |
+| **LocalAI** | Qualquer modelo local | ❌ Não |
+| **Ollama** | Já configurado | ❌ Não |
+
+> 💡 **Dica:** Para uso 100% offline e privado, continue com o Ollama. Os providers de nuvem são opcionais e enviam seus dados para os servidores dessas empresas.
+
+> 🔒 **Segurança:** Suas API keys são armazenadas localmente em `~/.denai/providers.yaml` com permissões restritas e nunca aparecem em logs ou exports.
+
+### Após adicionar, o modelo aparece no seletor
+
+Depois de salvar um provider, os modelos dele aparecem no **seletor de modelo** na barra lateral, agrupados por provider.
 
 ---
 

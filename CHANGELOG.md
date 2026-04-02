@@ -7,6 +7,27 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-04-02
+
+### Corrigido
+- **🔒 SSRF (CodeQL `py/partial-ssrf`)** — `POST /api/providers/test` agora valida a URL contra blocklist antes de fazer qualquer requisição HTTP
+  - Novo `denai/security/url_validator.py` com `validate_provider_url()` e `ProviderURLError`
+  - Bloqueia metadata servers (169.254.0.0/16), loopback em produção, IPs privados/reservados
+  - Resolve DNS e valida os IPs resultantes (previne DNS rebinding)
+  - URL reconstruída via `urlunparse()` de componentes estruturais — quebra o taint no CodeQL
+  - `allow_localhost=True` para suportar LM Studio/LocalAI em desenvolvimento
+- **🔒 Path Injection (CodeQL `py/path-injection`)** — `_validate_path()` em `routes/project.py` reconstruída via `Path(*candidate.parts)` para quebrar o taint
+
+### Adicionado
+- **📚 Documentação completa em `docs/`**
+  - `docs/README.md` — índice de toda a documentação
+  - `docs/API.md` — referência REST completa (todos os endpoints, exemplos curl)
+  - `docs/TOOLS.md` — referência de todas as 26 tools com parâmetros e exemplos
+  - `docs/PROVIDERS.md` — guia de providers (configuração, segurança, API)
+  - `docs/PERSONAS.md` — sub-agentes e personas customizadas
+  - `docs/SECURITY.md` — modelo de segurança, sandbox, SSRF, OWASP Top 10
+  - `docs/GUIA-COMPLETO.md` — atualizado para v4.0 com seção de providers e features novas
+
 ## [0.16.0] - 2026-04-01
 
 ### Adicionado
