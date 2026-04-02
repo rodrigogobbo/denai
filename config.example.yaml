@@ -93,3 +93,17 @@ max_context: 65536
 #     api_key: gsk_...
 #     models:
 #       - llama-3.1-70b-versatile
+
+# ─── Feedback in-app ──────────────────────────────────────────────────────
+# Permite enviar bugs e sugestões diretamente do DenAI como GitHub Issues.
+# Se não configurado, o feedback é salvo localmente em ~/.denai/feedback/
+#
+# Para obter um token:
+# 1. Acesse: https://github.com/settings/tokens/new
+# 2. Note: "DenAI feedback bot"
+# 3. Escopo: marque apenas "public_repo"
+# 4. Clique "Generate token" e copie o valor
+#
+# feedback:
+#   github_token: "ghp_seu_token_aqui"
+#   repo: "rodrigogobbo/denai"  # opcional, este é o padrão
