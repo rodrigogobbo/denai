@@ -74,6 +74,12 @@ class TestProjectInfo:
 class TestAnalyzeProject:
     """Test project analysis."""
 
+    @pytest.fixture(autouse=True)
+    def allow_tmp_path(self, tmp_path):
+        """Permite que analyze_project acesse tmp_path (fora do home em testes)."""
+        with patch("denai.project._safe_resolve", side_effect=lambda p: p):
+            yield
+
     def test_analyze_nonexistent(self, tmp_path: Path):
         info = analyze_project(tmp_path / "nope")
         assert info.name == "nope"
@@ -229,7 +235,10 @@ class TestProjectAPI:
     async def test_post_init(self, tmp_path: Path):
         (tmp_path / "pyproject.toml").write_text("[project]")
         (tmp_path / "README.md").write_text("# Test")
-        with patch("denai.routes.project._validate_path", return_value=(str(tmp_path), None)):
+        with (
+            patch("denai.routes.project._validate_path", return_value=(str(tmp_path), None)),
+            patch("denai.project._safe_resolve", side_effect=lambda p: p),
+        ):
             async with AsyncClient(
                 transport=ASGITransport(app=app),
                 base_url="http://test",
@@ -245,7 +254,10 @@ class TestProjectAPI:
 
     async def test_get_init(self, tmp_path: Path):
         (tmp_path / "package.json").write_text("{}")
-        with patch("denai.routes.project._validate_path", return_value=(str(tmp_path), None)):
+        with (
+            patch("denai.routes.project._validate_path", return_value=(str(tmp_path), None)),
+            patch("denai.project._safe_resolve", side_effect=lambda p: p),
+        ):
             async with AsyncClient(
                 transport=ASGITransport(app=app),
                 base_url="http://test",
