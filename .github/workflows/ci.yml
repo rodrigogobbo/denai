@@ -66,3 +66,102 @@ jobs:
       - run: pip install ruff
       - run: ruff check denai/ tests/
       - run: ruff format --check denai/ tests/
+
+  # Auto-release: cria tag + GitHub Release + publica PyPI se versão nova
+  # Roda apenas no push para main (não em PRs) e só após todos os testes passarem
+  release:
+    name: Auto Release
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    # Apenas em push para main — nunca em PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write   # para criar tags e releases
+      id-token: write   # para trusted publishing no PyPI
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # histórico completo para verificar tags existentes
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Ler versão atual
+        id: version
+        run: |
+          VERSION=$(python -c "from denai.version import VERSION; print(VERSION)")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Versão detectada: $VERSION"
+
+      - name: Verificar se tag já existe
+        id: check_tag
+        run: |
+          if git tag --list | grep -qx "${{ steps.version.outputs.tag }}"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag ${{ steps.version.outputs.tag }} já existe — sem release"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag ${{ steps.version.outputs.tag }} não existe — publicando"
+          fi
+
+      - name: Extrair notas de release do CHANGELOG
+        if: steps.check_tag.outputs.exists == 'false'
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # Extrai bloco da versão no CHANGELOG.md
+          NOTES=$(python3 - <<'PYEOF'
+          import re, sys
+          version = "${{ steps.version.outputs.version }}"
+          try:
+              with open("CHANGELOG.md", "r", encoding="utf-8") as f:
+                  content = f.read()
+              # Encontrar bloco [X.Y.Z]
+              pattern = rf"## \[{re.escape(version)}\].*?(?=\n## \[|\Z)"
+              match = re.search(pattern, content, re.DOTALL)
+              if match:
+                  print(match.group(0).strip())
+              else:
+                  print(f"Release v{version}")
+          except Exception as e:
+              print(f"Release v{version}")
+          PYEOF
+          )
+          # Salvar em arquivo para evitar problemas com caracteres especiais
+          echo "$NOTES" > /tmp/release_notes.md
+          echo "Notas de release extraídas."
+
+      - name: Criar tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Criar GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body_path: /tmp/release_notes.md
+          draft: false
+          prerelease: false
+
+      - name: Instalar ferramentas de build
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          python -m pip install --upgrade pip build
+
+      - name: Build do pacote
+        if: steps.check_tag.outputs.exists == 'false'
+        run: python -m build
+
+      - name: Publicar no PyPI
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: pypa/gh-action-pypi-publish@release/v1
