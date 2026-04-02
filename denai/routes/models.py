@@ -188,7 +188,7 @@ async def test_provider(body: TestProviderBody):
         return {"ok": False, "error": "Timeout ao conectar (>10s).", "latency_ms": None}
     except Exception as e:
         log.warning("Teste de provider falhou: %s", e)
-        return {"ok": False, "error": f"Erro: {type(e).__name__}", "latency_ms": None}
+        return {"ok": False, "error": "Falha ao testar conexão. Verifique a URL e a API key.", "latency_ms": None}
 
 
 # ── Models (multi-provider) ──────────────────────────────────────

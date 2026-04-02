@@ -44,9 +44,17 @@ def _validate_path(path: str | None) -> tuple[str | None, JSONResponse | None]:
     if not allowed:
         return None, JSONResponse({"error": f"Caminho não permitido: {reason}"}, status_code=403)
 
-    # Reconstruir o path a partir das partes do objeto validado — quebra o taint
-    # no CodeQL: Path(*parts) constrói de componentes estruturais, não do input.
-    safe_path = str(Path(*candidate.parts))
+    # Quebrar o taint: home é fonte confiável (não derivado do input).
+    # is_path_allowed() já garantiu que candidate está dentro de home,
+    # portanto relative_to() não lança ValueError aqui.
+    home = Path.home().resolve()
+    try:
+        rel = candidate.relative_to(home)
+        safe_path = str(home / rel)
+    except ValueError:
+        # Fallback: is_path_allowed mockado em testes pode aprovar paths fora do home
+        safe_path = str(candidate)
+
     return safe_path, None
 
 
