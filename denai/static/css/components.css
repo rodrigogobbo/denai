@@ -671,3 +671,49 @@
   border-radius: 6px; transition: background 0.15s;
 }
 .feedback-issue-link:hover { background: rgba(99,179,237,0.1); }
+
+/* ─── Wizard: Smart Model Selection ─────────────────────────── */
+.wizard-profile-loading {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px; color: var(--text-muted); font-size: 14px;
+  justify-content: center;
+}
+.wizard-machine-info {
+  font-size: 12px; color: var(--text-muted);
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 12px; margin-bottom: 10px;
+  text-align: center;
+}
+.wizard-badge {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 10px; margin-left: 6px;
+  vertical-align: middle;
+}
+.wizard-badge.recommended { background: rgba(99,179,237,0.2); color: var(--accent); }
+.wizard-badge.installed   { background: rgba(72,187,120,0.2); color: #48bb78; }
+.wizard-model-card.recommended-card {
+  border-color: var(--accent);
+  background: rgba(99,179,237,0.06);
+}
+.wizard-model-card.selected-card {
+  border-color: #48bb78;
+  background: rgba(72,187,120,0.08);
+  box-shadow: 0 0 0 2px rgba(72,187,120,0.3);
+}
+.wizard-model-card.compat-warning {
+  opacity: 0.6;
+}
+.wizard-model-card.compat-warning:hover { opacity: 0.85; }
+.wizard-model-warning {
+  font-size: 11px; color: #f59e0b; margin-top: 3px;
+}
+
+/* ─── Sidebar: model weight badge ────────────────────────────── */
+.model-weight-badge {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  padding: 1px 5px; border-radius: 4px; margin-left: 4px;
+  vertical-align: middle;
+}
+.model-weight-badge.heavy  { background: rgba(248,113,113,0.2); color: #f87171; }
+.model-weight-badge.medium { background: rgba(245,158,11,0.2);  color: #f59e0b; }
+.model-weight-badge.ok     { background: rgba(72,187,120,0.2);  color: #48bb78; }

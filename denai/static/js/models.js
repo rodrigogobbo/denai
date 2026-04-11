@@ -322,6 +322,10 @@ window.removeProviderUI = removeProviderUI;
 
 // ─── Models list ───
 async function loadModels() {
+  // Carregar perfil do sistema em background para badges de peso
+  if (!window._systemProfile) {
+    apiGet('/api/system/profile').then(p => { window._systemProfile = p; }).catch(() => {});
+  }
   try {
     const data = await apiGet('/api/models');
     const models = data.models || [];
@@ -381,7 +385,35 @@ DOM.modelSelect.addEventListener('change', () => {
 });
 
 function updateModelLabel() {
-  DOM.inputModelLabel.textContent = window.currentModel ? `Modelo: ${window.currentModel}` : '';
+  if (!window.currentModel) {
+    DOM.inputModelLabel.textContent = '';
+    return;
+  }
+  let label = `Modelo: ${window.currentModel}`;
+
+  // Badge de peso baseado no perfil do sistema
+  const profile = window._systemProfile;
+  if (profile) {
+    const entry = profile.model_catalog.find(
+      m => window.currentModel.startsWith(m.name.split(':')[0])
+    );
+    if (entry) {
+      const ramGb = profile.ram_gb;
+      let badgeClass = 'ok';
+      let badgeText = '';
+      if (entry.ram_min_gb > ramGb) {
+        badgeClass = 'heavy'; badgeText = '⚠️ pesado';
+      } else if (entry.ram_min_gb > ramGb * 0.75) {
+        badgeClass = 'medium'; badgeText = '〜 moderado';
+      }
+      if (badgeText) {
+        label += ` <span class="model-weight-badge ${badgeClass}">${badgeText}</span>`;
+        DOM.inputModelLabel.innerHTML = label;
+        return;
+      }
+    }
+  }
+  DOM.inputModelLabel.textContent = label;
 }
 window.updateModelLabel = updateModelLabel;
 
