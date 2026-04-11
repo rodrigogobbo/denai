@@ -45,6 +45,7 @@ A fully local AI assistant with tools, memory, and **zero cloud dependency**. Ch
 - 🔁 **Auto Update** — Streaming install progress + one-click restart from the UI
 - 💬 **In-app Feedback** — Report bugs and suggest improvements without leaving DenAI
 - 🚀 **Auto Release** — Every version bump triggers tests → GitHub Release → PyPI automatically
+- 🖥️ **Desktop App** — Native installer (.exe/.dmg/.zip) via Electron + uv bundled, no Python required
 
 ---
 
@@ -583,7 +584,13 @@ denai/
 │       ├── grep.py          # grep search
 │       ├── think.py         # Internal reasoning
 │       └── question.py      # Ask user questions
-├── tests/                   # 887 tests
+├── electron/                # Desktop app (Electron + uv)
+│   ├── src/main.js          # Main process
+│   ├── src/splash.html      # Loading screen
+│   ├── assets/              # Icons (png/ico/icns)
+│   └── forge.config.js      # Build config
+├── specs/changes/           # SDS specs per version
+├── tests/                   # 918 tests
 ├── examples/plugins/        # Example plugins
 ├── pyproject.toml
 ├── README.md

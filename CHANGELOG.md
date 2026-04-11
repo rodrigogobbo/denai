@@ -7,6 +7,31 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-04-11
+
+### Adicionado
+- **🖥️ DenAI Desktop — Electron** — app desktop nativo para Windows, macOS e Linux (#54, #55)
+  - `electron/` — shell Electron completo, independente do pacote Python
+  - Distribuição via instalador binário: `.exe` (Windows), `.dmg` (macOS arm64/x64), `.zip` (Linux)
+  - `uv` bundled por plataforma — gerencia Python automaticamente, sem instalação prévia
+  - First run: cria `~/.denai/electron-venv/`, instala `denai` via uv (~30s)
+  - Execuções seguintes: inicia em <2s
+  - Splash screen dark com progresso de instalação/inicialização
+  - Tray icon — fechar janela minimiza para bandeja, não encerra
+  - Restart automático do backend com backoff exponencial (1.5s/3s/6s, máx 3×)
+  - `killProcessCrossPlatform` — `taskkill /F /T /PID` no Windows, `SIGTERM` no Unix
+  - Single instance lock — foca janela existente se app já estiver aberto
+  - Window bounds persistidos (`window-bounds.json`)
+  - `powerMonitor.resume` → reconecta SSE ao acordar do sleep
+  - Detecção do Ollama com notificação não-bloqueante se offline
+  - Auto-update via `electron-updater` + GitHub Releases
+  - Ícones gerados: `icon.png` (512×512), `icon.ico` (multi-size), `icon.icns`
+  - `electron/scripts/sync-version.js` — sincroniza versão de `denai/version.py`
+  - `.github/workflows/electron.yml` — CI builds matrix win/mac/linux, triggered on release
+  - `pip install denai` e `python -m denai` continuam funcionando sem alteração
+- **📋 Specs SDS retroativas** — specs v0.13.0–v0.20.0 em `specs/changes/` (#51)
+  - requirements.md (EARS) + design.md + tasks.md com rastreabilidade `_Implements: DES-X, REQ-Y.Z_`
+
 ## [0.19.0] - 2026-04-02
 
 ### Adicionado
