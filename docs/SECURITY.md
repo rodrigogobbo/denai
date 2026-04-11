@@ -1,6 +1,6 @@
 # DenAI — Modelo de Segurança
 
-> **Versão:** 0.19.0
+> **Versão:** 0.21.0
 
 ## Princípio Fundamental
 

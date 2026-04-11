@@ -1,6 +1,6 @@
 # 🐺 DenAI — Guia Completo para Iniciantes
 
-> **Versão:** 5.0  
+> **Versão:** 6.0  
 > **Última atualização:** Abril 2026  
 > **Público-alvo:** Pessoas que nunca usaram terminal, programação ou IA local  
 > **Sistema:** Windows 10 / Windows 11
@@ -64,6 +64,7 @@ O DenAI é um programa que roda uma **inteligência artificial** (IA) diretament
 - ✅ **Rastrear tarefas em tempo real** — Lista de todos com prioridade e status
 - ✅ **Reportar bugs e sugerir melhorias** — Direto da interface, sem precisar de conta GitHub
 - ✅ **Atualizar com 1 clique** — Instala nova versão com progresso em tempo real e reinicia automaticamente
+- ✅ **Aplicativo desktop** — Instalador .exe/.dmg para Windows e Mac, sem precisar do terminal
 
 > 🔒 **Sobre privacidade:** Tudo que você digita fica **apenas no seu computador**. Nenhuma empresa recebe seus dados. Nenhum servidor externo é contatado. É como escrever num caderno que só você tem a chave.
 
@@ -698,6 +699,39 @@ curl http://localhost:4078/api/conversations/SEU-ID/export?format=json -o conver
 # Markdown
 curl http://localhost:4078/api/conversations/SEU-ID/export?format=markdown -o conversa.md
 ```
+
+---
+
+## 🖥️ Instalação como aplicativo desktop (mais fácil)
+
+> Esta é a forma **mais simples** de instalar o DenAI — sem precisar do terminal.
+
+Em vez de instalar Python e rodar comandos, você pode baixar um instalador que faz tudo automaticamente:
+
+1. Acesse: **https://github.com/rodrigogobbo/denai/releases/latest**
+2. Baixe o arquivo para o seu sistema:
+   - **Windows:** arquivo `.exe`
+   - **macOS:** arquivo `.dmg`
+   - **Linux:** arquivo `.zip`
+3. Instale normalmente (como qualquer programa)
+4. Abra o **DenAI** pelo menu iniciar ou ícone no desktop
+
+### O que acontece na primeira abertura
+
+Na primeira vez, uma tela de carregamento aparece enquanto o DenAI:
+1. **Configura o Python** automaticamente (não precisa instalar nada)
+2. **Instala o DenAI** no seu computador (~30 segundos)
+3. **Inicia o servidor** e abre a interface
+
+Nas próximas vezes, abre em menos de 2 segundos.
+
+### Ícone na bandeja do sistema
+
+O DenAI fica rodando na bandeja (canto inferior direito no Windows, barra superior no Mac). Fechar a janela **não encerra o programa** — ele continua disponível pelo ícone na bandeja.
+
+Para encerrar completamente: clique com o botão direito no ícone → **Sair**.
+
+> 💡 **Ainda precisa do Ollama?** Sim! O instalador do DenAI gerencia o Python automaticamente, mas o Ollama (que roda os modelos de IA) ainda precisa ser instalado separadamente em https://ollama.com/download
 
 ---
 

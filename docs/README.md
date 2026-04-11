@@ -1,6 +1,6 @@
 # DenAI — Documentação
 
-> **Versão:** 0.19.0 | [GitHub](https://github.com/rodrigogobbo/denai) | [PyPI](https://pypi.org/project/denai/)
+> **Versão:** 0.21.0 | [GitHub](https://github.com/rodrigogobbo/denai) | [PyPI](https://pypi.org/project/denai/)
 
 ## Documentos disponíveis
 
@@ -58,6 +58,8 @@ python -m denai --compartilhar
 
 | Versão | Data | Feature |
 |---|---|---|
+| v0.21.0 | Abr/2026 | Desktop App — Electron + uv bundled (.exe/.dmg/.zip) + specs SDS retroativas |
+| v0.20.0 | Abr/2026 | Smart Model Selection — tiers de hardware + wizard dinâmico |
 | v0.19.0 | Abr/2026 | Feedback in-app: reportar bugs e sugerir melhorias pelo DenAI |
 | v0.18.0 | Abr/2026 | Update com streaming SSE + reinicialização automática + auto-release pipeline |
 | v0.17.0 | Abr/2026 | Providers: persistência, UI modal, 8 templates, SSRF protection |
