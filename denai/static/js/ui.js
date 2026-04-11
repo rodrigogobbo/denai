@@ -147,6 +147,10 @@ window.wizardNext = function(step) {
   if (step === 2) {
     wizardCheckOllama();
   }
+  // Load system profile on step 3
+  if (step === 3) {
+    wizardLoadSystemProfile();
+  }
 };
 
 window.wizardCheckOllama = async function() {
@@ -189,6 +193,143 @@ window.wizardCheckOllama = async function() {
     offlineEl.style.display = 'block';
     if (recheckBtn) recheckBtn.disabled = false;
   }
+};
+
+// ─── Wizard Step 3: Smart model selection ───
+window._systemProfile = null;
+
+window.wizardLoadSystemProfile = async function() {
+  const cardsEl = document.getElementById('wizardModelCards');
+  if (!cardsEl) return;
+
+  // Show loading state
+  cardsEl.innerHTML = `
+    <div class="wizard-profile-loading">
+      <span class="counter-spinner"></span>
+      Analisando sua máquina…
+    </div>`;
+
+  try {
+    const profile = await apiGet('/api/system/profile');
+    window._systemProfile = profile;
+    _renderWizardModelCards(profile);
+  } catch (e) {
+    // Fallback: show static cards
+    cardsEl.innerHTML = `
+      <div class="wizard-model-card" onclick="wizardSelectModel('llama3.2:3b', this)">
+        <span class="model-emoji">🚀</span>
+        <div class="model-info">
+          <div class="model-name">llama3.2:3b</div>
+          <div class="model-desc">Rápido e leve — ótimo pra começar</div>
+        </div>
+        <span class="model-size">~2 GB</span>
+      </div>
+      <div class="wizard-model-card" onclick="wizardSelectModel('llama3.1:8b', this)">
+        <span class="model-emoji">🧠</span>
+        <div class="model-info">
+          <div class="model-name">llama3.1:8b</div>
+          <div class="model-desc">Mais inteligente — melhor qualidade</div>
+        </div>
+        <span class="model-size">~4.7 GB</span>
+      </div>`;
+  }
+};
+
+function _renderWizardModelCards(profile) {
+  const cardsEl = document.getElementById('wizardModelCards');
+  if (!cardsEl) return;
+
+  const rec = profile.recommendation;
+  const ramGb = profile.ram_gb;
+
+  // Header com info da máquina
+  let headerHtml = `<div class="wizard-machine-info">
+    💻 <b>${ramGb}GB RAM</b>`;
+  if (profile.vram_gb) headerHtml += ` · GPU ${profile.vram_gb}GB VRAM`;
+  if (profile.disk_free_gb < 10) {
+    headerHtml += ` · ⚠️ ${profile.disk_free_gb.toFixed(0)}GB livre em disco`;
+  }
+  headerHtml += `</div>`;
+
+  // Card de recomendação
+  const recModel = profile.model_catalog.find(m => m.name === rec.model) || {
+    name: rec.model, emoji: '✅', description: rec.reason, size_gb: 0
+  };
+
+  let recBadge = rec.already_installed
+    ? `<span class="wizard-badge installed">⚡ Já instalado</span>`
+    : `<span class="wizard-badge recommended">✅ Recomendado</span>`;
+
+  let recCard = `
+    <div class="wizard-model-card recommended-card" onclick="wizardSelectModel('${escapeAttr(rec.model)}', this)">
+      <span class="model-emoji">${recModel.emoji || '🤖'}</span>
+      <div class="model-info">
+        <div class="model-name">${escapeHtml(rec.model)} ${recBadge}</div>
+        <div class="model-desc">${escapeHtml(rec.reason)}</div>
+      </div>
+      ${recModel.size_gb ? `<span class="model-size">~${recModel.size_gb}GB</span>` : ''}
+    </div>`;
+
+  // Cards alternativos (compatíveis, exceto o recomendado)
+  const altCards = (rec.alternatives || [])
+    .filter(a => a.name !== rec.model)
+    .slice(0, 3)
+    .map(alt => {
+      const installed = profile.installed_models.some(i => i.startsWith(alt.name.split(':')[0]));
+      const warning = alt.ram_min_gb > ramGb;
+      const warnHtml = warning
+        ? `<div class="wizard-model-warning">⚠️ Requer ~${alt.ram_min_gb}GB RAM</div>` : '';
+      const instBadge = installed ? `<span class="wizard-badge installed" style="font-size:10px;">instalado</span>` : '';
+      return `
+        <div class="wizard-model-card ${warning ? 'compat-warning' : ''}"
+             onclick="wizardSelectModel('${escapeAttr(alt.name)}', this)">
+          <span class="model-emoji">${alt.emoji}</span>
+          <div class="model-info">
+            <div class="model-name">${escapeHtml(alt.name)} ${instBadge}</div>
+            <div class="model-desc">${escapeHtml(alt.description)}</div>
+            ${warnHtml}
+          </div>
+          <span class="model-size">~${alt.size_gb}GB</span>
+        </div>`;
+    }).join('');
+
+  cardsEl.innerHTML = headerHtml + recCard + altCards;
+}
+
+window.wizardSelectedModel = null;
+
+window.wizardSelectModel = function(modelName, cardEl) {
+  // Destacar card selecionado
+  document.querySelectorAll('#wizardModelCards .wizard-model-card')
+    .forEach(c => c.classList.remove('selected-card'));
+  if (cardEl) cardEl.classList.add('selected-card');
+  window.wizardSelectedModel = modelName;
+
+  // Se já instalado, mostrar botão "Usar agora"
+  const profile = window._systemProfile;
+  const isInstalled = profile && profile.installed_models.some(
+    i => i === modelName || i.startsWith(modelName.split(':')[0])
+  );
+
+  const actionEl = document.getElementById('wizardModelAction');
+  if (actionEl) {
+    if (isInstalled) {
+      actionEl.innerHTML = `<button class="wizard-btn" onclick="wizardUseModel('${escapeAttr(modelName)}')">
+        ⚡ Usar ${escapeHtml(modelName)} agora →
+      </button>`;
+    } else {
+      actionEl.innerHTML = `<button class="wizard-btn" onclick="wizardPullModel('${escapeAttr(modelName)}', null)">
+        ⬇️ Baixar e usar ${escapeHtml(modelName)} →
+      </button>`;
+    }
+  }
+};
+
+window.wizardUseModel = function(modelName) {
+  window.currentModel = modelName;
+  if (DOM.modelSelect) DOM.modelSelect.value = modelName;
+  updateModelLabel();
+  wizardNext(4);
 };
 
 window.wizardPullModel = async function(modelName, cardEl) {

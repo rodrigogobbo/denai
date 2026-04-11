@@ -237,24 +237,16 @@
     <div class="wizard-step" id="wizardStep3">
       <span class="wizard-icon" style="font-size:48px; animation:none;">📦</span>
       <h2>Escolha um modelo</h2>
-      <p>Selecione um modelo para baixar:</p>
+      <p>Analisando sua máquina para recomendar o melhor modelo:</p>
       <div class="wizard-model-cards" id="wizardModelCards">
-        <div class="wizard-model-card" onclick="wizardPullModel('llama3.2:3b', this)">
-          <span class="model-emoji">⚡</span>
-          <div class="model-info">
-            <div class="model-name">llama3.2:3b</div>
-            <div class="model-desc">Rápido e leve — ideal pra começar</div>
-          </div>
-          <span class="model-size">~2 GB</span>
+        <!-- Renderizado dinamicamente por wizardLoadSystemProfile() -->
+        <div class="wizard-profile-loading">
+          <span class="counter-spinner"></span>
+          Analisando sua máquina…
         </div>
-        <div class="wizard-model-card" onclick="wizardPullModel('llama3.1:8b', this)">
-          <span class="model-emoji">🧠</span>
-          <div class="model-info">
-            <div class="model-name">llama3.1:8b</div>
-            <div class="model-desc">Mais inteligente — melhor qualidade</div>
-          </div>
-          <span class="model-size">~4.7 GB</span>
-        </div>
+      </div>
+      <div id="wizardModelAction" style="margin-top:8px;">
+        <!-- Botão aparece após seleção -->
       </div>
       <div class="wizard-pull-progress" id="wizardPullProgress">
         <div class="wizard-pull-label" id="wizardPullLabel">Preparando download...</div>
