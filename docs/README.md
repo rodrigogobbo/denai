@@ -7,6 +7,8 @@
 | Documento | Público | Descrição |
 |---|---|---|
 | [GUIA-COMPLETO.md](./GUIA-COMPLETO.md) | Iniciantes | Instalação passo a passo no Windows, sem experiência técnica |
+| [INSTALLATION.md](./INSTALLATION.md) | Todos | Requisitos de sistema, modelos, Docker, desinstalação |
+| [CONFIGURATION.md](./CONFIGURATION.md) | Usuários | Share mode, MCP, segurança, config.yaml |
 | [API.md](./API.md) | Desenvolvedores | Referência completa de todos os endpoints REST |
 | [TOOLS.md](./TOOLS.md) | Usuários avançados | Referência de todas as 26 tools disponíveis para o LLM |
 | [PROVIDERS.md](./PROVIDERS.md) | Usuários avançados | Como configurar OpenAI, Anthropic, Gemini, Groq e outros |
