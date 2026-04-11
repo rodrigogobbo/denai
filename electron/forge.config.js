@@ -7,9 +7,7 @@ module.exports = {
     icon: path.join(__dirname, 'assets', 'icon'),
     appBundleId: 'dev.gobbo.denai',
     appCategoryType: 'public.app-category.productivity',
-    // Empacotar binários uv para todos os targets
     extraResource: [path.join(__dirname, 'bin')],
-    // Ignorar node_modules de dev e arquivos desnecessários
     ignore: [
       /^\/\.git/,
       /^\/scripts/,
@@ -20,13 +18,12 @@ module.exports = {
   rebuildConfig: {},
 
   makers: [
-    // Windows — NSIS installer
+    // Windows — Squirrel
     {
       name: '@electron-forge/maker-squirrel',
       config: {
         name: 'DenAI',
         setupIcon: path.join(__dirname, 'assets', 'icon.ico'),
-        loadingGif: path.join(__dirname, 'assets', 'install.gif'),
       },
       platforms: ['win32'],
     },
@@ -42,15 +39,9 @@ module.exports = {
       platforms: ['darwin'],
     },
 
-    // Linux — AppImage
+    // Linux — ZIP (AppImage requer buildtools externos)
     {
-      name: '@electron-forge/maker-appimage',
-      config: {
-        name: 'DenAI',
-        genericName: 'AI Assistant',
-        icon: path.join(__dirname, 'assets', 'icon.png'),
-        categories: ['Utility', 'Science'],
-      },
+      name: '@electron-forge/maker-zip',
       platforms: ['linux'],
     },
   ],
