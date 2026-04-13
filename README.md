@@ -103,7 +103,7 @@ denai/                    ← Python package
   routes/                 ← FastAPI routers (26 endpoints)
   tools/                  ← 26 auto-discovered tools
   llm/                    ← Ollama + provider adapters
-  static/                 ← Web UI (HTML/CSS/JS)
+  static/                 ← Web UI (HTML/JS + tailwind.css compilado)
   security/               ← Sandbox, auth, SSRF validation
 electron/                 ← Desktop app (Electron + uv)
 specs/changes/            ← SDS specs per version

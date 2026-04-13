@@ -7,6 +7,18 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-04-13
+
+### Removido
+- **🗑️ CSS legacy** — 5 arquivos CSS individuais removidos de `denai/static/css/`
+  - `base.css`, `animations.css`, `layout.css`, `chat.css`, `components.css`
+  - O único CSS servido agora é `tailwind.css` (gerado pelo pipeline Tailwind em `frontend/`)
+  - Redução de ~60KB de arquivos rastreados no repo
+
+### Corrigido
+- `frontend/package-lock.json` removido do repo e adicionado ao `.gitignore`
+  - Era commitado desnecessariamente desde a v0.23.0
+
 ## [0.24.0] - 2026-04-13
 
 ### Adicionado
