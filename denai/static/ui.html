@@ -132,6 +132,18 @@
         <span class="ollama-dot"></span>
         <span id="ollamaLabel">Verificando...</span>
       </div>
+      <!-- Profile selector -->
+      <div class="profile-selector" id="profileSelector" title="Perfil ativo">
+        <span id="profileLabel">default</span>
+        <span class="profile-arrow">▾</span>
+        <div class="profile-dropdown" id="profileDropdown" style="display:none;">
+          <div class="profile-dropdown-list" id="profileList"><!-- renderizado por JS --></div>
+          <div class="profile-dropdown-new">
+            <input type="text" id="newProfileInput" placeholder="novo perfil..." maxlength="32">
+            <button onclick="createAndActivateProfile()">+</button>
+          </div>
+        </div>
+      </div>
     </header>
 
     <!-- Messages -->

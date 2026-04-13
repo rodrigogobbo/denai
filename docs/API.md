@@ -1,6 +1,6 @@
 # DenAI — Referência da API REST
 
-> **Versão:** 0.24.1  
+> **Versão:** 0.25.0  
 > **Base URL:** `http://localhost:4078`  
 > **Autenticação:** header `X-API-Key: <sua-key>` em todas as rotas (exceto `/` e `/static`)
 
