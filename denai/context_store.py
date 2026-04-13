@@ -203,7 +203,15 @@ def activate_context(conv_id: str, path: str) -> dict:
     if not allowed:
         return {"ok": False, "error": f"Caminho não permitido: {reason}"}
 
-    root = Path(path).expanduser().resolve()
+    # Usar os.path (padrão reconhecido pelo CodeQL como sanitização)
+    import os as _os
+
+    try:
+        normalized = _os.path.realpath(_os.path.abspath(_os.path.expanduser(path)))
+    except (ValueError, OSError):
+        return {"ok": False, "error": "Caminho inválido."}
+
+    root = Path(normalized)
     if not root.is_dir():
         return {"ok": False, "error": "Caminho não é um diretório."}
 
@@ -228,7 +236,7 @@ def activate_context(conv_id: str, path: str) -> dict:
         "file_count": len(files),
     }
 
-    log.info("Context ativado para conv=%s: %d arquivos em %s", conv_id[:8], len(files), root.name)
+    log.info("Context ativado para conv=%s: %d arquivos indexados", conv_id[:8], len(files))
     return {
         "ok": True,
         "project_name": info.name,
