@@ -87,6 +87,7 @@ async def chat(request: Request):
             model,
             tools_spec=filtered_tools,
             prompt_prefix=prompt_prefix,
+            conversation_id=conv_id,
         ):
             yield chunk
             try:

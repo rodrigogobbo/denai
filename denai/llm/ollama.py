@@ -113,6 +113,7 @@ async def stream_chat(
     tools_spec: list[dict] | None = None,
     prompt_prefix: str = "",
     system_override: str | None = None,
+    conversation_id: str | None = None,
 ) -> AsyncGenerator[str, None]:
     """Stream de chat com Ollama, com suporte a tool calling iterativo.
 
@@ -157,6 +158,20 @@ async def stream_chat(
         system_content = build_system_prompt(rag_context, skills_context=skills_context)
     if prompt_prefix:
         system_content = prompt_prefix + system_content
+
+    # Injetar contexto de repositório se ativo para esta conversa
+    if conversation_id:
+        try:
+            from ..context_store import get_context as get_repo_context
+
+            ctx = get_repo_context(conversation_id)
+            if ctx:
+                system_content += (
+                    f"\n\n---\n\n{ctx['summary']}\n\n> Use rag_search para buscar código e arquivos neste repositório."
+                )
+        except Exception:
+            pass
+
     system_msg = {"role": "system", "content": system_content}
     full_messages = [system_msg] + messages
 

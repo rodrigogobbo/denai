@@ -3,6 +3,7 @@
 from .agent import router as agent_router
 from .chat import router as chat_router
 from .commands import router as commands_router
+from .context import router as context_router
 from .conversations import router as conversations_router
 from .diagnostics import router as diagnostics_router
 from .feedback import router as feedback_router
@@ -31,6 +32,7 @@ all_routers = [
     chat_router,
     agent_router,
     commands_router,
+    context_router,
     conversations_router,
     models_router,
     memories_router,
