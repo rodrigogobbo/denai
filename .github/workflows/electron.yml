@@ -45,7 +45,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p electron/bin
-          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
             # arm64
             curl -fsSL "${{ matrix.uv_url_arm64 }}" | tar xz -C /tmp
             mv /tmp/uv-aarch64-apple-darwin/uv electron/bin/uv-darwin-arm64
@@ -54,12 +54,14 @@ jobs:
             curl -fsSL "${{ matrix.uv_url_x64 }}" | tar xz -C /tmp
             mv /tmp/uv-x86_64-apple-darwin/uv electron/bin/uv-darwin-x64
             chmod +x electron/bin/uv-darwin-x64
-          elif [ "${{ matrix.os }}" = "windows-latest" ]; then
+          elif [[ "$RUNNER_OS" == "Windows" ]]; then
             curl -fsSL "${{ matrix.uv_url }}" -o /tmp/uv-win.zip
-            ${{ matrix.uv_extract }}
+            unzip -o /tmp/uv-win.zip -d /tmp/uv-win
+            mv /tmp/uv-win/uv.exe electron/bin/uv-win32-x64.exe
           else
             curl -fsSL "${{ matrix.uv_url }}" | tar xz -C /tmp
-            ${{ matrix.uv_extract }}
+            mv /tmp/uv-x86_64-unknown-linux-gnu/uv electron/bin/uv-linux-x64
+            chmod +x electron/bin/uv-linux-x64
           fi
           echo "uv binaries: $(ls -lh electron/bin/)"
 
@@ -111,7 +113,31 @@ jobs:
             TAG="${{ inputs.tag }}"
           fi
           echo "Uploading artifacts for tag: $TAG"
-          find electron/out/make -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.zip" \) | while read f; do
-            echo "Uploading: $f"
-            gh release upload "$TAG" "$f" --clobber || true
-          done
+
+          # No macOS: renomear o segundo DMG (x64) para evitar clobber
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            # arm64 DMG (primeiro build: out/make/DenAI.dmg)
+            ARM_DMG=$(find electron/out/make -name "DenAI.dmg" | head -1)
+            if [ -n "$ARM_DMG" ]; then
+              ARM_DEST="$(dirname "$ARM_DMG")/DenAI-arm64.dmg"
+              cp "$ARM_DMG" "$ARM_DEST"
+              gh release upload "$TAG" "$ARM_DEST" --clobber || true
+            fi
+            # x64 DMG (segundo build: out/make com arch=x64)
+            X64_DMG=$(find electron/out/make -name "DenAI.dmg" | tail -1)
+            if [ -n "$X64_DMG" ] && [ "$X64_DMG" != "$ARM_DMG" ]; then
+              X64_DEST="$(dirname "$X64_DMG")/DenAI-x64.dmg"
+              cp "$X64_DMG" "$X64_DEST"
+              gh release upload "$TAG" "$X64_DEST" --clobber || true
+            else
+              # Fallback: se só houver um DMG, subir como arm64 e tentar x64
+              find electron/out/make -name "*.dmg" | while read f; do
+                gh release upload "$TAG" "$f" --clobber || true
+              done
+            fi
+          else
+            find electron/out/make -type f \( -name "*.exe" -o -name "*.AppImage" -o -name "*.zip" \) | while read f; do
+              echo "Uploading: $f"
+              gh release upload "$TAG" "$f" --clobber || true
+            done
+          fi
