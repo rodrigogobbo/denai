@@ -56,13 +56,28 @@ async function sendMessage() {
 
   // Resolve custom commands
   if (text.startsWith("/")) {
+    // Interceptar /context antes dos outros comandos
+    const contextMatch = text.match(/^\/context\s+(.+)$/);
+    const contextOff = text.trim() === '/context off';
+    const contextStatus = text.trim() === '/context';
+
+    if (contextMatch) {
+      const path = contextMatch[1].trim();
+      await _handleContextActivate(path);
+      return;
+    }
+    if (contextOff) {
+      await _handleContextDeactivate();
+      return;
+    }
+    if (contextStatus) {
+      _showContextStatus();
+      return;
+    }
+
     const resolved = await window.resolveCommand(text);
     if (resolved) {
       text = resolved.prompt;
-      // If command specifies a model, temporarily switch
-      if (resolved.model && window.currentModel !== resolved.model) {
-        // Store for reference, but don't force switch
-      }
     }
   }
 
@@ -471,3 +486,102 @@ window.dismissSuggestion = function(id) {
     setTimeout(() => card.remove(), 200);
   }
 };
+
+// ─── /context command handlers ───────────────────────────
+window._activeContext = null;
+
+async function _handleContextActivate(path) {
+  if (!window.currentConversationId) {
+    // Criar conversa primeiro
+    try {
+      const data = await apiPost('/api/conversations', { title: `/context ${path}` });
+      window.currentConversationId = data.id || data.conversation_id;
+      window.conversations = window.conversations || [];
+      window.conversations.unshift({ id: window.currentConversationId, title: `/context ${path}` });
+      if (typeof renderConversationList === 'function') renderConversationList();
+    } catch (e) {
+      showToast('Erro ao criar conversa', 'error');
+      return;
+    }
+  }
+
+  // Exibir mensagem do usuário no chat
+  const emptyEl = DOM.messagesInner.querySelector('.empty-state');
+  if (emptyEl) emptyEl.remove();
+  DOM.messagesInner.insertAdjacentHTML('beforeend',
+    renderMessageBubble('user', `/context ${path}`, new Date().toISOString()));
+  scrollToBottom(true);
+
+  // Mostrar loading
+  const loadingId = 'ctx-loading-' + Date.now();
+  DOM.messagesInner.insertAdjacentHTML('beforeend',
+    `<div class="typing-indicator" id="${loadingId}">
+      <div class="message-avatar">📁</div>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>`);
+  scrollToBottom(true);
+
+  try {
+    const data = await apiPost('/api/context/activate', {
+      path,
+      conversation_id: window.currentConversationId,
+    });
+    document.getElementById(loadingId)?.remove();
+
+    if (data.ok) {
+      window._activeContext = { project_name: data.project_name, path };
+      _updateContextBadge();
+      DOM.messagesInner.insertAdjacentHTML('beforeend',
+        renderMessageBubble('assistant',
+          `✅ Contexto ativado: **${data.project_name}** — ${data.file_count} arquivo(s) indexado(s).\n\nAgora posso responder perguntas sobre este repositório. Use \`rag_search\` ou pergunte diretamente.`,
+          new Date().toISOString()));
+    } else {
+      DOM.messagesInner.insertAdjacentHTML('beforeend',
+        renderMessageBubble('assistant', `❌ ${data.error || 'Erro ao ativar contexto.'}`, new Date().toISOString()));
+    }
+  } catch (e) {
+    document.getElementById(loadingId)?.remove();
+    DOM.messagesInner.insertAdjacentHTML('beforeend',
+      renderMessageBubble('assistant', `❌ Erro: ${e.message}`, new Date().toISOString()));
+  }
+  scrollToBottom(true);
+}
+
+async function _handleContextDeactivate() {
+  if (!window.currentConversationId || !window._activeContext) {
+    showToast('Nenhum contexto ativo.', 'info');
+    return;
+  }
+  try {
+    await fetch(API_BASE + `/api/context/${encodeURIComponent(window.currentConversationId)}`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    window._activeContext = null;
+    _updateContextBadge();
+    showToast('Contexto desativado.', 'success');
+  } catch (e) {
+    showToast('Erro ao desativar contexto.', 'error');
+  }
+}
+
+function _showContextStatus() {
+  if (window._activeContext) {
+    showToast(`Contexto ativo: 📁 ${window._activeContext.project_name}`, 'info');
+  } else {
+    showToast('Nenhum contexto ativo. Use /context <caminho>', 'info');
+  }
+}
+
+function _updateContextBadge() {
+  const existing = document.getElementById('contextBadge');
+  if (existing) existing.remove();
+  if (window._activeContext && DOM.inputModelLabel) {
+    const badge = document.createElement('span');
+    badge.id = 'contextBadge';
+    badge.className = 'context-badge';
+    badge.title = `Contexto: ${window._activeContext.path}\nUse /context off para desativar`;
+    badge.textContent = `📁 ${window._activeContext.project_name}`;
+    badge.onclick = () => showToast(`Caminho: ${window._activeContext.path}\n/context off para desativar`, 'info');
+    DOM.inputModelLabel.insertAdjacentElement('afterend', badge);
+  }
+}

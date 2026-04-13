@@ -1,0 +1,20 @@
+/* DenAI Frontend — Tailwind Entry Point */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Variables & Reset ─────────────────────────────── */
+@import './custom/variables.css';
+
+/* ─── Animations (keyframes) ────────────────────────────── */
+@import './custom/animations.css';
+
+/* ─── Layout ────────────────────────────────────────────── */
+@import './custom/layout.css';
+
+/* ─── Chat ──────────────────────────────────────────────── */
+@import './custom/chat.css';
+
+/* ─── Components ────────────────────────────────────────── */
+@import './custom/components.css';

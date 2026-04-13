@@ -7,6 +7,26 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-04-13
+
+### Adicionado
+- **🎨 Tailwind CSS + build pipeline** — CSS unificado de 2.486 linhas → 6.8KB minificado (#65)
+  - `frontend/` — pipeline Tailwind CLI com design tokens do DenAI
+  - `tailwind.config.js` mapeia todas as CSS vars como cores customizadas
+  - `denai/static/css/tailwind.css` commitado — `pip install denai` funciona sem Node.js
+  - `ui.html` atualizado: 5 links CSS → 1 link `tailwind.css`
+  - `npm run dev` para watch mode durante desenvolvimento
+- **📁 Comando /context** — perguntas sobre qualquer repositório sem sair do DenAI
+  - `/context <caminho>` — indexa o diretório e ativa contexto para a sessão
+  - `/context off` — desativa e limpa o índice
+  - `/context` — mostra o projeto ativo
+  - `denai/context_store.py` — índice BM25 em memória por conversa, sem persistência
+  - Respeita `.gitignore`, pula `node_modules/`, `.git/`, binários; limite 500 arquivos / 50MB
+  - Project summary injetado no system prompt automaticamente
+  - `POST /api/context/activate`, `DELETE /api/context/{id}`, `GET /api/context/{id}`
+  - Badge `📁 <projeto>` no input quando contexto ativo
+  - 14 novos testes (934 total)
+
 ## [0.22.0] - 2026-04-13
 
 ### Adicionado
