@@ -67,11 +67,13 @@ jobs:
 
       - name: Make distributables
         working-directory: electron
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORGE_ARCH: ${{ matrix.forge_arch }}
         run: |
-          if [ -n "${{ matrix.forge_arch }}" ]; then
-            npm run make -- --arch ${{ matrix.forge_arch }}
+          if [ -n "$FORGE_ARCH" ]; then
+            npm run make -- --arch "$FORGE_ARCH"
           else
             npm run make
           fi
