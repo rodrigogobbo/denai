@@ -73,12 +73,16 @@ async def read_spec(body: SpecsReadBody):
         return JSONResponse({"error": error}, status_code=400)
 
     slug = body.slug.strip().strip("/")
-    spec_dir = specs_dir / slug
+    # Sanitizar slug: apenas componente de nome simples, sem path traversal
+    import os as _os
+
+    safe_slug = _os.path.basename(_os.path.normpath(slug))
+    spec_dir = specs_dir / safe_slug
 
     if not spec_dir.exists():
         available = [d.name for d in specs_dir.iterdir() if d.is_dir()]
         return JSONResponse(
-            {"error": f"Spec `{slug}` não encontrada.", "available": available},
+            {"error": f"Spec `{safe_slug}` não encontrada.", "available": available},
             status_code=404,
         )
 
@@ -90,9 +94,9 @@ async def read_spec(body: SpecsReadBody):
             parts.append(f"## 📄 {fname}\n\n{content}")
 
     if not parts:
-        return JSONResponse({"error": f"Spec `{slug}` está vazia."}, status_code=404)
+        return JSONResponse({"error": f"Spec `{safe_slug}` está vazia."}, status_code=404)
 
     return {
-        "slug": slug,
+        "slug": safe_slug,
         "content": "\n\n---\n\n".join(parts),
     }
