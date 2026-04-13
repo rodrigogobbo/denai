@@ -1,0 +1,61 @@
+/* ─── Utility layer via @apply ─────────────────────────────
+   Classes compostas reutilizadas 10+ vezes nos arquivos custom/
+   Reduz duplicação sem reescrever HTML existente.
+   ──────────────────────────────────────────────────────── */
+@layer components {
+
+  /* Flex row com alinhamento central — 34x nos custom/ */
+  .flex-center {
+    @apply flex items-center;
+  }
+
+  /* Texto muted — 32x */
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  /* Fundo card — 26x */
+  .bg-card {
+    background: var(--bg-card);
+  }
+
+  /* Borda + fundo card — padrão de containers */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Transição padrão — 41x */
+  .transition-default {
+    transition: var(--transition-fast);
+  }
+
+  /* Texto 13px (tamanho mais comum na UI) — 36x */
+  .text-ui {
+    @apply text-[13px];
+  }
+
+  /* Texto 12px (labels, badges) — 17x */
+  .text-ui-sm {
+    @apply text-[12px];
+  }
+
+  /* Botão base */
+  .btn-base {
+    @apply cursor-pointer border-none rounded-sm text-[13px] font-medium;
+    transition: var(--transition-fast);
+  }
+
+  /* Input base */
+  .input-base {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    @apply rounded-sm text-[13px];
+    color: var(--text-primary);
+  }
+  .input-base:focus {
+    @apply outline-none;
+    border-color: var(--accent);
+  }
+}

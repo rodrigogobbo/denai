@@ -1,6 +1,6 @@
 # DenAI — Documentação
 
-> **Versão:** 0.21.0 | [GitHub](https://github.com/rodrigogobbo/denai) | [PyPI](https://pypi.org/project/denai/)
+> **Versão:** 0.24.1 | [GitHub](https://github.com/rodrigogobbo/denai) | [PyPI](https://pypi.org/project/denai/)
 
 ## Documentos disponíveis
 
@@ -60,6 +60,10 @@ python -m denai --compartilhar
 
 | Versão | Data | Feature |
 |---|---|---|
+| v0.24.1 | Abr/2026 | Remoção de CSS legacy — Tailwind como único CSS servido |
+| v0.24.0 | Abr/2026 | macOS x64 + `/context` busca automática no índice da sessão |
+| v0.23.0 | Abr/2026 | Tailwind CSS + comando `/context` para perguntas sobre repositórios |
+| v0.22.0 | Abr/2026 | Changelog in-app no modal de update + instaladores Electron menores |
 | v0.21.0 | Abr/2026 | Desktop App — Electron + uv bundled (.exe/.dmg/.zip) + specs SDS retroativas |
 | v0.20.0 | Abr/2026 | Smart Model Selection — tiers de hardware + wizard dinâmico |
 | v0.19.0 | Abr/2026 | Feedback in-app: reportar bugs e sugerir melhorias pelo DenAI |

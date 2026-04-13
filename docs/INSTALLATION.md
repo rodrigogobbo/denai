@@ -1,6 +1,6 @@
 # DenAI — Instalação e Requisitos
 
-> **Versão:** 0.21.0
+> **Versão:** 0.24.1
 
 ---
 

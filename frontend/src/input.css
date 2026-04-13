@@ -10,6 +10,9 @@
 /* ─── Animations (keyframes) ────────────────────────────── */
 @import './custom/animations.css';
 
+/* ─── Utility classes (@apply) ──────────────────────────── */
+@import './custom/utilities.css';
+
 /* ─── Layout ────────────────────────────────────────────── */
 @import './custom/layout.css';
 

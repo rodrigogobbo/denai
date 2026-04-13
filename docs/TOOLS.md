@@ -1,6 +1,6 @@
 # DenAI — Referência de Tools
 
-> **Versão:** 0.21.0
+> **Versão:** 0.24.1
 
 Tools são funções que o LLM pode chamar durante uma conversa. São auto-descobertas em `denai/tools/` — basta criar um `.py` com a lista `TOOLS`.
 
@@ -480,3 +480,17 @@ TOOLS = [(MINHA_TOOL_SPEC, "minha_tool")]
 ```
 
 A tool é auto-descoberta na próxima requisição ou após `POST /api/plugins/reload`.
+
+---
+
+## Comandos de Chat
+
+Além das 26 tools, o DenAI suporta comandos slash no chat:
+
+| Comando | Descrição |
+|---|---|
+| `/context <caminho>` | Indexa diretório e ativa contexto de repositório na sessão |
+| `/context off` | Desativa o contexto e limpa o índice |
+| `/context` | Mostra o projeto atualmente ativo |
+
+Quando `/context` está ativo, `rag_search` busca automaticamente no índice da sessão (ícone 📁) em vez de `~/.denai/documents/`.
