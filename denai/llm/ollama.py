@@ -318,6 +318,10 @@ async def stream_chat(
                         tool_name = fn.get("name", "unknown")
                         tool_args = fn.get("arguments", {})
 
+                        # Injetar conv_id nas tool_args para tools que precisam de contexto de sessão
+                        if conversation_id:
+                            tool_args["_conv_id"] = conversation_id
+
                         if tool_failures[tool_name] >= CIRCUIT_BREAKER_LIMIT:
                             skip_msg = (
                                 f"⚠️ Tool '{tool_name}' falhou {CIRCUIT_BREAKER_LIMIT} vezes consecutivas. "
@@ -364,6 +368,9 @@ async def stream_chat(
                         fn = tc.get("function", {})
                         tool_name = fn.get("name", "unknown")
                         tool_args = fn.get("arguments", {})
+                        # Injetar conv_id nas tool_args para tools que precisam de contexto de sessão
+                        if conversation_id:
+                            tool_args["_conv_id"] = conversation_id
                         yield f"data: {json.dumps({'tool_call': {'name': tool_name, 'args': tool_args}})}\n\n"
                         tc_infos.append((tool_name, tool_args))
 

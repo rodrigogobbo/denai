@@ -66,12 +66,32 @@ RAG_STATS_SPEC = {
 
 
 async def rag_search(args: dict) -> str:
-    """Busca nos documentos indexados."""
+    """Busca nos documentos indexados ou no contexto de repositório ativo."""
     query = args.get("query", "")
     top_k = args.get("top_k", 5)
+    conv_id = args.get("_conv_id")
 
     if not query.strip():
         return "❌ Query vazia. Informe o que deseja buscar."
+
+    # Usar índice de contexto de sessão se ativo
+    if conv_id:
+        try:
+            from ..context_store import has_context, search_context
+
+            if has_context(conv_id):
+                ctx_results = search_context(conv_id, query, top_k=int(top_k))
+                if ctx_results:
+                    parts = [f'📁 {len(ctx_results)} arquivo(s) encontrado(s) para "{query}":\n']
+                    for i, r in enumerate(ctx_results, 1):
+                        snippet = r["snippet"]
+                        if len(snippet) > 500:
+                            snippet = snippet[:500] + "..."
+                        parts.append(f"**[{i}] {r['path']}** (score: {r['score']})\n{snippet}\n")
+                    return "\n".join(parts)
+                return f'📭 Nenhum arquivo encontrado para "{query}" no repositório ativo.'
+        except Exception:
+            pass  # Fallback para RAG global
 
     results = search_documents(query, top_k=int(top_k))
 
@@ -83,7 +103,6 @@ async def rag_search(args: dict) -> str:
         score = r["score"]
         source = r["source"]
         text = r["text"]
-        # Truncar texto longo
         if len(text) > 500:
             text = text[:500] + "..."
         parts.append(f"**[{i}] {source}** (score: {score})\n{text}\n")

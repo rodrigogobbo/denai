@@ -248,3 +248,52 @@ class TestContextRoutes:
         # Verificar que foi removido
         resp2 = await client.get("/api/context/del-conv")
         assert resp2.json()["active"] is False
+
+
+# ─── rag_search with context ──────────────────────────────────────────────
+
+
+class TestRagSearchWithContext:
+    @pytest.mark.asyncio
+    async def test_rag_search_uses_context_index_when_active(self, tmp_path):
+        """Quando contexto ativo, rag_search busca no índice da sessão."""
+        (tmp_path / "main.py").write_text("def authenticate(user, password): pass")
+        (tmp_path / "utils.py").write_text("def hash_password(pw): return pw")
+
+        with (
+            patch("denai.context_store.is_path_allowed", return_value=(True, "")),
+            patch("denai.context_store.analyze_project") as mock_analyze,
+        ):
+            from denai.project import ProjectInfo
+
+            mock_analyze.return_value = ProjectInfo(path=str(tmp_path), name="myapp")
+            activate_context("rag-conv-1", str(tmp_path))
+
+        from denai.tools.rag_search import rag_search
+
+        result = await rag_search({"query": "authenticate password", "_conv_id": "rag-conv-1"})
+
+        assert "📁" in result  # usa ícone de contexto, não RAG global
+        assert "main.py" in result or "utils.py" in result
+        deactivate_context("rag-conv-1")
+
+    @pytest.mark.asyncio
+    async def test_rag_search_falls_back_to_global_when_no_context(self):
+        """Sem contexto ativo, rag_search usa o RAG global normal."""
+        with patch("denai.tools.rag_search.search_documents", return_value=[]) as mock_search:
+            from denai.tools.rag_search import rag_search
+
+            result = await rag_search({"query": "algo", "_conv_id": "conv-sem-contexto"})
+
+        mock_search.assert_called_once()
+        assert "📭" in result
+
+    @pytest.mark.asyncio
+    async def test_rag_search_without_conv_id_uses_global(self):
+        """Sem _conv_id, usa o RAG global."""
+        with patch("denai.tools.rag_search.search_documents", return_value=[]) as mock_search:
+            from denai.tools.rag_search import rag_search
+
+            await rag_search({"query": "algo"})
+
+        mock_search.assert_called_once()
