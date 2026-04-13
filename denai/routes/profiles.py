@@ -68,3 +68,38 @@ async def remove_profile(name: str):
         return {"ok": True}
     except ValueError:
         return JSONResponse({"error": "Operação inválida. Verifique o nome do perfil."}, status_code=400)
+
+
+# ── Modelo por perfil ─────────────────────────────────────────────────────
+
+
+class ModelBody(BaseModel):
+    model: str
+
+
+@router.get("/active/model")
+async def get_active_model():
+    """Retorna o último modelo usado no perfil ativo."""
+    from ..profile_manager import get_active_profile, get_profile_dir
+
+    profile_dir = get_profile_dir(get_active_profile())
+    last_model_file = profile_dir / "last_model"
+    if last_model_file.exists():
+        model = last_model_file.read_text(encoding="utf-8").strip()
+        if model:
+            return {"model": model}
+    return {"model": None}
+
+
+@router.post("/active/model")
+async def save_active_model(body: ModelBody):
+    """Persiste o modelo selecionado no perfil ativo."""
+    model = body.model.strip()
+    if not model:
+        return JSONResponse({"error": "model é obrigatório."}, status_code=400)
+    from ..profile_manager import get_active_profile, get_profile_dir
+
+    profile_dir = get_profile_dir(get_active_profile())
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    (profile_dir / "last_model").write_text(model, encoding="utf-8")
+    return {"ok": True, "model": model}

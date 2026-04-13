@@ -7,6 +7,24 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-04-13
+
+### Adicionado
+- **🔔 Notificações nativas no Electron** — OS notifications para eventos importantes
+  - Ollama offline → notificação "⚠️ Ollama ficou offline — modelos indisponíveis"
+  - Ollama volta online → "✅ Ollama voltou online — pronto para conversar"
+  - Update disponível → notificação antes do dialog de confirmação
+  - Poll a cada 10s com detecção de transição de estado (não apenas first check)
+- **💾 Modelo por perfil** — cada perfil lembra o último modelo usado
+  - `GET /api/profiles/active/model` e `POST /api/profiles/active/model`
+  - Modelo persistido em `<profile_dir>/last_model`
+  - Frontend restaura o modelo do perfil ao carregar e salva ao trocar
+- **🎨 icon.icns real para macOS** — gerado com `sips` + `iconutil` no CI
+  - 9 resoluções: 16, 32, 64, 128, 256, 512 e variantes @2x
+  - Sem dependências extras — `sips` e `iconutil` são nativos no macOS
+  - CI gera o `.icns` antes do build arm64 e x64
+- 3 novos testes — 961 total
+
 ## [0.25.0] - 2026-04-13
 
 ### Adicionado

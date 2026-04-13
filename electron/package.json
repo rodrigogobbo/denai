@@ -1,7 +1,7 @@
 {
   "name": "denai",
   "productName": "DenAI",
-  "version": "0.25.0",
+  "version": "0.26.0",
   "description": "Your private AI den. Local LLM assistant with tools, memory and zero cloud dependency.",
   "main": "src/main.js",
   "author": {
