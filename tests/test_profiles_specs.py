@@ -314,3 +314,29 @@ class TestSpecsRoutes:
         assert resp.status_code == 404
 
         del _contexts["spec-conv-3"]
+
+
+class TestProfileModel:
+    @pytest.mark.asyncio
+    async def test_get_model_no_saved(self, client):
+        resp = await client.get("/api/profiles/active/model")
+        assert resp.status_code == 200
+        assert resp.json()["model"] is None
+
+    @pytest.mark.asyncio
+    async def test_save_and_get_model(self, client, tmp_path):
+        with (
+            patch("denai.profile_manager.get_active_profile", return_value="default"),
+            patch("denai.profile_manager.get_profile_dir", return_value=tmp_path),
+        ):
+            resp = await client.post("/api/profiles/active/model", json={"model": "llama3.1:8b"})
+            assert resp.status_code == 200
+            assert resp.json()["ok"] is True
+
+            resp2 = await client.get("/api/profiles/active/model")
+            assert resp2.json()["model"] == "llama3.1:8b"
+
+    @pytest.mark.asyncio
+    async def test_save_empty_model_returns_error(self, client):
+        resp = await client.post("/api/profiles/active/model", json={"model": ""})
+        assert resp.status_code == 400

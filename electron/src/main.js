@@ -393,31 +393,50 @@ function setupTray() {
 
 // ─── Ollama check ─────────────────────────────────────────────────────────────
 
+let _ollamaOnline = null; // null = ainda não verificado
+
+function _sendNotification(title, body) {
+  const { Notification } = require('electron');
+  if (Notification.isSupported()) {
+    new Notification({ title, body }).show();
+  }
+}
+
 function checkOllama() {
-  const check = () => {
+  const poll = () => {
     http.get('http://localhost:11434/api/version', (res) => {
       res.resume();
-      if (res.statusCode !== 200) scheduleRetry();
-    }).on('error', () => scheduleRetry());
+      const online = res.statusCode === 200;
+      _handleOllamaTransition(online);
+    }).on('error', () => {
+      _handleOllamaTransition(false);
+    });
+    setTimeout(poll, 10000); // poll a cada 10s
   };
 
-  let notified = false;
-  const scheduleRetry = () => {
-    if (!notified) {
-      notified = true;
-      // Notificação não-bloqueante
-      const { Notification } = require('electron');
-      if (Notification.isSupported()) {
-        new Notification({
-          title: 'DenAI',
-          body: 'Ollama não encontrado. Baixe em ollama.com para usar modelos locais.',
-        }).show();
-      }
+  setTimeout(poll, 3000); // primeira verificação 3s após inicializar
+}
+
+function _handleOllamaTransition(isOnline) {
+  if (_ollamaOnline === isOnline) return; // sem mudança de estado
+
+  const prev = _ollamaOnline;
+  _ollamaOnline = isOnline;
+
+  if (prev === null) {
+    // Primeiro check — só notificar se offline
+    if (!isOnline) {
+      _sendNotification('DenAI', 'Ollama não encontrado. Baixe em ollama.com para usar modelos locais.');
     }
-    setTimeout(check, 30000); // retry a cada 30s
-  };
+    return;
+  }
 
-  setTimeout(check, 3000); // checar 3s após inicializar
+  // Transição
+  if (!isOnline) {
+    _sendNotification('DenAI', '⚠️ Ollama ficou offline — modelos indisponíveis.');
+  } else {
+    _sendNotification('DenAI', '✅ Ollama voltou online — pronto para conversar.');
+  }
 }
 
 // ─── Auto-update ──────────────────────────────────────────────────────────────
@@ -431,11 +450,14 @@ function setupAutoUpdate() {
     repo: 'denai',
   });
 
-  autoUpdater.on('update-available', () => {
+  autoUpdater.on('update-available', (info) => {
+    // Notificação nativa primeiro — menos intrusiva que dialog
+    _sendNotification('DenAI', `🆕 Nova versão disponível: v${info.version}. Clique para instalar.`);
+
     dialog.showMessageBox({
       type: 'info',
       title: 'Atualização disponível',
-      message: 'Uma nova versão do DenAI está disponível. Deseja baixar?',
+      message: `Nova versão ${info.version} disponível. Deseja baixar?`,
       buttons: ['Baixar', 'Agora não'],
     }).then(({ response }) => {
       if (response === 0) autoUpdater.downloadUpdate();

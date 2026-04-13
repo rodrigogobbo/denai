@@ -371,6 +371,20 @@ async function loadModels() {
     if (!window.currentModel && models.length > 0) {
       window.currentModel = typeof models[0] === 'string' ? models[0] : (models[0].name || models[0].model || '');
     }
+
+    // Restaurar modelo salvo no perfil ativo (sobrescreve o padrão)
+    try {
+      const saved = await apiGet('/api/profiles/active/model');
+      if (saved.model) {
+        // Verificar se o modelo salvo ainda existe na lista
+        const exists = models.some(m => {
+          const n = typeof m === 'string' ? m : (m.name || m.model || '');
+          return n === saved.model;
+        });
+        if (exists) window.currentModel = saved.model;
+      }
+    } catch (_) {}
+
     DOM.modelSelect.value = window.currentModel;
     updateModelLabel();
   } catch (e) {
@@ -382,6 +396,10 @@ window.loadModels = loadModels;
 DOM.modelSelect.addEventListener('change', () => {
   window.currentModel = DOM.modelSelect.value;
   updateModelLabel();
+  // Persistir modelo no perfil ativo
+  if (window.currentModel) {
+    apiPost('/api/profiles/active/model', { model: window.currentModel }).catch(() => {});
+  }
 });
 
 function updateModelLabel() {
