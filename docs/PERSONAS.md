@@ -1,6 +1,6 @@
 # DenAI — Sub-agentes e Personas
 
-> **Versão:** 0.24.1
+> **Versão:** 0.25.0
 
 ## O que são sub-agentes?
 
