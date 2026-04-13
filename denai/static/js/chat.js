@@ -75,6 +75,19 @@ async function sendMessage() {
       return;
     }
 
+    // Interceptar /specs
+    const specsMatch = text.match(/^\/specs\s+(.+)$/);
+    const specsList = text.trim() === '/specs';
+
+    if (specsList) {
+      await _handleSpecsList();
+      return;
+    }
+    if (specsMatch) {
+      await _handleSpecsRead(specsMatch[1].trim());
+      return;
+    }
+
     const resolved = await window.resolveCommand(text);
     if (resolved) {
       text = resolved.prompt;
@@ -583,5 +596,77 @@ function _updateContextBadge() {
     badge.textContent = `📁 ${window._activeContext.project_name}`;
     badge.onclick = () => showToast(`Caminho: ${window._activeContext.path}\n/context off para desativar`, 'info');
     DOM.inputModelLabel.insertAdjacentElement('afterend', badge);
+  }
+}
+
+// ─── /specs command handlers ─────────────────────────────
+async function _handleSpecsList() {
+  _ensureConversation('/specs');
+  const emptyEl = DOM.messagesInner.querySelector('.empty-state');
+  if (emptyEl) emptyEl.remove();
+  DOM.messagesInner.insertAdjacentHTML('beforeend',
+    renderMessageBubble('user', '/specs', new Date().toISOString()));
+  scrollToBottom(true);
+
+  try {
+    const data = await apiPost('/api/specs/list', { conversation_id: window.currentConversationId });
+    let msg;
+    if (data.error) {
+      msg = `❌ ${data.error}`;
+    } else if (!data.specs || data.specs.length === 0) {
+      msg = data.message || 'Nenhuma spec encontrada.';
+    } else {
+      const lines = data.specs.map((s, i) => `**[${i+1}]** \`${s}\``);
+      msg = `📋 **Specs em ${escapeHtml(data.project || '')}:**\n\n${lines.join('\n')}\n\nUse \`/specs <slug>\` para ver o conteúdo.`;
+    }
+    DOM.messagesInner.insertAdjacentHTML('beforeend',
+      renderMessageBubble('assistant', msg, new Date().toISOString()));
+  } catch (e) {
+    DOM.messagesInner.insertAdjacentHTML('beforeend',
+      renderMessageBubble('assistant', `❌ Erro: ${e.message}`, new Date().toISOString()));
+  }
+  scrollToBottom(true);
+}
+
+async function _handleSpecsRead(slug) {
+  _ensureConversation(`/specs ${slug}`);
+  const emptyEl = DOM.messagesInner.querySelector('.empty-state');
+  if (emptyEl) emptyEl.remove();
+  DOM.messagesInner.insertAdjacentHTML('beforeend',
+    renderMessageBubble('user', `/specs ${slug}`, new Date().toISOString()));
+  scrollToBottom(true);
+
+  const loadingId = 'specs-loading-' + Date.now();
+  DOM.messagesInner.insertAdjacentHTML('beforeend',
+    `<div class="typing-indicator" id="${loadingId}">
+      <div class="message-avatar">📋</div>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>`);
+  scrollToBottom(true);
+
+  try {
+    const data = await apiPost('/api/specs/read', {
+      conversation_id: window.currentConversationId, slug,
+    });
+    document.getElementById(loadingId)?.remove();
+    const msg = data.error
+      ? `❌ ${data.error}`
+      : `# Spec: \`${escapeHtml(data.slug)}\`\n\n${data.content}`;
+    DOM.messagesInner.insertAdjacentHTML('beforeend',
+      renderMessageBubble('assistant', msg, new Date().toISOString()));
+  } catch (e) {
+    document.getElementById(loadingId)?.remove();
+    DOM.messagesInner.insertAdjacentHTML('beforeend',
+      renderMessageBubble('assistant', `❌ Erro: ${e.message}`, new Date().toISOString()));
+  }
+  scrollToBottom(true);
+}
+
+function _ensureConversation(cmdText) {
+  if (!window.currentConversationId) {
+    // Criar conversa em background para ter um ID
+    apiPost('/api/conversations', { title: cmdText }).then(data => {
+      window.currentConversationId = data.id || data.conversation_id;
+    }).catch(() => {});
   }
 }

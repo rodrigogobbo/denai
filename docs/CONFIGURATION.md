@@ -1,6 +1,6 @@
 # DenAI — Configuração
 
-> **Versão:** 0.24.1
+> **Versão:** 0.25.0
 
 ---
 

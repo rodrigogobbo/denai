@@ -1,6 +1,6 @@
 # DenAI — Documentação
 
-> **Versão:** 0.24.1 | [GitHub](https://github.com/rodrigogobbo/denai) | [PyPI](https://pypi.org/project/denai/)
+> **Versão:** 0.25.0 | [GitHub](https://github.com/rodrigogobbo/denai) | [PyPI](https://pypi.org/project/denai/)
 
 ## Documentos disponíveis
 
@@ -60,6 +60,7 @@ python -m denai --compartilhar
 
 | Versão | Data | Feature |
 |---|---|---|
+| v0.25.0 | Abr/2026 | Múltiplos perfis isolados + comando `/specs` para specs SDS |
 | v0.24.1 | Abr/2026 | Remoção de CSS legacy — Tailwind como único CSS servido |
 | v0.24.0 | Abr/2026 | macOS x64 + `/context` busca automática no índice da sessão |
 | v0.23.0 | Abr/2026 | Tailwind CSS + comando `/context` para perguntas sobre repositórios |

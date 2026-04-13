@@ -7,6 +7,23 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-04-13
+
+### Adicionado
+- **👤 Múltiplos perfis** — namespaces isolados de dados por contexto
+  - `denai/profile_manager.py` — get/set/list/create/delete profiles
+  - Perfil `default` usa `~/.denai/` diretamente (retrocompatível, zero migração)
+  - Perfis customizados em `~/.denai/profiles/<name>/` — DB, config e providers isolados
+  - `python -m denai --profile <nome>` para ativar um perfil via CLI
+  - `GET/POST /api/profiles`, `POST /api/profiles/{name}/activate`, `DELETE /api/profiles/{name}`
+  - Seletor de perfil no header — dropdown com troca e criação inline
+  - Skills, personas, RAG e API key são compartilhados entre perfis
+- **📋 Comando /specs** — listar e ler specs SDS do repositório ativo
+  - `/specs` — lista specs em `specs/changes/` do projeto via `/context`
+  - `/specs <slug>` — exibe requirements.md + design.md + tasks.md
+  - `POST /api/specs/list`, `POST /api/specs/read`
+  - 21 novos testes (958 total)
+
 ## [0.24.1] - 2026-04-13
 
 ### Removido

@@ -16,10 +16,12 @@ from .personas import router as personas_router
 from .plans import router as plans_router
 from .plans_spec import router as plans_spec_router
 from .plugins import router as plugins_router
+from .profiles import router as profiles_router
 from .project import router as project_router
 from .questions import router as questions_router
 from .rag import router as rag_router
 from .skills import router as skills_router
+from .specs import router as specs_router
 from .system import router as system_router
 from .todos import router as todos_router
 from .ui import router as ui_router
@@ -44,7 +46,9 @@ all_routers = [
     todos_router,
     personas_router,
     plugins_router,
+    profiles_router,
     project_router,
+    specs_router,
     feedback_router,
     marketplace_router,
     rag_router,

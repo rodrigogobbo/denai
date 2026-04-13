@@ -511,6 +511,7 @@ async function init() {
     ]);
     // Load providers after models (non-blocking)
     loadProviders().catch(() => {});
+    initProfileSelector().catch(() => {});
 
     // Load plans badge count
     loadPlans();
@@ -724,3 +725,91 @@ setTimeout(checkForUpdates, 5000);
 
 // Check periodically every 6h
 setInterval(checkForUpdates, 6 * 60 * 60 * 1000);
+
+// ─── Profile Selector ───────────────────────────────────
+async function initProfileSelector() {
+  try {
+    const data = await apiGet('/api/profiles');
+    const active = data.active || 'default';
+    document.getElementById('profileLabel').textContent = active;
+    _renderProfileList(data.profiles || [], active);
+  } catch (e) {
+    console.debug('Profile load failed:', e);
+  }
+}
+
+function _renderProfileList(profiles, active) {
+  const list = document.getElementById('profileList');
+  if (!list) return;
+  list.innerHTML = profiles.map(p => `
+    <div class="profile-item ${p.name === active ? 'active' : ''}"
+         onclick="switchProfile('${escapeAttr(p.name)}')">
+      <span class="profile-item-name">${escapeHtml(p.name)}${p.name === active ? ' ✓' : ''}</span>
+      ${p.name !== 'default' && p.name !== active
+        ? `<button class="profile-item-del" onclick="event.stopPropagation();deleteProfile('${escapeAttr(p.name)}')" title="Remover">✕</button>`
+        : ''}
+    </div>`).join('');
+}
+
+// Toggle dropdown
+const profileSelector = document.getElementById('profileSelector');
+if (profileSelector) {
+  profileSelector.addEventListener('click', (e) => {
+    const dd = document.getElementById('profileDropdown');
+    if (!dd) return;
+    if (dd.style.display === 'none') {
+      dd.style.display = 'block';
+      document.getElementById('newProfileInput')?.focus();
+    } else {
+      dd.style.display = 'none';
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (!profileSelector.contains(e.target)) {
+      const dd = document.getElementById('profileDropdown');
+      if (dd) dd.style.display = 'none';
+    }
+  });
+}
+
+window.switchProfile = async function(name) {
+  try {
+    const data = await apiPost(`/api/profiles/${encodeURIComponent(name)}/activate`, {});
+    if (data.ok && data.reload) {
+      showToast(`Perfil "${name}" ativado. Recarregando...`, 'success');
+      setTimeout(() => window.location.reload(), 800);
+    }
+  } catch (e) {
+    showToast('Erro ao trocar de perfil.', 'error');
+  }
+};
+
+window.createAndActivateProfile = async function() {
+  const input = document.getElementById('newProfileInput');
+  const name = input?.value.trim();
+  if (!name) return;
+  try {
+    await apiPost('/api/profiles', { name });
+    await switchProfile(name);
+  } catch (e) {
+    showToast(`Erro: ${e.message}`, 'error');
+  }
+};
+
+window.deleteProfile = async function(name) {
+  if (!confirm(`Remover o perfil "${name}" e todos os seus dados?`)) return;
+  try {
+    const resp = await fetch(API_BASE + `/api/profiles/${encodeURIComponent(name)}`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      showToast(`Perfil "${name}" removido.`, 'success');
+      initProfileSelector();
+    } else {
+      showToast(data.error || 'Erro ao remover.', 'error');
+    }
+  } catch (e) {
+    showToast('Erro ao remover perfil.', 'error');
+  }
+};

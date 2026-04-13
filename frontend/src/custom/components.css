@@ -750,3 +750,51 @@
   transition: background 0.15s;
 }
 .context-badge:hover { background: rgba(99,179,237,0.25); }
+
+/* ─── Profile Selector ───────────────────────────────────── */
+.profile-selector {
+  position: relative; display: flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 6px; cursor: pointer;
+  font-size: 12px; font-weight: 500; color: var(--text-muted);
+  border: 1px solid transparent; transition: var(--transition-fast);
+  margin-left: 8px;
+}
+.profile-selector:hover { border-color: var(--border); color: var(--text-primary); }
+.profile-arrow { font-size: 9px; opacity: 0.6; }
+.profile-dropdown {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 8px; min-width: 180px; z-index: 200;
+  box-shadow: var(--shadow-md); overflow: hidden;
+}
+.profile-dropdown-list { max-height: 200px; overflow-y: auto; }
+.profile-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; font-size: 13px; cursor: pointer;
+  color: var(--text-primary); transition: background 0.1s;
+}
+.profile-item:hover { background: var(--bg-card-hover); }
+.profile-item.active { color: var(--accent); font-weight: 600; }
+.profile-item-name { flex: 1; }
+.profile-item-del {
+  font-size: 11px; color: var(--text-muted); opacity: 0;
+  padding: 2px 5px; border-radius: 4px; border: none;
+  background: transparent; cursor: pointer;
+}
+.profile-item:hover .profile-item-del { opacity: 0.6; }
+.profile-item-del:hover { color: var(--danger); opacity: 1 !important; }
+.profile-dropdown-new {
+  display: flex; gap: 6px; padding: 8px;
+  border-top: 1px solid var(--border);
+}
+.profile-dropdown-new input {
+  flex: 1; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 5px; padding: 4px 8px; font-size: 12px;
+  color: var(--text-primary); outline: none;
+}
+.profile-dropdown-new input:focus { border-color: var(--accent); }
+.profile-dropdown-new button {
+  background: var(--accent); color: #0a0e1a; border: none;
+  border-radius: 5px; padding: 4px 10px; font-size: 13px;
+  font-weight: 700; cursor: pointer;
+}

@@ -46,6 +46,7 @@ def parse_args():
     parser.add_argument("--host", default=None, help="Endereço de bind")
     parser.add_argument("--port", type=int, default=None, help="Porta (padrão: 4078)")
     parser.add_argument("--model", default=None, help="Modelo padrão do Ollama")
+    parser.add_argument("--profile", default=None, help="Perfil a usar (default: perfil ativo)")
 
     if "uvicorn" not in sys.modules.get("__main__", "").__class__.__name__:
         try:
@@ -67,9 +68,22 @@ CLI = parse_args()
 
 # ─── Paths ─────────────────────────────────────────────────────────────────
 
-DATA_DIR = Path.home() / ".denai"
+
+# DATA_DIR é dinâmico: depende do perfil ativo
+# O perfil 'default' usa ~/.denai/ (retrocompatível)
+# Outros perfis usam ~/.denai/profiles/<name>/
+def _resolve_data_dir() -> Path:
+    try:
+        from .profile_manager import get_active_profile, get_profile_dir
+
+        return get_profile_dir(get_active_profile())
+    except Exception:
+        return Path.home() / ".denai"
+
+
+DATA_DIR = _resolve_data_dir()
 DB_PATH = DATA_DIR / "denai.db"
-API_KEY_PATH = DATA_DIR / "api.key"
+API_KEY_PATH = Path.home() / ".denai" / "api.key"  # API key sempre em ~/.denai/
 STATIC_DIR = Path(__file__).parent / "static"
 CONFIG_YAML_PATH = DATA_DIR / "config.yaml"
 
