@@ -27,6 +27,12 @@ jobs:
             uv_url: "https://github.com/astral-sh/uv/releases/download/0.6.14/uv-aarch64-apple-darwin.tar.gz"
             uv_bin: "uv-darwin-arm64"
             uv_extract: "tar xz -C /tmp -f /tmp/uv.tar.gz && mv /tmp/uv-aarch64-apple-darwin/uv electron/bin/uv-darwin-arm64 && chmod +x electron/bin/uv-darwin-arm64"
+            forge_arch: "arm64"
+          - os: macos-13
+            uv_url: "https://github.com/astral-sh/uv/releases/download/0.6.14/uv-x86_64-apple-darwin.tar.gz"
+            uv_bin: "uv-darwin-x64"
+            uv_extract: "tar xz -C /tmp -f /tmp/uv.tar.gz && mv /tmp/uv-x86_64-apple-darwin/uv electron/bin/uv-darwin-x64 && chmod +x electron/bin/uv-darwin-x64"
+            forge_arch: "x64"
           - os: ubuntu-latest
             uv_url: "https://github.com/astral-sh/uv/releases/download/0.6.14/uv-x86_64-unknown-linux-gnu.tar.gz"
             uv_bin: "uv-linux-x64"
@@ -63,7 +69,12 @@ jobs:
         working-directory: electron
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run make
+        run: |
+          if [ -n "${{ matrix.forge_arch }}" ]; then
+            npm run make -- --arch ${{ matrix.forge_arch }}
+          else
+            npm run make
+          fi
 
       - name: Upload artifacts to Release
         shell: bash

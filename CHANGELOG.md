@@ -7,6 +7,21 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-04-13
+
+### Adicionado
+- **🍎 macOS x64 no build Electron** — instalador para Mac Intel (macos-13) além do arm64 (macos-latest)
+  - `electron.yml`: matrix com `macos-13` + `uv-darwin-x64` + `--arch x64` no forge
+  - Release agora inclui: `.dmg` (arm64) + `.dmg` (x64) + `.exe` (Windows) + `.zip` (Linux)
+
+### Melhorado
+- **📁 `/context` — busca automática no índice da sessão**
+  - `rag_search` agora usa automaticamente o índice de contexto quando ativo via `/context`
+  - `conversation_id` injetado como `_conv_id` nos `tool_args` em ambos os caminhos de execução (serial e paralelo)
+  - Sem contexto ativo: comportamento original (busca em `~/.denai/documents/`)
+  - Ícone diferenciado: 📁 para resultados do contexto, 📄 para RAG global
+  - 3 novos testes (937 total)
+
 ## [0.23.0] - 2026-04-13
 
 ### Adicionado
