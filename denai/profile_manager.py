@@ -54,7 +54,7 @@ def set_active_profile(name: str) -> None:
         get_profile_dir(name).mkdir(parents=True, exist_ok=True)
     _BASE_DIR.mkdir(parents=True, exist_ok=True)
     _ACTIVE_FILE.write_text(name, encoding="utf-8")
-    log.info("Perfil ativo alterado para: %s", name)
+    log.info("Perfil ativo alterado")
 
 
 def get_profile_dir(name: str) -> Path:
@@ -111,7 +111,7 @@ def create_profile(name: str) -> Path:
         raise ValueError(f"Perfil '{name}' já existe.")
 
     profile_dir.mkdir(parents=True, exist_ok=True)
-    log.info("Perfil criado: %s (%s)", name, profile_dir)
+    log.info("Perfil criado com sucesso")
     return profile_dir
 
 
@@ -128,5 +128,5 @@ def delete_profile(name: str) -> bool:
         return False
 
     shutil.rmtree(profile_dir)
-    log.info("Perfil removido: %s", name)
+    log.info("Perfil removido com sucesso")
     return True

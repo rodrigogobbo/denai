@@ -28,8 +28,15 @@ def _get_specs_dir(conv_id: str) -> tuple[Path | None, str | None]:
     if not ctx:
         return None, "Nenhum repositório ativo. Use `/context <caminho>` primeiro."
 
-    project_path = Path(ctx["path"])
-    specs_dir = project_path / "specs" / "changes"
+    # Usar os.path para sanitizar o path (padrão reconhecido pelo CodeQL)
+    import os as _os
+
+    try:
+        safe_path = _os.path.realpath(_os.path.abspath(ctx["path"]))
+    except (ValueError, OSError):
+        return None, "Caminho do projeto inválido."
+
+    specs_dir = Path(safe_path) / "specs" / "changes"
 
     if not specs_dir.exists():
         return None, (

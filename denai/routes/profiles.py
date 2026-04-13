@@ -39,8 +39,8 @@ async def create_new_profile(body: ProfileBody):
     try:
         profile_dir = create_profile(body.name)
         return {"ok": True, "name": body.name, "dir": str(profile_dir)}
-    except ValueError as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
+    except ValueError:
+        return JSONResponse({"error": "Operação inválida. Verifique o nome do perfil."}, status_code=400)
 
 
 @router.post("/{name}/activate")
@@ -54,8 +54,8 @@ async def activate_profile(name: str):
             "message": "Perfil ativado. Recarregue a página para aplicar.",
             "reload": True,
         }
-    except ValueError as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
+    except ValueError:
+        return JSONResponse({"error": "Operação inválida. Verifique o nome do perfil."}, status_code=400)
 
 
 @router.delete("/{name}")
@@ -66,5 +66,5 @@ async def remove_profile(name: str):
         if not removed:
             return JSONResponse({"error": f"Perfil '{name}' não encontrado."}, status_code=404)
         return {"ok": True}
-    except ValueError as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
+    except ValueError:
+        return JSONResponse({"error": "Operação inválida. Verifique o nome do perfil."}, status_code=400)
