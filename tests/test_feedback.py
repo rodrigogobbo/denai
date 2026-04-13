@@ -122,7 +122,7 @@ class TestSubmitFeedback:
         assert resp.status_code == 200
         data = resp.json()
         assert data["issue_number"] == 42
-        assert "github.com" in data["issue_url"]
+        assert data["issue_url"].startswith("https://github.com")
 
     @pytest.mark.asyncio
     async def test_submit_fallback_on_github_error(self, client, tmp_path):
