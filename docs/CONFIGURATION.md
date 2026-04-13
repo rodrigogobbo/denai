@@ -110,3 +110,34 @@ A `config.example.yaml` is included in the repo as reference.
 | `DENAI_MAX_CONTEXT` | `65536` | Max context window (tokens) |
 
 ---
+
+## Perfis
+
+Múltiplos perfis permitem isolar conversas, memórias e providers por contexto (trabalho, pessoal, projetos).
+
+```bash
+# Ativar um perfil via CLI
+python -m denai --profile trabalho
+python -m denai --profile pessoal
+```
+
+O perfil `default` usa `~/.denai/` diretamente — retrocompatível, sem migração.
+
+Perfis customizados ficam em `~/.denai/profiles/<nome>/` com seu próprio `denai.db`, `config.yaml` e `providers.yaml`.
+
+**Troca via UI:** clique no nome do perfil no header → dropdown com troca e criação inline.
+
+**API:**
+```bash
+# Listar perfis
+curl http://localhost:4078/api/profiles -H "X-API-Key: $KEY"
+
+# Criar perfil
+curl -X POST http://localhost:4078/api/profiles \
+  -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"name": "trabalho"}'
+
+# Ativar (requer reload da página)
+curl -X POST http://localhost:4078/api/profiles/trabalho/activate \
+  -H "X-API-Key: $KEY"
+```
