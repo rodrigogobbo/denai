@@ -107,10 +107,37 @@ async def test_check_update_returns_current_version(client):
 async def test_check_update_available(client):
     with patch("denai.routes.update.httpx.AsyncClient") as mock_cls:
         mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"info": {"version": "1.0.0"}}
-        mock_client.get.return_value = mock_response
+        pypi_resp = MagicMock()
+        pypi_resp.status_code = 200
+        pypi_resp.json.return_value = {"info": {"version": "1.0.0"}}
+        github_resp = MagicMock()
+        github_resp.status_code = 404  # sem release notes no GitHub
+        mock_client.get.side_effect = [pypi_resp, github_resp]
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_cls.return_value = mock_client
+
+        with patch("denai.routes.update._extract_changelog", return_value=None):
+            resp = await client.get("/api/update/check")
+
+    data = resp.json()
+    assert data["update_available"] is True
+    assert data["latest_version"] == "1.0.0"
+
+
+@pytest.mark.asyncio
+async def test_check_update_includes_release_notes(client):
+    """Quando há atualização, inclui notas de release do GitHub."""
+    notes = "## [1.0.0]\n\n### Adicionado\n- Feature X\n- Feature Y"
+    with patch("denai.routes.update.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        pypi_resp = MagicMock()
+        pypi_resp.status_code = 200
+        pypi_resp.json.return_value = {"info": {"version": "1.0.0"}}
+        github_resp = MagicMock()
+        github_resp.status_code = 200
+        github_resp.json.return_value = {"body": notes}
+        mock_client.get.side_effect = [pypi_resp, github_resp]
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_cls.return_value = mock_client
@@ -119,7 +146,31 @@ async def test_check_update_available(client):
 
     data = resp.json()
     assert data["update_available"] is True
-    assert data["latest_version"] == "1.0.0"
+    assert "release_notes" in data
+    assert "Feature X" in data["release_notes"]
+
+
+@pytest.mark.asyncio
+async def test_check_update_fallback_to_changelog(client):
+    """Sem release no GitHub, faz fallback para CHANGELOG.md local."""
+    with patch("denai.routes.update.httpx.AsyncClient") as mock_cls:
+        mock_client = AsyncMock()
+        pypi_resp = MagicMock()
+        pypi_resp.status_code = 200
+        pypi_resp.json.return_value = {"info": {"version": "1.0.0"}}
+        github_resp = MagicMock()
+        github_resp.status_code = 404
+        mock_client.get.side_effect = [pypi_resp, github_resp]
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_cls.return_value = mock_client
+
+        with patch("denai.routes.update._extract_changelog", return_value="## [1.0.0]\n- changelog local"):
+            resp = await client.get("/api/update/check")
+
+    data = resp.json()
+    assert data["update_available"] is True
+    assert data.get("release_notes") == "## [1.0.0]\n- changelog local"
 
 
 @pytest.mark.asyncio
