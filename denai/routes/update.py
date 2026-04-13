@@ -31,7 +31,7 @@ def _parse_version(v: str) -> tuple[int, ...]:
 
 @router.get("/api/update/check")
 async def check_update():
-    """Compara versão local vs PyPI."""
+    """Compara versão local vs PyPI e busca notas de release do GitHub."""
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get("https://pypi.org/pypi/denai/json")
@@ -45,11 +45,21 @@ async def check_update():
             latest = data["info"]["version"]
             current_t = _parse_version(VERSION)
             latest_t = _parse_version(latest)
-            return {
+            update_available = latest_t > current_t
+
+            result: dict = {
                 "current_version": VERSION,
                 "latest_version": latest,
-                "update_available": latest_t > current_t,
+                "update_available": update_available,
             }
+
+            # Buscar notas de release do GitHub quando há atualização
+            if update_available:
+                notes = await _fetch_release_notes(client, latest)
+                if notes:
+                    result["release_notes"] = notes
+
+            return result
     except Exception as e:
         log.error("Erro ao verificar atualização no PyPI: %s", e)
         return {
@@ -57,6 +67,42 @@ async def check_update():
             "current_version": VERSION,
             "error": "Não foi possível verificar atualizações",
         }
+
+
+async def _fetch_release_notes(client: httpx.AsyncClient, version: str) -> str | None:
+    """Busca as notas da release no GitHub Releases."""
+    try:
+        tag = f"v{version}"
+        url = f"https://api.github.com/repos/rodrigogobbo/denai/releases/tags/{tag}"
+        resp = await client.get(url, headers={"Accept": "application/vnd.github+json"})
+        if resp.status_code == 200:
+            body = resp.json().get("body", "").strip()
+            if body:
+                return body
+    except Exception:
+        pass
+
+    # Fallback: extrair do CHANGELOG.md bundled
+    return _extract_changelog(version)
+
+
+def _extract_changelog(version: str) -> str | None:
+    """Extrai notas de uma versão do CHANGELOG.md local."""
+    import re
+    from pathlib import Path
+
+    changelog_path = Path(__file__).parent.parent.parent / "CHANGELOG.md"
+    if not changelog_path.exists():
+        return None
+    try:
+        content = changelog_path.read_text(encoding="utf-8")
+        pattern = rf"## \[{re.escape(version)}\].*?(?=\n## \[|\Z)"
+        match = re.search(pattern, content, re.DOTALL)
+        if match:
+            return match.group(0).strip()
+    except Exception:
+        pass
+    return None
 
 
 # ── Install (SSE streaming) ──────────────────────────────────────

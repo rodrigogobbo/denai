@@ -7,6 +7,21 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-04-13
+
+### Adicionado
+- **📋 Changelog in-app** — notas de release exibidas no modal de update antes de instalar
+  - `GET /api/update/check` retorna `release_notes` quando há atualização disponível
+  - Busca primeiro no GitHub Releases via API; fallback para `CHANGELOG.md` local
+  - Modal de update exibe as notas formatadas (bullets, texto limpo, máx 800 chars)
+  - 2 novos testes: `test_check_update_includes_release_notes`, `test_check_update_fallback_to_changelog`
+
+### Corrigido
+- **📦 Tamanho dos instaladores Electron** — redução de ~220MB para ~80-100MB
+  - CI agora baixa apenas o binário `uv` da plataforma de build (não todos os 4)
+  - `electron.yml`: matrix com `include` por OS → cada job baixa só seu `uv_bin`
+  - Windows: `uv-win32-x64.exe` | macOS: `uv-darwin-arm64` | Linux: `uv-linux-x64`
+
 ## [0.21.0] - 2026-04-11
 
 ### Adicionado

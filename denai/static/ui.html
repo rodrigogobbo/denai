@@ -337,7 +337,7 @@
 <script src="/static/js/modes.js"></script>
 <!-- Update Modal -->
 <div class="modal-overlay" id="updateModalOverlay" style="display:none;">
-  <div class="modal-box" id="updateModal" style="max-width:480px;">
+  <div class="modal-box" id="updateModal" style="max-width:520px;">
     <div class="modal-header">
       <h2 class="modal-title">🆕 Atualizar DenAI</h2>
       <button class="modal-close" onclick="closeUpdateModal()">&times;</button>
@@ -348,6 +348,11 @@
         <span class="update-version-badge" id="updateCurrentVersion">v?</span>
         <span class="update-arrow">→</span>
         <span class="update-version-badge new" id="updateNewVersion">v?</span>
+      </div>
+      <!-- Notas de release -->
+      <div class="update-changelog" id="updateChangelog" style="display:none;">
+        <div class="update-changelog-label">O que há de novo:</div>
+        <div class="update-changelog-body" id="updateChangelogBody"></div>
       </div>
       <!-- Log de progresso -->
       <div class="update-log" id="updateLog" style="display:none;">

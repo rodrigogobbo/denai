@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag da release (ex: v0.21.0)'
+        description: 'Tag da release (ex: v0.22.0)'
         required: true
 
 jobs:
@@ -14,11 +14,23 @@ jobs:
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     permissions:
-      contents: write   # necessário para gh release upload
+      contents: write
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            uv_url: "https://github.com/astral-sh/uv/releases/download/0.6.14/uv-x86_64-pc-windows-msvc.zip"
+            uv_bin: "uv-win32-x64.exe"
+            uv_extract: "unzip -o /tmp/uv-win.zip -d /tmp/uv-win && mv /tmp/uv-win/uv.exe electron/bin/uv-win32-x64.exe"
+          - os: macos-latest
+            uv_url: "https://github.com/astral-sh/uv/releases/download/0.6.14/uv-aarch64-apple-darwin.tar.gz"
+            uv_bin: "uv-darwin-arm64"
+            uv_extract: "tar xz -C /tmp -f /tmp/uv.tar.gz && mv /tmp/uv-aarch64-apple-darwin/uv electron/bin/uv-darwin-arm64 && chmod +x electron/bin/uv-darwin-arm64"
+          - os: ubuntu-latest
+            uv_url: "https://github.com/astral-sh/uv/releases/download/0.6.14/uv-x86_64-unknown-linux-gnu.tar.gz"
+            uv_bin: "uv-linux-x64"
+            uv_extract: "tar xz -C /tmp -f /tmp/uv.tar.gz && mv /tmp/uv-x86_64-unknown-linux-gnu/uv electron/bin/uv-linux-x64 && chmod +x electron/bin/uv-linux-x64"
 
     steps:
       - uses: actions/checkout@v6
@@ -30,33 +42,14 @@ jobs:
           cache: 'npm'
           cache-dependency-path: electron/package-lock.json
 
-      - name: Download uv binaries
-        working-directory: electron
+      - name: Download uv binary (platform-specific)
         shell: bash
         run: |
-          mkdir -p bin
-          UV_VERSION="0.6.14"
-          BASE="https://github.com/astral-sh/uv/releases/download/${UV_VERSION}"
-
-          # Darwin arm64
-          curl -fsSL "${BASE}/uv-aarch64-apple-darwin.tar.gz" | tar xz -C /tmp
-          mv /tmp/uv-aarch64-apple-darwin/uv bin/uv-darwin-arm64
-          chmod +x bin/uv-darwin-arm64
-
-          # Darwin x64
-          curl -fsSL "${BASE}/uv-x86_64-apple-darwin.tar.gz" | tar xz -C /tmp
-          mv /tmp/uv-x86_64-apple-darwin/uv bin/uv-darwin-x64
-          chmod +x bin/uv-darwin-x64
-
-          # Linux x64
-          curl -fsSL "${BASE}/uv-x86_64-unknown-linux-gnu.tar.gz" | tar xz -C /tmp
-          mv /tmp/uv-x86_64-unknown-linux-gnu/uv bin/uv-linux-x64
-          chmod +x bin/uv-linux-x64
-
-          # Windows x64
-          curl -fsSL "${BASE}/uv-x86_64-pc-windows-msvc.zip" -o /tmp/uv-win.zip
-          unzip -o /tmp/uv-win.zip -d /tmp/uv-win
-          mv /tmp/uv-win/uv.exe bin/uv-win32-x64.exe
+          mkdir -p electron/bin
+          curl -fsSL "${{ matrix.uv_url }}" -o /tmp/uv.tar.gz 2>/dev/null || \
+            curl -fsSL "${{ matrix.uv_url }}" -o /tmp/uv-win.zip
+          ${{ matrix.uv_extract }}
+          echo "uv binary: $(ls -lh electron/bin/)"
 
       - name: Install dependencies
         working-directory: electron

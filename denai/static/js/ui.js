@@ -544,6 +544,7 @@ async function init() {
 // ─── Auto-Update Check ───
 let _pendingUpdateVersion = null;
 let _lastCheckedVersion = null;
+let _pendingReleaseNotes = null;
 
 async function checkForUpdates() {
   try {
@@ -551,6 +552,7 @@ async function checkForUpdates() {
     if (data.update_available && data.latest_version !== _lastCheckedVersion) {
       _pendingUpdateVersion = data.latest_version;
       _lastCheckedVersion = data.latest_version;
+      _pendingReleaseNotes = data.release_notes || null;
 
       // Toast não-intrusivo com botão para abrir modal
       const existingToast = document.querySelector('.toast.update-toast');
@@ -560,7 +562,7 @@ async function checkForUpdates() {
       toast.className = 'toast info update-toast';
       toast.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:8px;';
       toast.innerHTML = `🆕 DenAI <b>${data.latest_version}</b> disponível
-        <button onclick="openUpdateModal('${escapeAttr(data.current_version)}','${escapeAttr(data.latest_version)}')"
+        <button onclick="openUpdateModal('${escapeAttr(data.current_version)}','${escapeAttr(data.latest_version)}', window._pendingReleaseNotes)"
           style="background:var(--accent);color:#0a0e1a;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:600;">
           Ver e instalar
         </button>`;
@@ -573,7 +575,7 @@ async function checkForUpdates() {
 window.checkForUpdates = checkForUpdates;
 
 // ─── Update Modal ───
-window.openUpdateModal = function(currentVersion, newVersion) {
+window.openUpdateModal = function(currentVersion, newVersion, releaseNotes) {
   document.getElementById('updateCurrentVersion').textContent = `v${currentVersion}`;
   document.getElementById('updateNewVersion').textContent = `v${newVersion}`;
   document.getElementById('updateLog').style.display = 'none';
@@ -583,8 +585,26 @@ window.openUpdateModal = function(currentVersion, newVersion) {
   document.getElementById('updateActions').innerHTML = `
     <button class="pf-btn-cancel" onclick="closeUpdateModal()">Cancelar</button>
     <button class="pf-btn-save" id="btnInstallUpdate" onclick="startInstallUpdate()">Instalar atualização</button>`;
+
+  // Exibir changelog se disponível
+  const changelogEl = document.getElementById('updateChangelog');
+  const changelogBody = document.getElementById('updateChangelogBody');
+  if (releaseNotes && changelogEl && changelogBody) {
+    // Simplificar markdown: remover headers pesados, manter bullets e texto
+    const simplified = releaseNotes
+      .replace(/^## .+$/m, '')           // remover título da seção
+      .replace(/\*\*(.+?)\*\*/g, '$1')   // remover bold
+      .replace(/`(.+?)`/g, '$1')         // remover inline code
+      .replace(/^\s*[-*]\s+/gm, '• ')    // normalizar bullets
+      .replace(/\n{3,}/g, '\n\n')        // colapsar linhas em branco
+      .trim();
+    changelogBody.textContent = simplified.slice(0, 800) + (simplified.length > 800 ? '…' : '');
+    changelogEl.style.display = 'block';
+  } else if (changelogEl) {
+    changelogEl.style.display = 'none';
+  }
+
   document.getElementById('updateModalOverlay').style.display = 'flex';
-  // Remove o toast ao abrir o modal
   const toast = document.querySelector('.toast.update-toast');
   if (toast) toast.remove();
 };
