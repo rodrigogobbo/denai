@@ -103,41 +103,38 @@ jobs:
             npm run make
           fi
 
-      - name: Upload artifacts to Release
+      - name: Upload macOS artifacts (arm64 + x64)
+        if: runner.os == 'macOS'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ github.event.release.tag_name }}"
-          if [ -z "$TAG" ]; then
-            TAG="${{ inputs.tag }}"
-          fi
-          echo "Uploading artifacts for tag: $TAG"
+          [ -z "$TAG" ] && TAG="${{ inputs.tag }}"
+          # arm64 — renomear para DenAI-arm64.dmg
+          find electron/out/make -name "DenAI.dmg" | while read f; do
+            DEST="$(dirname "$f")/DenAI-arm64.dmg"
+            cp "$f" "$DEST"
+            echo "Uploading arm64: $DEST"
+            gh release upload "$TAG" "$DEST" --clobber || true
+          done
+          # x64 — renomear para DenAI-x64.dmg
+          find electron/out/make -name "DenAI.dmg" | while read f; do
+            DEST="$(dirname "$f")/DenAI-x64.dmg"
+            cp "$f" "$DEST"
+            echo "Uploading x64: $DEST"
+            gh release upload "$TAG" "$DEST" --clobber || true
+          done
 
-          # No macOS: renomear o segundo DMG (x64) para evitar clobber
-          if [[ "$RUNNER_OS" == "macOS" ]]; then
-            # arm64 DMG (primeiro build: out/make/DenAI.dmg)
-            ARM_DMG=$(find electron/out/make -name "DenAI.dmg" | head -1)
-            if [ -n "$ARM_DMG" ]; then
-              ARM_DEST="$(dirname "$ARM_DMG")/DenAI-arm64.dmg"
-              cp "$ARM_DMG" "$ARM_DEST"
-              gh release upload "$TAG" "$ARM_DEST" --clobber || true
-            fi
-            # x64 DMG (segundo build: out/make com arch=x64)
-            X64_DMG=$(find electron/out/make -name "DenAI.dmg" | tail -1)
-            if [ -n "$X64_DMG" ] && [ "$X64_DMG" != "$ARM_DMG" ]; then
-              X64_DEST="$(dirname "$X64_DMG")/DenAI-x64.dmg"
-              cp "$X64_DMG" "$X64_DEST"
-              gh release upload "$TAG" "$X64_DEST" --clobber || true
-            else
-              # Fallback: se só houver um DMG, subir como arm64 e tentar x64
-              find electron/out/make -name "*.dmg" | while read f; do
-                gh release upload "$TAG" "$f" --clobber || true
-              done
-            fi
-          else
-            find electron/out/make -type f \( -name "*.exe" -o -name "*.AppImage" -o -name "*.zip" \) | while read f; do
-              echo "Uploading: $f"
-              gh release upload "$TAG" "$f" --clobber || true
-            done
-          fi
+      - name: Upload non-macOS artifacts
+        if: runner.os != 'macOS'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          [ -z "$TAG" ] && TAG="${{ inputs.tag }}"
+          find electron/out/make -type f \( -name "*.exe" -o -name "*.AppImage" -o -name "*.zip" \) | while read f; do
+            echo "Uploading: $f"
+            gh release upload "$TAG" "$f" --clobber || true
+          done
