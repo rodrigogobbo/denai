@@ -31,7 +31,9 @@
   background-position: 10px center;
 }
 
-.sidebar-search-input:focus {
+.sidebar-search-input:focus,
+.model-selector:focus,
+.pull-model-input:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -393,10 +395,7 @@
   padding-right: 28px;
 }
 
-.model-selector:focus {
-  outline: none;
-  border-color: var(--accent);
-}
+/* focus consolidado em .sidebar-search-input:focus, .model-selector:focus, .pull-model-input:focus acima */
 
 .model-selector option {
   background: var(--bg-card);
@@ -424,10 +423,7 @@
   transition: border-color var(--transition-fast);
 }
 
-.pull-model-input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
+/* focus consolidado em .sidebar-search-input:focus, .model-selector:focus, .pull-model-input:focus acima */
 
 .pull-model-input::placeholder {
   color: var(--text-muted);
@@ -500,7 +496,8 @@
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.btn-toggle-sidebar:hover {
+.btn-toggle-sidebar:hover,
+.header-btn:hover {
   background: var(--bg-card);
   color: var(--text-primary);
 }
@@ -603,10 +600,7 @@
   position: relative;
 }
 
-.header-btn:hover {
-  background: var(--bg-card);
-  color: var(--text-primary);
-}
+/* hover consolidado em .btn-toggle-sidebar:hover, .header-btn:hover acima */
 
 .header-btn svg {
   width: 18px;

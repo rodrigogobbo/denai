@@ -84,7 +84,14 @@ async function sendMessage() {
       return;
     }
     if (specsMatch) {
-      await _handleSpecsRead(specsMatch[1].trim());
+      const specsArg = specsMatch[1].trim();
+      // Suporte a "/specs <slug> analyze"
+      const analyzeMatch = specsArg.match(/^(.+?)\s+analyze$/i);
+      if (analyzeMatch) {
+        await _handleSpecsAnalyze(analyzeMatch[1].trim());
+      } else {
+        await _handleSpecsRead(specsArg);
+      }
       return;
     }
 
@@ -397,6 +404,11 @@ async function sendMessage() {
     timeDiv.textContent = formatTime(new Date().toISOString());
     msgDiv.querySelector('.message-content').appendChild(timeDiv);
 
+    // Notificação Electron — só quando teve tool calls (tarefa longa) e janela desfocada
+    if (toolCallCount > 0 && window.electronAPI?.notifyTaskDone) {
+      window.electronAPI.notifyTaskDone(text.slice(0, 60), toolCallCount);
+    }
+
     // Update conversation in sidebar
     const conv = window.conversations.find(c => (c.id || c.conversation_id) === window.currentConversationId);
     if (conv) {
@@ -610,17 +622,34 @@ async function _handleSpecsList() {
 
   try {
     const data = await apiPost('/api/specs/list', { conversation_id: window.currentConversationId });
-    let msg;
+    let msgEl;
     if (data.error) {
-      msg = `❌ ${data.error}`;
+      DOM.messagesInner.insertAdjacentHTML('beforeend',
+        renderMessageBubble('assistant', `❌ ${data.error}`, new Date().toISOString()));
     } else if (!data.specs || data.specs.length === 0) {
-      msg = data.message || 'Nenhuma spec encontrada.';
+      DOM.messagesInner.insertAdjacentHTML('beforeend',
+        renderMessageBubble('assistant', data.message || 'Nenhuma spec encontrada.', new Date().toISOString()));
     } else {
-      const lines = data.specs.map((s, i) => `**[${i+1}]** \`${s}\``);
-      msg = `📋 **Specs em ${escapeHtml(data.project || '')}:**\n\n${lines.join('\n')}\n\nUse \`/specs <slug>\` para ver o conteúdo.`;
+      // Renderizar lista com botões de ação
+      const bubbleId = 'specs-list-' + Date.now();
+      const items = data.specs.map(s => `
+        <div class="specs-list-item">
+          <span class="specs-list-slug"><code>${escapeHtml(s)}</code></span>
+          <div class="specs-list-actions">
+            <button class="specs-btn specs-btn-read" onclick="_handleSpecsRead('${escapeAttr(s)}')">📄 Ver</button>
+            <button class="specs-btn specs-btn-analyze" onclick="_handleSpecsAnalyze('${escapeAttr(s)}')">🔍 Analisar</button>
+          </div>
+        </div>`).join('');
+      const html = `<div class="specs-list-header">📋 <strong>Specs em ${escapeHtml(data.project || '')}:</strong></div>
+        <div class="specs-list-container" id="${bubbleId}">${items}</div>`;
+      DOM.messagesInner.insertAdjacentHTML('beforeend',
+        renderMessageBubble('assistant', '', new Date().toISOString()));
+      const last = DOM.messagesInner.querySelector('.message-bubble:last-of-type') ||
+                   DOM.messagesInner.lastElementChild?.querySelector('.message-bubble');
+      // Encontrar o último bubble assistant e injetar HTML
+      const bubbles = DOM.messagesInner.querySelectorAll('.message-row.assistant .message-bubble');
+      if (bubbles.length > 0) bubbles[bubbles.length - 1].innerHTML = html;
     }
-    DOM.messagesInner.insertAdjacentHTML('beforeend',
-      renderMessageBubble('assistant', msg, new Date().toISOString()));
   } catch (e) {
     DOM.messagesInner.insertAdjacentHTML('beforeend',
       renderMessageBubble('assistant', `❌ Erro: ${e.message}`, new Date().toISOString()));
@@ -661,6 +690,92 @@ async function _handleSpecsRead(slug) {
   }
   scrollToBottom(true);
 }
+
+async function _handleSpecsAnalyze(slug) {
+  _ensureConversation(`/specs ${slug} analyze`);
+  const emptyEl = DOM.messagesInner.querySelector('.empty-state');
+  if (emptyEl) emptyEl.remove();
+  DOM.messagesInner.insertAdjacentHTML('beforeend',
+    renderMessageBubble('user', `/specs ${slug} analyze`, new Date().toISOString()));
+  scrollToBottom(true);
+
+  // Bubble de resposta com typing indicator
+  const typingId = 'specs-analyze-' + Date.now();
+  DOM.messagesInner.insertAdjacentHTML('beforeend',
+    `<div class="typing-indicator" id="${typingId}">
+      <div class="message-avatar">🔍</div>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>`);
+  scrollToBottom(true);
+
+  try {
+    const response = await fetch(API_BASE + '/api/specs/analyze', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        conversation_id: window.currentConversationId,
+        slug,
+        model: window.currentModel,
+      }),
+    });
+
+    document.getElementById(typingId)?.remove();
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: response.statusText }));
+      DOM.messagesInner.insertAdjacentHTML('beforeend',
+        renderMessageBubble('assistant', `❌ ${err.error || 'Erro desconhecido'}`, new Date().toISOString()));
+      scrollToBottom(true);
+      return;
+    }
+
+    // Streaming SSE
+    DOM.messagesInner.insertAdjacentHTML('beforeend',
+      renderMessageBubble('assistant', '', new Date().toISOString()));
+    const bubbles = DOM.messagesInner.querySelectorAll('.message-row.assistant .message-bubble');
+    const bubbleEl = bubbles[bubbles.length - 1];
+    let fullContent = '';
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data: ')) continue;
+        const jsonStr = trimmed.slice(6);
+        if (!jsonStr || jsonStr === '[DONE]') continue;
+        try {
+          const event = JSON.parse(jsonStr);
+          if (event.content) {
+            fullContent += event.content;
+            bubbleEl.innerHTML = renderMarkdown(fullContent);
+            scrollToBottom();
+          }
+          if (event.done) break;
+        } catch (_) { /* ignorar parse errors */ }
+      }
+    }
+
+    if (!fullContent) {
+      bubbleEl.innerHTML = '<p style="color:var(--text-muted);font-style:italic;">Análise vazia.</p>';
+    }
+  } catch (e) {
+    document.getElementById(typingId)?.remove();
+    DOM.messagesInner.insertAdjacentHTML('beforeend',
+      renderMessageBubble('assistant', `❌ Erro: ${e.message}`, new Date().toISOString()));
+  }
+  scrollToBottom(true);
+}
+
+window._handleSpecsAnalyze = _handleSpecsAnalyze;
+window._handleSpecsRead = _handleSpecsRead;
 
 function _ensureConversation(cmdText) {
   if (!window.currentConversationId) {

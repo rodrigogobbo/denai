@@ -495,5 +495,6 @@ Além das 26 tools, o DenAI suporta comandos slash no chat:
 
 Quando `/context` está ativo, `rag_search` busca automaticamente no índice da sessão (ícone 📁) em vez de `~/.denai/documents/`.
 
-| `/specs` | Lista specs SDS em `specs/changes/` do projeto ativo via `/context` |
+| `/specs` | Lista specs SDS em `specs/changes/` do projeto ativo via `/context`, com botões "📄 Ver" e "🔍 Analisar" |
 | `/specs <slug>` | Exibe requirements.md + design.md + tasks.md de uma spec |
+| `/specs <slug> analyze` | Analisa status de implementação da spec usando o LLM (streaming) |
