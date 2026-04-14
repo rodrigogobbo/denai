@@ -9,6 +9,11 @@
     @apply flex items-center;
   }
 
+  /* Flex centralizado completo (row + center + center) */
+  .flex-center-full {
+    @apply flex items-center justify-center;
+  }
+
   /* Texto muted — 32x */
   .text-muted {
     color: var(--text-muted);
@@ -22,6 +27,12 @@
   /* Borda + fundo card — padrão de containers */
   .card {
     background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Borda arredondada padrão — sem background */
+  .border-card {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
   }
@@ -41,9 +52,32 @@
     @apply text-[12px];
   }
 
+  /* Label uppercase pequeno — 11px bold */
+  .label-xs {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    @apply uppercase tracking-wide;
+  }
+
+  /* Texto truncado em linha única — 3x nos custom/ */
+  .text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* Botão base */
   .btn-base {
     @apply cursor-pointer border-none rounded-sm text-[13px] font-medium;
+    transition: var(--transition-fast);
+  }
+
+  /* Botão ghost (sem fundo, sem borda) */
+  .btn-ghost {
+    background: none;
+    border: none;
+    @apply cursor-pointer;
     transition: var(--transition-fast);
   }
 

@@ -402,6 +402,20 @@ function _sendNotification(title, body) {
   }
 }
 
+/**
+ * Exibe notificação nativa ao finalizar tarefa com tool calls.
+ * Só notifica se a janela não estiver em foco (tarefa de background).
+ */
+function _handleTaskDone(goal, toolCount) {
+  if (mainWindow && !mainWindow.isFocused()) {
+    const tools = toolCount === 1 ? '1 ferramenta' : `${toolCount} ferramentas`;
+    _sendNotification(
+      'DenAI — Tarefa concluída',
+      `✅ ${goal} · ${tools} usadas`,
+    );
+  }
+}
+
 function checkOllama() {
   const poll = () => {
     http.get('http://localhost:11434/api/version', (res) => {
@@ -500,6 +514,11 @@ function setupIPC() {
   ipcMain.handle('open-external', (_e, url) => shell.openExternal(url));
   ipcMain.handle('get-version', () => app.getVersion());
   ipcMain.handle('get-denai-url', () => DENAI_URL);
+
+  // Notificação de tarefa concluída (com tool calls)
+  ipcMain.on('task-done', (_e, { goal, toolCount }) => {
+    _handleTaskDone(goal, toolCount);
+  });
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────

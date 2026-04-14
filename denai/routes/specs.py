@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import json
+import os as _os
 from pathlib import Path
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from ..config import DEFAULT_MODEL
 from ..context_store import get_context
+from ..llm import stream_chat
 
 router = APIRouter(prefix="/api/specs", tags=["specs"])
 
@@ -22,14 +26,18 @@ class SpecsReadBody(BaseModel):
     slug: str
 
 
+class SpecsAnalyzeBody(BaseModel):
+    conversation_id: str
+    slug: str
+    model: str = DEFAULT_MODEL
+    question: str = "Qual o status atual desta implementação no repositório? Aponte tasks concluídas (✅) e pendentes (⬜), cite arquivos relevantes encontrados e faça um resumo de 2-3 linhas."
+
+
 def _get_specs_dir(conv_id: str) -> tuple[Path | None, str | None]:
     """Retorna o diretório specs/changes/ do projeto ativo, ou erro."""
     ctx = get_context(conv_id)
     if not ctx:
         return None, "Nenhum repositório ativo. Use `/context <caminho>` primeiro."
-
-    # Usar os.path para sanitizar o path (padrão reconhecido pelo CodeQL)
-    import os as _os
 
     try:
         safe_path = _os.path.realpath(_os.path.abspath(ctx["path"]))
@@ -45,6 +53,28 @@ def _get_specs_dir(conv_id: str) -> tuple[Path | None, str | None]:
         )
 
     return specs_dir, None
+
+
+def _load_spec_content(specs_dir: Path, slug: str) -> tuple[str | None, str | None]:
+    """Carrega e concatena os arquivos de uma spec. Retorna (content, error)."""
+    safe_slug = _os.path.basename(_os.path.normpath(slug))
+    spec_dir = specs_dir / safe_slug
+
+    if not spec_dir.exists():
+        available = [d.name for d in specs_dir.iterdir() if d.is_dir()]
+        return None, f"Spec `{safe_slug}` não encontrada. Disponíveis: {', '.join(available) or 'nenhuma'}"
+
+    parts = []
+    for fname in ("requirements.md", "design.md", "tasks.md"):
+        fpath = spec_dir / fname
+        if fpath.exists():
+            content = fpath.read_text(encoding="utf-8", errors="replace")
+            parts.append(f"## 📄 {fname}\n\n{content}")
+
+    if not parts:
+        return None, f"Spec `{safe_slug}` está vazia."
+
+    return "\n\n---\n\n".join(parts), None
 
 
 @router.post("/list")
@@ -72,31 +102,60 @@ async def read_spec(body: SpecsReadBody):
     if error:
         return JSONResponse({"error": error}, status_code=400)
 
-    slug = body.slug.strip().strip("/")
-    # Sanitizar slug: apenas componente de nome simples, sem path traversal
-    import os as _os
+    content, err = _load_spec_content(specs_dir, body.slug)
+    if err:
+        return JSONResponse({"error": err}, status_code=404)
 
-    safe_slug = _os.path.basename(_os.path.normpath(slug))
-    spec_dir = specs_dir / safe_slug
+    safe_slug = _os.path.basename(_os.path.normpath(body.slug.strip().strip("/")))
+    return {"slug": safe_slug, "content": content}
 
-    if not spec_dir.exists():
-        available = [d.name for d in specs_dir.iterdir() if d.is_dir()]
-        return JSONResponse(
-            {"error": f"Spec `{safe_slug}` não encontrada.", "available": available},
-            status_code=404,
-        )
 
-    parts = []
-    for fname in ("requirements.md", "design.md", "tasks.md"):
-        fpath = spec_dir / fname
-        if fpath.exists():
-            content = fpath.read_text(encoding="utf-8", errors="replace")
-            parts.append(f"## 📄 {fname}\n\n{content}")
+@router.post("/analyze")
+async def analyze_spec(body: SpecsAnalyzeBody):
+    """Analisa o status de implementação de uma spec usando o LLM. Streaming SSE."""
+    specs_dir, error = _get_specs_dir(body.conversation_id)
+    if error:
+        return JSONResponse({"error": error}, status_code=400)
 
-    if not parts:
-        return JSONResponse({"error": f"Spec `{safe_slug}` está vazia."}, status_code=404)
+    spec_content, err = _load_spec_content(specs_dir, body.slug)
+    if err:
+        return JSONResponse({"error": err}, status_code=404)
 
-    return {
-        "slug": safe_slug,
-        "content": "\n\n---\n\n".join(parts),
+    ctx = get_context(body.conversation_id)
+    project_name = ctx["project_name"] if ctx else "projeto"
+    project_path = ctx["path"] if ctx else ""
+
+    safe_slug = _os.path.basename(_os.path.normpath(body.slug.strip().strip("/")))
+
+    system_prompt = (
+        f"Você é um assistente de engenharia de software especialista em Spec-Driven Development (SDS). "
+        f"Você está analisando a spec **{safe_slug}** do projeto **{project_name}** localizado em `{project_path}`. "
+        f"Use suas ferramentas (bash, read_file, glob) para inspecionar o repositório e verificar o que já foi implementado. "
+        f"Seja objetivo e preciso."
+    )
+
+    user_message = (
+        f"Analise a spec abaixo e responda: {body.question}\n\n"
+        f"---\n\n{spec_content}"
+    )
+
+    messages = [{"role": "user", "content": user_message}]
+
+    _SSE_HEADERS = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
     }
+
+    async def generate():
+        yield f"data: {json.dumps({'slug': safe_slug, 'analyzing': True})}\n\n"
+        async for chunk in stream_chat(
+            messages,
+            body.model,
+            system_override=system_prompt,
+            conversation_id=body.conversation_id,
+        ):
+            yield chunk
+
+    return StreamingResponse(generate(), media_type="text/event-stream", headers=_SSE_HEADERS)
+

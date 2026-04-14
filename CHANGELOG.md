@@ -7,6 +7,30 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-04-14
+
+### Adicionado
+- **🔍 `/specs analyze`** — análise inteligente de specs SDS com LLM
+  - Novo endpoint `POST /api/specs/analyze` com streaming SSE
+  - Tool `specs_analyze` disponível no agent loop para inspecionar specs
+  - Listagem `/specs` agora tem botões "📄 Ver" e "🔍 Analisar" por spec
+  - Sub-comando `/specs <slug> analyze` para análise via chat
+  - System prompt contextualizado com projeto + path + pergunta customizável
+- **🔔 Notificação Electron — tarefa concluída**
+  - Ao terminar uma resposta com tool calls enquanto a janela está desfocada, dispara notificação nativa
+  - Título: "DenAI — Tarefa concluída" · Corpo: primeiros 60 chars da pergunta + nº de ferramentas
+  - Só notifica se `!mainWindow.isFocused()` — sem interrupções desnecessárias
+  - `window.electronAPI.notifyTaskDone(goal, toolCount)` exposto no preload
+- **🎨 Tailwind Fase 2 — consolidação CSS**
+  - Novas classes em `utilities.css`: `.flex-center-full`, `.border-card`, `.label-xs`, `.text-truncate`, `.btn-ghost`
+  - Hover states idênticos consolidados: `.btn-toggle-sidebar:hover, .header-btn:hover`
+  - Focus states idênticos consolidados: `.sidebar-search-input:focus, .model-selector:focus, .pull-model-input:focus`
+  - `.message` e `.typing-indicator` compartilham base via seletor combinado
+  - `utilities.css`: 61 → 95 linhas (+34), `layout.css`: 860 → 854 (-6), `chat.css`: 616 → 679 (+63 — inclui estilos novos dos botões de specs)
+
+### Corrigido
+- `routes/specs.py`: refatoração interna — `_load_spec_content()` extraída como helper reutilizável
+
 ## [0.26.0] - 2026-04-13
 
 ### Adicionado

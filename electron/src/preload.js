@@ -16,4 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSplashStatus: (callback) => {
     ipcRenderer.on('splash-status', (_e, msg) => callback(msg));
   },
+
+  // Notificação ao finalizar tarefa com tool calls
+  notifyTaskDone: (goal, toolCount) => ipcRenderer.send('task-done', { goal, toolCount }),
 });
