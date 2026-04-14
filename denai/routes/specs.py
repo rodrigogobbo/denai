@@ -30,7 +30,11 @@ class SpecsAnalyzeBody(BaseModel):
     conversation_id: str
     slug: str
     model: str = DEFAULT_MODEL
-    question: str = "Qual o status atual desta implementação no repositório? Aponte tasks concluídas (✅) e pendentes (⬜), cite arquivos relevantes encontrados e faça um resumo de 2-3 linhas."
+    question: str = (
+        "Qual o status atual desta implementação no repositório? "
+        "Aponte tasks concluídas (✅) e pendentes (⬜), cite arquivos relevantes "
+        "encontrados e faça um resumo de 2-3 linhas."
+    )
 
 
 def _get_specs_dir(conv_id: str) -> tuple[Path | None, str | None]:
@@ -128,10 +132,12 @@ async def analyze_spec(body: SpecsAnalyzeBody):
     safe_slug = _os.path.basename(_os.path.normpath(body.slug.strip().strip("/")))
 
     system_prompt = (
-        f"Você é um assistente de engenharia de software especialista em Spec-Driven Development (SDS). "
-        f"Você está analisando a spec **{safe_slug}** do projeto **{project_name}** localizado em `{project_path}`. "
-        f"Use suas ferramentas (bash, read_file, glob) para inspecionar o repositório e verificar o que já foi implementado. "
-        f"Seja objetivo e preciso."
+        f"Você é um assistente de engenharia de software especialista em "
+        f"Spec-Driven Development (SDS). "
+        f"Você está analisando a spec **{safe_slug}** do projeto **{project_name}** "
+        f"localizado em `{project_path}`. "
+        f"Use suas ferramentas (bash, read_file, glob) para inspecionar o repositório "
+        f"e verificar o que já foi implementado. Seja objetivo e preciso."
     )
 
     user_message = (
@@ -141,7 +147,7 @@ async def analyze_spec(body: SpecsAnalyzeBody):
 
     messages = [{"role": "user", "content": user_message}]
 
-    _SSE_HEADERS = {
+    sse_headers = {
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
         "X-Accel-Buffering": "no",
@@ -157,5 +163,5 @@ async def analyze_spec(body: SpecsAnalyzeBody):
         ):
             yield chunk
 
-    return StreamingResponse(generate(), media_type="text/event-stream", headers=_SSE_HEADERS)
+    return StreamingResponse(generate(), media_type="text/event-stream", headers=sse_headers)
 
