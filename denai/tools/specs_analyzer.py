@@ -25,8 +25,7 @@ SPECS_ANALYZE_SPEC = {
                 "slug": {
                     "type": "string",
                     "description": (
-                        "Nome da spec (ex: 'v0.27.0-specs-analyze'). "
-                        "Use specs_list primeiro para ver as disponíveis."
+                        "Nome da spec (ex: 'v0.27.0-specs-analyze'). Use specs_list primeiro para ver as disponíveis."
                     ),
                 },
                 "conversation_id": {

@@ -155,9 +155,9 @@ class TestSpecsAnalyze:
     async def test_analyze_no_context(self, client):
         c, _ = client
         with patch("denai.routes.specs.get_context", return_value=None):
-            r = await c.post("/api/specs/analyze", json={
-                "conversation_id": "abc", "slug": "test", "model": "test-model"
-            })
+            r = await c.post(
+                "/api/specs/analyze", json={"conversation_id": "abc", "slug": "test", "model": "test-model"}
+            )
         assert r.status_code == 400
 
     @pytest.mark.asyncio
@@ -167,9 +167,9 @@ class TestSpecsAnalyze:
         _make_specs_dir(tmp_path)
         ctx = {"path": str(project_dir), "project_name": "myproject"}
         with patch("denai.routes.specs.get_context", return_value=ctx):
-            r = await c.post("/api/specs/analyze", json={
-                "conversation_id": "abc", "slug": "nonexistent", "model": "test-model"
-            })
+            r = await c.post(
+                "/api/specs/analyze", json={"conversation_id": "abc", "slug": "nonexistent", "model": "test-model"}
+            )
         assert r.status_code == 404
 
     @pytest.mark.asyncio
@@ -180,16 +180,16 @@ class TestSpecsAnalyze:
         ctx = {"path": str(project_dir), "project_name": "myproject"}
 
         async def fake_stream(*args, **kwargs):
-            yield f'data: {json.dumps({"content": "✅ TASK-1 concluída"})}\n\n'
-            yield f'data: {json.dumps({"done": True})}\n\n'
+            yield f"data: {json.dumps({'content': '✅ TASK-1 concluída'})}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
 
         with (
             patch("denai.routes.specs.get_context", return_value=ctx),
             patch("denai.routes.specs.stream_chat", side_effect=fake_stream),
         ):
-            r = await c.post("/api/specs/analyze", json={
-                "conversation_id": "abc", "slug": "v1.0-feature", "model": "test-model"
-            })
+            r = await c.post(
+                "/api/specs/analyze", json={"conversation_id": "abc", "slug": "v1.0-feature", "model": "test-model"}
+            )
 
         assert r.status_code == 200
         assert "text/event-stream" in r.headers["content-type"]
@@ -204,9 +204,9 @@ class TestSpecsAnalyze:
         _make_specs_dir(tmp_path)
         ctx = {"path": str(project_dir), "project_name": "myproject"}
         with patch("denai.routes.specs.get_context", return_value=ctx):
-            r = await c.post("/api/specs/analyze", json={
-                "conversation_id": "abc", "slug": "../../etc/passwd", "model": "test-model"
-            })
+            r = await c.post(
+                "/api/specs/analyze", json={"conversation_id": "abc", "slug": "../../etc/passwd", "model": "test-model"}
+            )
         assert r.status_code == 404
 
 

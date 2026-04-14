@@ -140,10 +140,7 @@ async def analyze_spec(body: SpecsAnalyzeBody):
         f"e verificar o que já foi implementado. Seja objetivo e preciso."
     )
 
-    user_message = (
-        f"Analise a spec abaixo e responda: {body.question}\n\n"
-        f"---\n\n{spec_content}"
-    )
+    user_message = f"Analise a spec abaixo e responda: {body.question}\n\n---\n\n{spec_content}"
 
     messages = [{"role": "user", "content": user_message}]
 
@@ -164,4 +161,3 @@ async def analyze_spec(body: SpecsAnalyzeBody):
             yield chunk
 
     return StreamingResponse(generate(), media_type="text/event-stream", headers=sse_headers)
-
